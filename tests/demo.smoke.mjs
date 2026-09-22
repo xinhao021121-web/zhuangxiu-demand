@@ -24,8 +24,21 @@ const exeCandidates = [
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
 ].filter(Boolean);
-const exe = exeCandidates.find((p) => fs.existsSync(p));
-const browser = await chromium.launch(exe ? { executablePath: exe } : {});
+const available = exeCandidates.filter((p) => fs.existsSync(p));
+
+/* 逐个尝试：本机 ms-playwright 自带内核可能因缺少运行库无法启动，需回落到系统 Chrome / Edge */
+async function launchBrowser() {
+  const errors = [];
+  for (const candidate of available) {
+    try { return await chromium.launch({ executablePath: candidate }); }
+    catch (e) { errors.push(candidate + "：" + String(e.message).split("\n")[0]); }
+  }
+  try { return await chromium.launch(); }
+  catch (e) { errors.push(String(e.message).split("\n")[0]); }
+  throw new Error("没有可用的浏览器内核：\n" + errors.join("\n"));
+}
+
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push("pageerror: " + e.message));

@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>筑云 · 装修需求采集（小程序端）</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg-page:#f4f5f7; --bg-card:#ffffff; --bg-hover:#f1f3f5; --bg-active:#e9f1fb;
+  --border:#e6e8eb; --border-strong:#d4d7db;
+  --text-1:#16181c; --text-2:#5a5f66; --text-3:#9aa0a6;
+  --primary:#2a78d6; --primary-hover:#256abf; --primary-weak:#e9f1fb;
+  --success:#0ca30c; --warning:#fab219; --danger:#d03b3b;
+  --success-bg:#e7f6e7; --warning-bg:#fdf3d7; --danger-bg:#fbe7e7;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10);
+  --shadow-lg:0 12px 32px rgba(16,24,40,.16);
+  --radius:10px; --radius-sm:7px;
+  --font:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  --app-w:430px; --navbar-h:44px; --actionbar-h:62px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:#dfe3e8;color:var(--text-1);font-family:var(--font);font-size:14px;line-height:1.5;
+  display:flex;justify-content:center;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+
+/* 手机框：宽屏时收成手机宽度 */
+.app{position:relative;width:100%;max-width:var(--app-w);min-height:100vh;background:var(--bg-page);
+  padding-bottom:calc(var(--actionbar-h) + var(--safe-b) + 14px)}
+@media (min-width:520px){
+  .app{box-shadow:0 0 0 1px rgba(16,24,40,.06),0 18px 48px rgba(16,24,40,.14)}
+}
+
+/* 顶部：导航栏 + 清晰度 + 分区导航 */
+.app-head{position:sticky;top:0;z-index:30;background:var(--bg-card);border-bottom:1px solid var(--border)}
+.navbar{height:var(--navbar-h);display:flex;align-items:center;padding:0 12px}
+.nav-title{font-weight:600;font-size:15.5px}
+.capsule{margin-left:auto;display:flex;align-items:center;height:30px;border:1px solid var(--border-strong);
+  border-radius:99px;background:#fff;padding:0 1px}
+.capsule i{width:33px;height:100%;display:grid;place-items:center;font-style:normal;
+  font-size:13px;color:var(--text-2);letter-spacing:1px}
+.capsule b{width:1px;height:15px;background:var(--border-strong)}
+.progress-row{display:flex;align-items:center;gap:9px;padding:0 12px 9px}
+.progress{flex:1;height:6px;border-radius:99px;background:#eceef1;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--primary);border-radius:99px;transition:width .3s}
+.progress-num{font-size:11.5px;color:var(--text-2);white-space:nowrap}
+.sec-nav{display:flex;gap:7px;overflow-x:auto;padding:0 12px 10px;scrollbar-width:none}
+.sec-nav::-webkit-scrollbar{display:none}
+.snav{flex:none;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border-radius:99px;
+  border:1px solid var(--border);background:#fff;font-size:12.5px;color:var(--text-2);white-space:nowrap}
+.snav i{width:6px;height:6px;border-radius:50%;background:var(--border-strong);flex:none}
+.snav.part i{background:var(--warning)}
+.snav.done i{background:var(--success)}
+.snav.on{border-color:var(--primary);background:var(--primary-weak);color:var(--primary)}
+
+/* 表单 */
+.form-col{padding:10px 12px 4px;display:flex;flex-direction:column;gap:9px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+.sec-card{overflow:hidden}
+.sec-head{display:flex;align-items:center;gap:9px;padding:0 14px;min-height:52px}
+.sec-num{width:22px;height:22px;border-radius:50%;background:var(--primary-weak);color:var(--primary);
+  font-size:12px;display:grid;place-items:center;font-weight:600;flex:none}
+.sec-title{font-weight:600;font-size:14.5px}
+.sec-meta{margin-left:auto;font-size:11.5px;color:var(--text-3);white-space:nowrap}
+.sec-arrow{flex:none;width:16px;text-align:center;color:var(--text-3);font-size:11px;transition:transform .2s}
+.sec-card.open .sec-arrow{transform:rotate(90deg);color:var(--primary)}
+.sec-card.open .sec-num{background:var(--primary);color:#fff}
+.sec-card.open .sec-meta{color:var(--primary)}
+.sec-body{padding:0 14px 15px}
+.group-title{font-size:12px;color:var(--text-3);margin:14px 0 9px;padding-top:11px;border-top:1px dashed var(--border)}
+.group-title:first-child{border-top:0;padding-top:0;margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field label{font-size:12.5px;color:var(--text-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.4}
+.rec{font-size:10.5px;color:#8a6200;background:var(--warning-bg);border-radius:4px;padding:1px 6px}
+.field input,.field textarea{width:100%;padding:10px 11px;border:1px solid var(--border-strong);border-radius:8px;
+  font-size:16px;font-family:inherit;color:var(--text-1);background:#fff;outline:none;min-height:44px}
+.field input:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-weak)}
+.field textarea{min-height:88px;resize:none;line-height:1.6}
+.unit{font-size:12px;color:var(--text-3)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--border-strong);background:#fff;border-radius:99px;min-height:35px;padding:6px 14px;
+  font-size:13px;color:var(--text-2);transition:.15s}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.ai-badge{display:inline-flex;align-items:center;gap:4px;background:var(--primary-weak);color:var(--primary);
+  border-radius:99px;padding:2px 9px;font-size:11px}
+.flash{animation:flash 1.8s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--primary)}100%{box-shadow:0 0 0 3px transparent}}
+.field.flash{border-radius:8px}
+
+/* 空间实例 */
+.inst-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 13px;margin-top:12px;background:#fcfdfe}
+.inst-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.inst-title{font-weight:600;font-size:13.5px}
+.inst-sub{font-size:11.5px;color:var(--text-3)}
+.inst-head .btn{margin-left:auto}
+.type-row{display:flex;flex-direction:column;gap:8px;padding:11px 0 9px;border-bottom:1px dashed var(--border);margin-bottom:11px}
+.type-label{font-size:12.5px;color:var(--text-2)}
+.inst-empty{border:1px dashed var(--border-strong);border-radius:var(--radius-sm);padding:18px 14px;text-align:center;
+  color:var(--text-3);font-size:12.5px;margin-top:12px;background:#fcfdfe}
+.inst-actions{display:flex;gap:9px;justify-content:center;margin-top:12px}
+.inst-actions .btn{min-height:36px}
+
+/* 按钮 */
+.btn{border:1px solid var(--border-strong);background:#fff;color:var(--text-1);border-radius:8px;
+  min-height:40px;padding:8px 14px;font-size:13.5px;transition:.15s;display:inline-flex;
+  align-items:center;justify-content:center;gap:5px}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-soft{background:var(--primary-weak);border-color:transparent;color:var(--primary)}
+.btn-sm{min-height:33px;padding:5px 11px;font-size:12.5px;border-radius:7px}
+
+/* 演示提示卡 */
+.hint-card{padding:15px 15px 16px;background:linear-gradient(180deg,#eef4fd,#fff);border:1px solid #d8e6fa}
+.hint-title{font-weight:600;font-size:14px;color:var(--text-1)}
+.hint-text{font-size:12.5px;color:var(--text-2);margin-top:6px;line-height:1.65}
+.hint-card .btn{margin-top:11px;width:100%}
+.tool-card{padding:14px 15px;text-align:center}
+.tool-card .btn{width:100%}
+.tool-note{font-size:11.5px;color:var(--text-3);margin-top:9px;line-height:1.6}
+
+/* 悬浮球 */
+.fab{position:fixed;right:max(16px,calc(50% - var(--app-w) / 2 + 16px));
+  bottom:calc(var(--actionbar-h) + var(--safe-b) + 16px);z-index:45;
+  width:56px;height:56px;border-radius:50%;border:0;background:var(--primary);color:#fff;
+  box-shadow:0 8px 22px rgba(42,120,214,.42);display:grid;place-items:center;font-size:20px;
+  transition:transform .16s,opacity .18s}
+.fab:active{transform:scale(.93)}
+.fab.hide{opacity:0;pointer-events:none;transform:scale(.8)}
+.fab.quiet{background:var(--text-3);box-shadow:0 8px 22px rgba(16,24,40,.24)}
+.fab .badge{position:absolute;top:-4px;right:-4px;min-width:21px;height:21px;padding:0 5px;border-radius:99px;
+  background:var(--danger);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center;
+  border:2px solid var(--bg-page)}
+
+/* 底部操作栏 */
+.actionbar{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:var(--app-w);
+  bottom:0;z-index:35;display:flex;align-items:center;gap:10px;
+  padding:9px 12px calc(9px + var(--safe-b));background:rgba(255,255,255,.96);
+  backdrop-filter:blur(8px);border-top:1px solid var(--border)}
+.save-hint{font-size:11.5px;color:var(--text-3);flex:none;display:flex;align-items:center;gap:5px}
+.save-hint i{width:6px;height:6px;border-radius:50%;background:var(--success);display:block}
+.actionbar .btn-primary{margin-left:auto;flex:1;max-width:200px;min-height:42px;font-size:15px;border-radius:10px}
+
+/* 遮罩与底部弹层 */
+.mask{position:fixed;inset:0;background:rgba(16,24,40,.42);opacity:0;pointer-events:none;transition:opacity .22s;z-index:60}
+.mask.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:var(--app-w);z-index:70;
+  height:64vh;transform:translate(-50%,102%);
+  transition:transform .28s cubic-bezier(.32,.72,0,1),height .22s ease;
+  background:var(--bg-card);border-radius:16px 16px 0 0;display:flex;flex-direction:column;
+  box-shadow:0 -8px 32px rgba(16,24,40,.18)}
+.sheet.on{transform:translate(-50%,0)}
+.sheet.full{height:92vh}
+.sheet.small{height:auto;max-height:76vh}
+.sheet-grab{height:24px;display:grid;place-items:center;flex:none;touch-action:none}
+.sheet-grab i{width:36px;height:4px;border-radius:99px;background:var(--border-strong);display:block}
+.sheet-head{padding:0 16px 12px;flex:none}
+.sheet.small .sheet-head{padding-top:14px;border-bottom:1px solid var(--border)}
+.sheet-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15.5px}
+.sheet-title .tag{font-size:11px;font-weight:400;color:var(--primary);background:var(--primary-weak);
+  padding:2px 8px;border-radius:99px}
+.counts{display:flex;gap:13px;margin-top:9px;font-size:12.5px;color:var(--text-2);flex-wrap:wrap}
+.counts b{color:var(--text-1)}
+.resume{margin-top:9px;padding:8px 10px;background:var(--bg-active);border-radius:8px;font-size:12.5px;color:var(--primary)}
+.sheet-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sheet.small .sheet-body{font-size:13px;white-space:pre-wrap;line-height:1.8;color:var(--text-1);max-height:52vh}
+.sheet-foot{flex:none;display:flex;gap:9px;padding:10px 14px calc(10px + var(--safe-b));border-top:1px solid var(--border)}
+.sheet-foot .btn{flex:1}
+
+/* 发现卡片 */
+.dk{border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-sm);
+  padding:12px 13px;background:#fff}
+.dk.p0{border-left-color:var(--danger)}
+.dk.p1{border-left-color:var(--warning)}
+.dk.risk{background:#fffdf7}
+.dk-top{display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap}
+.prio{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--bg-hover);color:var(--text-2)}
+.prio.p0{background:var(--danger-bg);color:var(--danger)}
+.prio.p1{background:var(--warning-bg);color:#8a6200}
+.dk-kind{font-size:11px;color:var(--text-3)}
+.dk-scope{margin-left:auto;font-size:11px;color:var(--primary);background:var(--primary-weak);border-radius:4px;padding:2px 7px}
+.dk-title{font-size:14px;font-weight:600;line-height:1.45}
+.dk-text{font-size:12.5px;color:var(--text-2);margin-top:6px;line-height:1.65}
+.dk-why{font-size:11.5px;color:var(--text-3);margin-top:7px;line-height:1.6}
+.dk-target{display:inline-flex;align-items:center;min-height:34px;font-size:12px;color:var(--primary);
+  background:var(--primary-weak);border-radius:6px;padding:4px 9px;margin-top:9px}
+.dk-acts{display:flex;gap:8px;margin-top:11px}
+.dk-acts .btn{flex:1;min-height:38px}
+.dk-edit{width:100%;min-height:80px;margin-top:9px;padding:9px 10px;border:1px solid var(--border-strong);
+  border-radius:8px;font-family:inherit;font-size:15px;line-height:1.6;resize:none}
+.dk.done{background:var(--success-bg);border-left-color:var(--success);opacity:.92}
+.dk-done-tag{font-size:11px;color:var(--success);font-weight:600}
+.list-label{font-size:11.5px;color:var(--text-3);padding:4px 2px 0;display:flex;align-items:center;gap:8px}
+.list-label::after{content:"";flex:1;height:1px;background:var(--border)}
+.empty{padding:30px 12px;text-align:center;color:var(--text-3);font-size:12.5px;line-height:1.8}
+.quiet{font-size:12.5px;color:#8a6200;padding:11px 13px;background:var(--warning-bg);border-radius:8px;line-height:1.7}
+.more{font-size:13px;color:var(--primary);text-align:center;padding:10px;border:1px dashed var(--border-strong);
+  border-radius:8px;background:#fff}
+
+/* 摘要整页 */
+.page{position:fixed;left:50%;top:0;width:100%;max-width:var(--app-w);height:100%;z-index:90;
+  background:var(--bg-page);transform:translate(-50%,100%);
+  transition:transform .28s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column}
+.page.on{transform:translate(-50%,0)}
+.page-head{flex:none;height:48px;display:flex;align-items:center;padding:0 6px;background:#fff;
+  border-bottom:1px solid var(--border)}
+.page-head .btn{border:0;background:transparent;min-height:38px;font-size:15px;color:var(--primary)}
+.page-title{flex:1;text-align:center;font-weight:600;font-size:15.5px}
+.page-body{flex:1;overflow-y:auto;padding:12px 12px calc(20px + var(--safe-b));-webkit-overflow-scrolling:touch}
+.sum-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 15px}
+.sum-text{font-size:13.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;margin:0;
+  font-family:var(--font);color:var(--text-1)}
+.page-foot{flex:none;display:flex;gap:9px;padding:10px 12px calc(10px + var(--safe-b));
+  background:#fff;border-top:1px solid var(--border)}
+.page-foot .btn{flex:1;min-height:44px;font-size:15px;border-radius:10px}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--actionbar-h) + var(--safe-b) + 26px);
+  transform:translateX(-50%) translateY(10px);background:rgba(22,24,28,.94);color:#fff;
+  max-width:calc(var(--app-w) - 48px);text-align:center;
+  padding:10px 15px;border-radius:9px;font-size:13px;line-height:1.6;opacity:0;pointer-events:none;
+  transition:.25s;z-index:95}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app-head">
+    <div class="navbar">
+      <span class="nav-title">装修需求采集</span>
+      <span class="capsule"><i>···</i><b></b><i>◉</i></span>
+    </div>
+    <div class="progress-row">
+      <div class="progress"><i id="prog-bar" style="width:0%"></i></div>
+      <span class="progress-num" id="prog-num">清晰度 0%</span>
+    </div>
+    <nav class="sec-nav" id="sec-nav"></nav>
+  </header>
+
+  <main class="form-col" id="form-col"></main>
+
+  <button class="fab" id="fab" data-act="open-sheet" aria-label="需求发现助手">
+    <span>✦</span><span class="badge" id="fab-badge" style="display:none">0</span>
+  </button>
+
+  <div class="actionbar">
+    <span class="save-hint"><i></i>已自动保存</span>
+    <button class="btn btn-primary" id="btn-submit">提交设计师</button>
+  </div>
+
+  <div class="mask" id="mask"></div>
+
+  <section class="sheet" id="sheet">
+    <div class="sheet-grab" id="sheet-grab"><i></i></div>
+    <div class="sheet-head">
+      <div class="sheet-title">需求发现助手 <span class="tag">纯规则</span></div>
+      <div class="counts">
+        <span>已发现 <b id="c-found">0</b></span>
+        <span>已处理 <b id="c-handled">0</b></span>
+        <span>待看 <b id="c-open">0</b></span>
+        <span>推荐项 <b id="c-rec">0/0</b></span>
+      </div>
+      <div class="resume" id="resume" style="display:none"></div>
+    </div>
+    <div class="sheet-body" id="dk-list"></div>
+    <div class="sheet-foot">
+      <button class="btn" id="btn-quiet">暂时不要建议</button>
+      <button class="btn btn-soft" id="btn-summary">需求摘要</button>
+    </div>
+  </section>
+
+  <section class="sheet small" id="confirm">
+    <div class="sheet-head"><div class="sheet-title" id="cf-title">提交前检查</div></div>
+    <div class="sheet-body" id="cf-body"></div>
+    <div class="sheet-foot">
+      <button class="btn" id="cf-cancel">返回修改</button>
+      <button class="btn btn-primary" id="cf-ok">仍要提交</button>
+    </div>
+  </section>
+
+  <section class="page" id="summary-page">
+    <div class="page-head">
+      <button class="btn" id="sum-back">返回</button>
+      <span class="page-title">需求摘要</span>
+      <button class="btn" id="sum-copy">复制</button>
+    </div>
+    <div class="page-body">
+      <div class="sum-card"><pre class="sum-text" id="sum-text"></pre></div>
+    </div>
+    <div class="page-foot">
+      <button class="btn" id="sum-copy2">复制文本</button>
+      <button class="btn btn-primary" id="sum-done">完成</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* 字段清单由 tools/build_mobile_demo.py 从字段清单 V2 注入，保证与规格一致 */
+const FIELD_SPEC = /*__FIELD_SPEC__*/[];
+const HAS_SPEC = FIELD_SPEC.length > 0;
+
+const SPEC = FIELD_SPEC;
+const byId = new Map(SPEC.map(f => [f.id, f]));
+
+/* 空间定义：固定空间只出现一次，实例空间可增删 */
+const INSTANCE_DEF = {
+  '卫生间': { max: 3, defaults: ['主卫', '客卫'], typeField: 'wc_type', namePrefix: '卫生间', other: 'wc_other' },
+  '其他卧室': { max: 4, defaults: [], typeField: 'room_type', namePrefix: '次卧', other: 'room_other' },
+  '书房与电竞房': { max: 2, defaults: [], typeField: null, namePrefix: '书房', other: 'st_other' }
+};
+const SECTION_OTHER = {
+  '认识你家': 'base_other', '设备与系统': 'dev_other', '玄关': 'ex_other', '客厅': 'lv_other',
+  '餐厅': 'dn_other', '厨房': 'kt_other', '阳台': 'bl_other', '主卧': 'br_other',
+  '收纳与家政': 'sc_other', '补充说明': 'note_free'
+};
+
+const SECTIONS = (() => {
+  const map = new Map();
+  SPEC.forEach(f => {
+    if (!map.has(f.section)) map.set(f.section, { name: f.section, scope: INSTANCE_DEF[f.section] ? f.section : '固定', groups: new Map() });
+    const sec = map.get(f.section);
+    if (!sec.groups.has(f.group)) sec.groups.set(f.group, []);
+    sec.groups.get(f.group).push(f);
+  });
+  return [...map.values()].map(s => ({
+    ...s,
+    groups: [...s.groups.entries()].map(([g, fields]) => ({ name: g, fields })),
+    fields: [...s.groups.values()].flat()
+  }));
+})();
+
+/* ============ 规则库（与 PC 端 Demo 同一套纯规则） ============ */
+const has = (v, x) => Array.isArray(v) ? v.includes(x) : (v === x || (typeof v === 'string' && v.includes(x)));
+const anyOf = (v, xs) => xs.some(x => has(v, x));
+
+const RULES = [
+  { id:'pet-cat', p:'P1', run:c => has(c.v.live_pet,'猫') ? [{ section:'认识你家', target:'base_other',
+      title:'养猫家庭的专属空间与材质', text:'建议在阳台或卫生间预留猫砂盆位置，避免大面积绒面与皮质家具，猫爬架附近预留插座。',
+      why:'因为你填了「是否养宠物：'+(c.v.live_pet||[]).join('、')+'」' }] : [] },
+  { id:'pet-robot', p:'P2', run:c => anyOf(c.v.live_pet,['猫','狗']) ? [{ section:'阳台', target:'bl_robot', value:'阳台',
+      title:'预留扫地机器人位置与回充点位', text:'养宠家庭地面清洁频率高，建议明确扫地机器人回充位置并预留插座。', why:'因为你养了宠物' }] : [] },
+  { id:'elder', p:'P0', run:c => has(c.v.live_elder,'是') ? [{ section:'认识你家', target:'base_other',
+      title:'适老安全设施', text:'建议长辈房与卫生间增加紧急按钮、防滑扶手与感应夜灯，地面避免高差。', why:'因为你填了「有老人或行动不便成员：是」' }] : [] },
+  { id:'allergy', p:'P1', run:c => has(c.v.live_allergy,'是') ? [{ section:'认识你家', target:'base_other',
+      title:'过敏成员的材质注意事项', text:'有过敏成员，软装避免长毛地毯与绒面沙发，优先可擦洗材质，并考虑新风与除螨。', why:'因为你填了「有鼻炎或过敏成员：是」' }] : [] },
+  { id:'smoke', p:'P2', run:c => has(c.v.live_smoke,'是') ? [{ section:'认识你家', target:'base_other',
+      title:'吸烟区与排风方案', text:'建议明确一个可关门的吸烟位置并做独立排风，避免烟味扩散到卧室与衣物。', why:'因为你填了「有吸烟成员：是」' }] : [] },
+  { id:'budget', p:'P0', kind:'risk', run:c => (c.v.budget_total && c.v.base_area) ? [{ section:'认识你家', target:'budget_reserve', value:'是',
+      title:'预算与面积匹配度提醒', text:'建议在预算之外单独预留 20% 作为增项备用金，装修过程中增项很难完全避免。', why:'因为你填了「建筑面积：'+c.v.base_area+'㎡」和「预算：'+c.v.budget_total+'」' }] : [] },
+  { id:'schedule', p:'P0', kind:'risk', run:c => (c.v.date_finish && c.v.date_movein) ? [{ section:'认识你家', target:'date_start',
+      title:'入住时间与定制家具周期冲突', text:'定制柜与木作的制作安装通常需要 45-60 天，建议把下单时间提前，避免影响入住。', why:'因为你填了计划完工与计划入住两个时间' }] : [] },
+  { id:'oldhouse', p:'P1', run:c => has(c.v.base_house_state,'旧房翻新') ? [{ section:'认识你家', target:'base_other',
+      title:'旧房翻新的隐蔽工程', text:'旧房建议先确认原有水电管线年限与防水状况，这部分通常是预算最容易超的地方。', why:'因为你填了「房屋现状：旧房翻新」' }] : [] },
+  { id:'ac', p:'P1', run:c => anyOf(c.v.dev_ac,['中央空调','风管机']) ? [{ section:'设备与系统', target:'dev_other',
+      title:'中央空调的吊顶与检修口', text:'中央空调需要吊顶包裹管道，请在需要的位置预留检修口，并确认层高是否满足。', why:'因为你填了「空调需求：'+(c.v.dev_ac||[]).join('、')+'」' }] : [] },
+  { id:'heat', p:'P1', run:c => has(c.v.dev_heat,'地暖') ? [{ section:'设备与系统', target:'dev_other',
+      title:'地暖带来的地面抬高', text:'地暖完成面通常抬高 8-10cm，木地板建议选地暖专用款，量房时需要确认与入户门槛的高度衔接。', why:'因为你填了「取暖方式：地暖」' }] : [] },
+  { id:'kitchen-open', p:'P0', kind:'risk', run:c => (has(c.v.kt_form,'开放式') && has(c.v.kt_freq,'经常')) ? [{ section:'厨房', target:'kt_hood', value:'侧吸',
+      title:'开放式厨房遇到高频下厨，油烟方案要先定', text:'建议确认油烟机形式与风量，并提前了解当地燃气公司对开放厨房的备案要求。', why:'因为你填了「厨房形式：开放式」和「下厨频率：经常」' }] : [] },
+  { id:'kitchen-height', p:'P1', run:c => (c.v.kt_height_m || c.v.kt_height_f) ? [{ section:'厨房', target:'kt_counter', value:'需要',
+      title:'按身高做高低台面', text:'按主要做饭人身高计算，洗切区比烹饪区高 8-10cm 更省腰，建议做高低台面。', why:'因为你填了身高「'+(c.v.kt_height_m||'-')+' / '+(c.v.kt_height_f||'-')+' cm」' }] : [] },
+  { id:'dishwasher', p:'P2', run:c => anyOf(c.v.kt_dishwasher,['前开式','水槽式']) ? [{ section:'厨房', target:'kt_other',
+      title:'洗碗机的水电与橱柜尺寸', text:'洗碗机需要进水、排水与插座，建议在橱柜设计前确定型号，避免后期改柜。', why:'因为你填了「洗碗机：'+c.v.kt_dishwasher+'」' }] : [] },
+  { id:'office', p:'P1', run:c => has(c.v.office_need,'长期居家办公') ? [{ section:'设备与系统', target:'dev_smart', value:'全屋WIFI',
+      title:'居家办公的网络与隔音', text:'建议工位预留有线网口，并给书房做隔音处理；全屋建议做 WIFI 全覆盖。', why:'因为你填了「办公需求：长期居家办公」' }] : [] },
+  { id:'bookshelf', p:'P2', run:c => has(c.v.lv_bookshelf,'需要') ? [{ section:'客厅', target:'lv_sofa', value:'灵活家具',
+      title:'学习型客厅的家具取舍', text:'做整墙书柜时建议减少沙发体量与茶几，用大长桌替代，客厅使用率会明显提高。', why:'因为你填了「书墙或大长桌：需要」' }] : [] },
+  { id:'dryer', p:'P1', run:c => has(c.v.bl_dryer,'是') ? [{ section:'阳台', target:'bl_hanger', value:'以烘干为主',
+      title:'有烘干机后，阳台可以重新规划', text:'如果以烘干为主，可以减少晾晒空间，把阳台改成家政柜加收纳，或做成休闲区。', why:'因为你填了「烘干机：是」' }] : [] },
+  { id:'washer', p:'P2', run:c => has(c.v.bl_washer,'是') ? [{ section:'阳台', target:'bl_other',
+      title:'洗衣机上方空间利用', text:'洗衣机上方可做吊柜或台面，增加收纳与分拣空间；注意预留龙头与插座高度。', why:'因为你填了「洗衣机：是」' }] : [] },
+  { id:'secondhand', p:'P2', run:c => has(c.v.br_secondhand,'需要') ? [{ section:'主卧', target:'br_clothes', value:'长衣',
+      title:'次净衣区的落位', text:'建议在衣柜侧边留出次净衣区，底部配脏衣篓，入住后衣物不容易堆在椅子或床尾。', why:'因为你选择了「次净衣区：需要」' }] : [] },
+  { id:'guest', p:'P2', run:c => has(c.v.guest_freq,'经常') ? [{ section:'认识你家', target:'stay_need', value:'需要',
+      title:'常来客人的留宿规划', text:'客人常来建议保留独立客房或可展开的沙发床，同时兼顾日常的储物与办公需求。', why:'因为你填了「聚会与来客频率：经常」' }] : [] },
+  { id:'belief', p:'P2', run:c => (has(c.v.fengshui,'是') || has(c.v.religion,'有')) ? [{ section:'认识你家', target:'base_other',
+      title:'信仰与风水相关的预留', text:'建议提前说明供奉位置或风水上的具体要求（门位、镜面、床位），设计阶段一次性规避。', why:'因为你填了信仰或风水相关的选项' }] : [] },
+  { id:'clean', p:'P2', run:c => anyOf(c.v.clean_tools,['洗地机','扫地机器人']) ? [{ section:'收纳与家政', target:'sc_housekeeping', value:'需要',
+      title:'家政柜与清洁工具收纳', text:'建议做一组家政柜集中收纳清洁工具，并在柜内预留插座给吸尘器与洗地机充电。', why:'因为你填了清洁工具：'+(c.v.clean_tools||[]).join('、') }] : [] },
+  { id:'luggage', p:'P1', run:c => (Number(c.v.sc_luggage) >= 2 || has(c.v.sc_storage_items,'露营装备')) ? [{ section:'收纳与家政', target:'sc_storage_room', value:'独立储物间',
+      title:'行李箱与户外装备的收纳位置', text:'建议在储物间或衣柜顶柜预留大件存放区，避免 28 寸行李箱堆在玄关。', why:'因为你填了大件物品的收纳需求' }] : [] },
+  { id:'boots', p:'P2', run:c => Number(c.v.ex_boots) > 0 ? [{ section:'玄关', target:'ex_shoe', value:'需要',
+      title:'高筒靴需要活动层板', text:'有高筒靴时鞋柜建议做活动层板，留出 30cm 以上层高，不要全做均分格。', why:'因为你填了「高筒靴数量：'+c.v.ex_boots+' 双」' }] : [] },
+
+  /* ---- 按空间实例计算 ---- */
+  { id:'bath-tub', p:'P1', run:c => c.inst('卫生间').filter(b => has(b.values.wc_bath,'浴缸')).map(b => ({
+      section:'卫生间', inst:b, target:'wc_other',
+      title:'浴缸尺寸与给排水需要现场确认', text:'常见浴缸长度 1.5-1.7m，需要确认空间尺寸与给排水位置，建议在量房时一起定。',
+      why:'因为你为「'+c.name(b)+'」选了「泡澡需求：'+b.values.wc_bath+'」' })) },
+  { id:'bath-smart', p:'P1', run:c => c.inst('卫生间').filter(b => has(b.values.wc_toilet,'智能马桶')).map(b => ({
+      section:'卫生间', inst:b, target:'wc_other',
+      title:'智能马桶的插座与防溅', text:'智能马桶需要在马桶侧预留插座并做好防溅；如考虑移位，需现场确认排污条件。',
+      why:'因为你为「'+c.name(b)+'」选了智能马桶' })) },
+  { id:'bath-dry', p:'P2', run:c => c.inst('卫生间').filter(b => has(b.values.wc_drywet,'否')).map(b => ({
+      section:'卫生间', inst:b, target:'wc_other',
+      title:'不做干湿分离的取舍', text:'不做干湿分离时，建议浴室柜选防潮材质，并把插座与镜柜尽量外移。',
+      why:'因为你为「'+c.name(b)+'」选了「干湿分离：否」' })) },
+  { id:'room-kid', p:'P1', run:c => c.inst('其他卧室').filter(r => has(r.values.room_type,'儿童房')).map(r => ({
+      section:'其他卧室', inst:r, target:'room_other',
+      title:'儿童房要留成长空间', text:'建议预留可升降书桌与活动空间，家具做倒圆角处理，衣柜 1.2m 以下留给孩子自己收纳。',
+      why:'因为你把「'+c.name(r)+'」设为儿童房' })) },
+  { id:'room-elder', p:'P1', run:c => c.inst('其他卧室').filter(r => has(r.values.room_type,'长辈房')).map(r => ({
+      section:'其他卧室', inst:r, target:'room_other',
+      title:'长辈房的适老细节', text:'建议床头留出储物与紧急按钮位置，通道净宽不小于 80cm，地面避免高差与门槛。',
+      why:'因为你把「'+c.name(r)+'」设为长辈房' })) },
+  { id:'room-bunk', p:'P2', run:c => c.inst('其他卧室').filter(r => has(r.values.room_bunk,'高低床')).map(r => ({
+      section:'其他卧室', inst:r, target:'room_other',
+      title:'高低床的安全与层高', text:'高低床需要确认层高与护栏高度，上铺建议靠墙布置并预留插座与阅读灯。',
+      why:'因为你为「'+c.name(r)+'」选了高低床' })) }
+];
+
+/* ============ 状态 ============ */
+let V = {};            // 固定字段
+let INST = {};         // 实例空间
+let AI = {};           // fieldKey -> true
+let DK = {};           // ruleKey -> {status, text}
+let NO_NEED = {};      // 已声明"没有该空间需求"的实例分区
+let QUIET = false;
+let DISMISS = 0;
+let EXPANDED = null;   // 移动端一次只展开一个大类
+let REVEAL = false;
+let seq = 0;
+let doneOrder = [];    // 已处理卡片的展示顺序
+
+const STORE_KEY = 'zy_demand_mobile_v01';
+const $ = s => document.querySelector(s);
+const fk = (inst, id) => inst ? inst.key + '.' + id : id;
+const empty = v => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
+const labelOf = id => (byId.get(id) || {}).label || id;
+const recFields = SPEC.filter(f => f.suggest === '推荐填写');
+
+function newInst(section, typeValue) {
+  seq += 1;
+  const def = INSTANCE_DEF[section];
+  const inst = { key: 'i' + seq, section, values: {} };
+  if (def.typeField && typeValue) inst.values[def.typeField] = typeValue;
+  return inst;
+}
+function ensureInstances() {
+  Object.entries(INSTANCE_DEF).forEach(([section, def]) => {
+    if (!INST[section]) INST[section] = def.defaults.map(n => newInst(section, n));
+  });
+}
+function nameOf(section, inst, index) {
+  const def = INSTANCE_DEF[section];
+  const type = def.typeField ? inst.values[def.typeField] : '';
+  const base = def.namePrefix + (index + 1);
+  if (section === '卫生间') return type || base;
+  if (section === '书房与电竞房') return base;
+  return base + (type ? ' · ' + type : '');
+}
+function instName(inst) {
+  const list = INST[inst.section] || [];
+  return nameOf(inst.section, inst, list.indexOf(inst));
+}
+function typeOf(inst) {
+  const def = INSTANCE_DEF[inst.section];
+  return def.typeField ? inst.values[def.typeField] : '';
+}
+function visibleFields(section, inst) {
+  const t = typeOf(inst);
+  return (SECTIONS.find(s => s.name === section) || { fields: [] }).fields
+    .filter(f => f.applies === '全部' || f.applies === t);
+}
+function findInst(key) {
+  const [instKey] = key.includes('.') ? key.split('.') : [null];
+  return instKey ? Object.values(INST).flat().find(i => i.key === instKey) : null;
+}
+
+/* ============ 计算 ============ */
+function ctx() {
+  return { v: V, inst: section => INST[section] || [], name: instName, type: typeOf };
+}
+function runRules() {
+  const c = ctx();
+  const out = [];
+  RULES.forEach(r => {
+    let list = [];
+    try { list = r.run(c) || []; } catch (e) { list = []; }
+    list.forEach(item => out.push({
+      ...item, ruleId: r.id, id: r.id + '#' + (item.inst ? item.inst.key : '-'),
+      p: r.p, kind: r.kind || 'discover'
+    }));
+  });
+  return out;
+}
+function fillSuggestions() {
+  const out = [];
+  recFields.filter(f => f.scope === '固定' && empty(V[f.id])).slice(0, 2).forEach(f => out.push({
+    id: 'fill#' + f.id, ruleId: 'fill#' + f.id, p: 'P1', kind: 'fill', section: f.section, target: f.id,
+    title: '还差一项关键信息：' + f.label, text: '这项直接影响助手给建议的准确度，点一下就能补上。', why: '推荐填写项未完成'
+  }));
+  Object.entries(INSTANCE_DEF).forEach(([section, def]) => {
+    (INST[section] || []).forEach((inst, i) => {
+      if (def.typeField && empty(inst.values[def.typeField])) out.push({
+        id: 'type#' + inst.key, ruleId: 'type#' + inst.key, p: 'P1', kind: 'fill', section, inst,
+        target: def.typeField, title: (def.namePrefix + (i + 1)) + ' 还没选房间用途',
+        text: '选完用途后，这里只显示相关的需求项，不用填无关内容。', why: '房间用途会影响需要了解的内容'
+      });
+    });
+  });
+  return out;
+}
+const P_ORDER = { P0: 0, P1: 1, P2: 2 };
+function allSuggestions() {
+  const list = [...fillSuggestions(), ...runRules()];
+  return list.sort((a, b) => (P_ORDER[a.p] - P_ORDER[b.p]) || (a.kind === 'risk' ? -1 : 1));
+}
+function openSuggestions() { return allSuggestions().filter(s => !DK[s.id] || DK[s.id].status === 'new'); }
+function doneSuggestions() {
+  const alive = new Map(allSuggestions().map(s => [s.id, s]));
+  return doneOrder.map(id => alive.get(id)).filter(Boolean);
+}
+function foundCount() { return allSuggestions().length; }
+function recStats() {
+  let total = 0, done = 0;
+  recFields.forEach(f => {
+    if (f.scope === '固定') { total += 1; if (!empty(V[f.id])) done += 1; }
+    else (INST[f.section] || []).forEach(inst => { total += 1; if (!empty(inst.values[f.id])) done += 1; });
+  });
+  return { total, done };
+}
+function sectionStats(name) {
+  const sec = SECTIONS.find(s => s.name === name);
+  if (sec.scope === '固定') {
+    return { filled: sec.fields.filter(f => !empty(V[f.id])).length, total: sec.fields.length, count: null };
+  }
+  const list = INST[name] || [];
+  let total = 0, filled = 0;
+  list.forEach(inst => {
+    const fields = visibleFields(name, inst);
+    total += fields.length;
+    filled += fields.filter(f => !empty(inst.values[f.id])).length;
+  });
+  return { filled, total, count: list.length };
+}
+
+/* ============ 渲染：控件 ============ */
+function controlOf(f, inst) {
+  const key = fk(inst, f.id);
+  const v = inst ? inst.values[f.id] : V[f.id];
+  if (f.type === '单选' || f.type === '多选') {
+    const multi = f.type === '多选';
+    return '<div class="chips">' + f.options.map(o =>
+      '<button class="chip' + (multi ? (has(v, o) ? ' on' : '') : (v === o ? ' on' : '')) +
+      '" data-act="chip" data-key="' + key + '" data-val="' + o.replace(/"/g, '&quot;') + '">' + o + '</button>').join('') + '</div>';
+  }
+  if (f.type === '长文本') return '<textarea data-act="input" data-key="' + key + '" placeholder="' + (f.unit || '') + '">' + (v || '') + '</textarea>';
+  const t = f.type === '数字' ? 'number' : (f.type === '日期' ? 'month' : 'text');
+  const val = v === undefined || v === null ? '' : v;
+  return '<input type="' + t + '" data-act="input" data-key="' + key + '" value="' + String(val).replace(/"/g, '&quot;') +
+    '" placeholder="' + (f.unit || '') + '" />' + (f.unit && f.type === '数字' ? '<span class="unit">' + f.unit + '</span>' : '');
+}
+function fieldHtml(f, inst) {
+  const key = fk(inst, f.id);
+  const wide = f.type === '长文本';
+  return '<div class="field' + (wide ? ' wide' : '') + '" id="fi-' + key + '">' +
+    '<label>' + f.label + (f.suggest === '推荐填写' ? '<span class="rec">推荐填写</span>' : '') +
+    (AI[key] ? '<span class="ai-badge" data-act="undo" data-key="' + key + '">✦ 助手建议 · 撤销</span>' : '') +
+    '</label>' + controlOf(f, inst) + '</div>';
+}
+function groupsHtml(fields, inst) {
+  const groups = new Map();
+  fields.forEach(f => { if (!groups.has(f.group)) groups.set(f.group, []); groups.get(f.group).push(f); });
+  return [...groups.entries()].map(([g, list]) =>
+    '<div class="group-title">' + g + '</div><div class="grid">' + list.map(f => fieldHtml(f, inst)).join('') + '</div>').join('');
+}
+
+/* ============ 渲染：表单（手风琴 + 按需渲染） ============ */
+function sectionBody(s) {
+  if (s.scope === '固定') return groupsHtml(s.fields, null);
+  const list = INST[s.name] || [];
+  const def = INSTANCE_DEF[s.name];
+  if (!list.length) {
+    return '<div class="inst-empty">' + (NO_NEED[s.name] ? '已确认：这个空间暂时没有需求' : '还没有添加' + s.name) +
+      '<div class="inst-actions">' +
+      '<button class="btn btn-sm" data-act="no-need" data-sec="' + s.name + '">' + (NO_NEED[s.name] ? '恢复' : '没有需求') + '</button>' +
+      '<button class="btn btn-sm btn-primary" data-act="add-inst" data-sec="' + s.name + '">+ 添加' + def.namePrefix + '</button>' +
+      '</div></div>';
+  }
+  const typeField = def.typeField ? byId.get(def.typeField) : null;
+  return list.map((inst, idx) => {
+    const fields = visibleFields(s.name, inst);
+    const filled = fields.filter(f => !empty(inst.values[f.id])).length;
+    return '<div class="inst-card" data-inst="' + inst.key + '">' +
+      '<div class="inst-head"><span class="inst-title">' + nameOf(s.name, inst, idx) + '</span>' +
+      '<span class="inst-sub">' + filled + ' / ' + fields.length + ' 项</span>' +
+      (list.length > 1 ? '<button class="btn btn-sm" data-act="del-inst" data-sec="' + s.name + '" data-key="' + inst.key + '">删除</button>' : '') +
+      '</div>' +
+      (typeField ? '<div class="type-row"><span class="type-label">' + typeField.label + '</span>' + controlOf(typeField, inst) + '</div>' : '') +
+      groupsHtml(fields.filter(f => f.id !== (def.typeField || '')), inst) + '</div>';
+  }).join('') +
+    '<div class="inst-actions">' +
+    (list.length < def.max
+      ? '<button class="btn btn-sm" data-act="add-inst" data-sec="' + s.name + '">+ 添加' + def.namePrefix + '（还可加 ' + (def.max - list.length) + ' 个）</button>'
+      : '<span class="inst-sub">已达上限 ' + def.max + ' 个</span>') +
+    '</div>';
+}
+
+function renderForm() {
+  const col = $('#form-col');
+  if (!HAS_SPEC) {
+    col.innerHTML = '<div class="card hint-card"><div class="hint-title">这是构建用的模板文件</div>' +
+      '<div class="hint-text">模板不包含字段数据，请打开：<br/><b>mobile/装修需求发现助手_小程序端Demo_V0.1.html</b></div></div>';
+    return;
+  }
+  const parts = [];
+  /* 还没动过任何字段时才提示示例数据：默认创建的主卫、客卫不算已填写 */
+  const touched = Object.keys(V).length > 0 || Object.values(INST).flat().some(i =>
+    Object.keys(i.values).some(k => k !== (INSTANCE_DEF[i.section] || {}).typeField));
+  if (!touched) {
+    parts.push('<div class="card hint-card"><div class="hint-title">先看看完整流程？</div>' +
+      '<div class="hint-text">一键填入示例需求：89㎡ 旧房翻新 · 三口之家养猫 · 两个卫生间。填完后右下角的助手会立刻给出建议。</div>' +
+      '<button class="btn btn-primary" data-act="demo">填入示例需求</button></div>');
+  }
+  SECTIONS.forEach((s, i) => {
+    const open = EXPANDED === s.name;
+    const st = sectionStats(s.name);
+    const meta = s.scope === '固定' ? st.filled + ' / ' + st.total : st.count + ' 个空间';
+    const stateCls = st.filled === 0 ? '' : (st.filled >= st.total && st.total ? 'done' : 'part');
+    parts.push('<section class="card sec-card' + (open ? ' open' : '') + (stateCls ? ' ' + stateCls : '') + '" data-sec="' + s.name + '">' +
+      '<div class="sec-head" data-act="toggle" data-sec="' + s.name + '">' +
+      '<span class="sec-num">' + (i + 1) + '</span><span class="sec-title">' + s.name + '</span>' +
+      '<span class="sec-meta">' + meta + '</span><span class="sec-arrow">▶</span></div>' +
+      (open ? '<div class="sec-body">' + sectionBody(s) + '</div>' : '') +
+      '</section>');
+  });
+  parts.push('<div class="card tool-card"><button class="btn" data-act="reset">重置全部内容</button>' +
+    '<div class="tool-note">演示数据仅保存在本机浏览器，刷新后仍在。</div></div>');
+  col.innerHTML = parts.join('');
+}
+
+/* ============ 渲染：分区导航 ============ */
+function renderNav() {
+  const nav = $('#sec-nav');
+  nav.innerHTML = SECTIONS.map(s => {
+    const st = sectionStats(s.name);
+    const cls = st.filled === 0 ? '' : (st.filled >= st.total && st.total ? 'done' : 'part');
+    return '<button class="snav ' + cls + (EXPANDED === s.name ? ' on' : '') + '" data-act="jump" data-sec="' + s.name + '">' +
+      '<i></i>' + s.name + '</button>';
+  }).join('');
+  const on = nav.querySelector('.snav.on');
+  if (on) nav.scrollLeft = Math.max(0, on.offsetLeft - 60);
+}
+
+/* ============ 渲染：进度与悬浮球 ============ */
+function renderProgress() {
+  const { total, done } = recStats();
+  const pct = total ? Math.round(done / total * 100) : 0;
+  $('#prog-bar').style.width = pct + '%';
+  $('#prog-num').textContent = '清晰度 ' + pct + '%';
+  $('#c-rec').textContent = done + '/' + total;
+}
+function renderFab() {
+  const n = QUIET ? 0 : openSuggestions().length;
+  const badge = $('#fab-badge');
+  badge.textContent = n > 99 ? '99+' : String(n);
+  badge.style.display = n > 0 ? 'grid' : 'none';
+  $('#fab').classList.toggle('quiet', QUIET);
+}
+
+/* ============ 渲染：发现弹层 ============ */
+function dkCard(s, done) {
+  const kind = s.kind === 'risk' ? '风险提醒' : (s.kind === 'fill' ? '信息补充' : '需求发现');
+  const scopeTag = s.inst ? '<span class="dk-scope">' + instName(s.inst) + '</span>' : '';
+  const head = '<div class="dk-top"><span class="prio ' + s.p.toLowerCase() + '">' + s.p + '</span>' +
+    '<span class="dk-kind">' + kind + '</span>' + scopeTag + '</div>';
+  if (done) {
+    return '<div class="dk done" data-rule="' + s.id + '">' + head +
+      '<div class="dk-title">' + s.title + '</div>' +
+      '<div class="dk-done-tag">' + (s.status === 'adopted' ? '✓ 已加入需求' : '已忽略') + '</div></div>';
+  }
+  return '<div class="dk ' + s.p.toLowerCase() + (s.kind === 'risk' ? ' risk' : '') + '" data-rule="' + s.id + '">' + head +
+    '<div class="dk-title">' + s.title + '</div>' +
+    '<div class="dk-text">' + s.text + '</div>' +
+    '<div class="dk-why">' + s.why + '</div>' +
+    '<span class="dk-target" data-act="goto" data-key="' + fk(s.inst, s.target) + '">→ ' +
+    (s.inst ? instName(s.inst) + ' · ' : '') + labelOf(s.target) + '</span>' +
+    (s.kind === 'fill'
+      ? '<div class="dk-acts"><button class="btn btn-soft" data-act="goto" data-key="' + fk(s.inst, s.target) + '">去填写</button></div>'
+      : '<div class="dk-acts"><button class="btn btn-primary" data-act="adopt" data-id="' + s.id + '">加入</button>' +
+        '<button class="btn" data-act="edit" data-id="' + s.id + '">改一改</button>' +
+        '<button class="btn" data-act="ignore" data-id="' + s.id + '">不感兴趣</button></div>') +
+    '</div>';
+}
+
+function renderSheet() {
+  if (!HAS_SPEC) { $('#dk-list').innerHTML = '<div class="empty">模板文件不含字段数据</div>'; return; }
+  const open = openSuggestions();
+  const done = Object.values(DK).filter(d => d.status !== 'new').length;
+  $('#c-found').textContent = foundCount();
+  $('#c-handled').textContent = done;
+  $('#c-open').textContent = open.length;
+  const resume = $('#resume');
+  if (done > 0 && open.length > 0) {
+    resume.style.display = 'block';
+    resume.textContent = '你已处理 ' + done + ' 条发现，还有 ' + open.length + ' 条待看';
+  } else resume.style.display = 'none';
+
+  const list = $('#dk-list');
+  if (QUIET) {
+    list.innerHTML = '<div class="quiet">已进入静默模式，暂停主动建议。<br/>你可以点下方「恢复建议」重新开启。</div>';
+    return;
+  }
+  const handled = doneSuggestions();
+  if (!open.length && !handled.length) {
+    list.innerHTML = '<div class="empty">当前没有新的发现。<br/>继续填写表单，助手会自动跟进。</div>';
+    return;
+  }
+  const shown = REVEAL ? open : open.slice(0, 3);
+  let html = shown.map(s => dkCard(s, false)).join('');
+  if (open.length > 3 && !REVEAL) {
+    html += '<div class="more" data-act="reveal">展开更多（还有 ' + (open.length - 3) + ' 条）</div>';
+  }
+  const recent = handled.slice(-3).reverse();
+  if (recent.length) {
+    html += '<div class="list-label">最近处理</div>' + recent.map(s => dkCard(s, true)).join('');
+  }
+  list.innerHTML = html;
+}
+
+function renderAll() { renderForm(); renderNav(); renderProgress(); renderFab(); renderSheet(); save(); }
+
+/* ============ 动作 ============ */
+function setValue(key, val) {
+  const [instKey, id] = key.includes('.') ? key.split('.') : [null, key];
+  const inst = instKey ? findInst(key) : null;
+  if (inst) inst.values[id] = val; else V[id] = val;
+  delete AI[key];
+}
+function getSuggestion(id) { return allSuggestions().find(s => s.id === id); }
+
+function adopt(id, customText) {
+  const s = getSuggestion(id);
+  if (!s) return;
+  const f = byId.get(s.target);
+  const text = customText || s.text;
+  const key = fk(s.inst, s.target);
+  const cur = s.inst ? s.inst.values[s.target] : V[s.target];
+  if (f && f.type === '单选' && s.value) {
+    setValue(key, s.value);
+  } else if (f && (f.type === '长文本' || f.type === '文本')) {
+    setValue(key, cur ? (cur + '\n' + text) : text);
+  } else if (f && f.type === '多选') {
+    const list = Array.isArray(cur) ? cur.slice() : [];
+    const opt = (f.options || []).find(o => text.includes(o)) || (s.value || text);
+    if (!list.includes(opt)) list.push(opt);
+    setValue(key, list);
+  } else {
+    setValue(key, text);
+  }
+  AI[key] = true;
+  DK[id] = { status: 'adopted', text };
+  doneOrder = doneOrder.filter(x => x !== id).concat(id);
+  toast('已写入「' + (s.inst ? instName(s.inst) + ' · ' : '') + labelOf(s.target) + '」，可在字段旁撤销');
+  renderAll();
+}
+function ignore(id) {
+  DK[id] = { status: 'ignored' };
+  doneOrder = doneOrder.filter(x => x !== id).concat(id);
+  DISMISS += 1;
+  if (DISMISS >= 3 && !QUIET) { QUIET = true; toast('连续 3 条不感兴趣，已进入静默模式'); }
+  else toast('已忽略，这条建议不再出现');
+  renderAll();
+}
+function undoAI(key) { setValue(key, ''); toast('已撤销该字段的助手建议'); renderAll(); }
+
+function addInstance(section, typeValue) {
+  if (!INST[section]) INST[section] = [];
+  if (INST[section].length >= INSTANCE_DEF[section].max) return;
+  INST[section].push(newInst(section, typeValue));
+  NO_NEED[section] = false;
+  EXPANDED = section;
+  renderAll();
+  toast('已添加' + INSTANCE_DEF[section].namePrefix + '，选一下用途就能看到相关需求');
+}
+function removeInstance(section, key) {
+  const inst = (INST[section] || []).find(i => i.key === key);
+  if (!inst) return;
+  const filled = Object.values(inst.values).filter(v => !empty(v)).length;
+  if (filled && !confirm('「' + instName(inst) + '」已经填了 ' + filled + ' 项内容，确认删除吗？')) return;
+  INST[section] = INST[section].filter(i => i.key !== key);
+  Object.keys(AI).forEach(k => { if (k.startsWith(key + '.')) delete AI[k]; });
+  renderAll();
+  toast('已删除该空间');
+}
+
+/* 移动端定位：收起弹层 → 展开所属大类 → 滚动高亮 */
+function gotoField(key) {
+  closeSheets();
+  const [id] = key.includes('.') ? key.split('.') : [key];
+  const f = byId.get(id);
+  const secName = f ? f.section : null;
+  if (secName && EXPANDED !== secName) { EXPANDED = secName; renderForm(); renderNav(); }
+  const jump = () => {
+    const el = document.getElementById('fi-' + key);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1800);
+  };
+  toast('已定位到「' + (secName ? secName + ' · ' : '') + labelOf(id) + '」');
+  requestAnimationFrame(() => setTimeout(jump, 60));
+}
+function jumpSection(name) {
+  EXPANDED = name;
+  renderForm(); renderNav();
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.sec-card[data-sec="' + name + '"]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function summaryText() {
+  const lines = [];
+  const adopted = Object.values(DK).filter(d => d.status === 'adopted').map(d => d.text);
+  lines.push('【需求摘要】' + (V.base_area || '-') + '㎡ · ' + (V.base_house_state || '-') + ' · ' +
+    ((V.style_pref || []).join('、') || '-') + ' · 预算 ' + (V.budget_total || '-'));
+  lines.push('');
+  lines.push('一、认识你家');
+  const base = SECTIONS.find(s => s.name === '认识你家');
+  const baseItems = base.fields.filter(f => !empty(V[f.id]))
+    .map(f => f.label + '：' + (Array.isArray(V[f.id]) ? V[f.id].join('、') : V[f.id]));
+  lines.push('  ' + (baseItems.join('；') || '（待补充）'));
+  SECTIONS.filter(s => s.name !== '认识你家' && s.name !== '补充说明').forEach(s => {
+    if (s.scope === '固定') {
+      const items = s.fields.filter(f => !empty(V[f.id]))
+        .map(f => f.label + '：' + (Array.isArray(V[f.id]) ? V[f.id].join('、') : V[f.id]));
+      if (items.length) { lines.push(''); lines.push('· ' + s.name); lines.push('  ' + items.join('；')); }
+    } else {
+      const list = INST[s.name] || [];
+      if (!list.length) return;
+      lines.push('');
+      lines.push('· ' + s.name + '（' + list.length + ' 个）');
+      list.forEach((inst, i) => {
+        const items = visibleFields(s.name, inst).filter(f => !empty(inst.values[f.id]))
+          .map(f => f.label + '：' + (Array.isArray(inst.values[f.id]) ? inst.values[f.id].join('、') : inst.values[f.id]));
+        lines.push('  ' + nameOf(s.name, inst, i) + '：' + (items.join('；') || '（未填写）'));
+      });
+    }
+  });
+  if (adopted.length) {
+    lines.push('');
+    lines.push('二、助手发现并确认的需求');
+    adopted.forEach(t => lines.push('  · ' + t));
+  }
+  if (!empty(V.note_free)) { lines.push(''); lines.push('三、其他补充'); lines.push('  ' + V.note_free); }
+  return lines.join('\n');
+}
+
+/* ============ 弹层控制 ============ */
+function openSheet() {
+  $('#sheet').classList.add('on');
+  $('#mask').classList.add('on');
+  $('#fab').classList.add('hide');
+  $('#sheet').classList.remove('full');
+}
+function openConfirm(title, body, okText) {
+  $('#cf-title').textContent = title;
+  $('#cf-body').textContent = body;
+  $('#cf-ok').textContent = okText || '知道了';
+  $('#confirm').classList.add('on');
+  $('#mask').classList.add('on');
+  $('#fab').classList.add('hide');
+}
+function openSummary() {
+  $('#sum-text').textContent = summaryText();
+  $('#summary-page').classList.add('on');
+}
+function closeSheets() {
+  $('#sheet').classList.remove('on', 'full');
+  $('#confirm').classList.remove('on');
+  $('#mask').classList.remove('on');
+  $('#fab').classList.remove('hide');
+}
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+/* ============ 示例数据 ============ */
+function fillDemo() {
+  V = Object.assign({}, V, {
+    base_house_state: '旧房翻新', base_area: 89, live_type: '长期居住',
+    live_members: ['夫妻', '儿子'], live_pet: ['猫'], live_pet_count: 1,
+    live_elder: '否', live_allergy: '否', budget_total: '20-30万', mode: '半包',
+    style_pref: ['现代简约'], office_need: '偶尔', date_finish: '2026-10', date_movein: '2026-12',
+    kt_freq: '经常', kt_form: '开放式', kt_height_m: 175, kt_height_f: 162, kt_dishwasher: '前开式',
+    lv_bookshelf: '需要', bl_washer: '是', bl_dryer: '是', dn_people: 3, br_bed: '1.8m',
+    ex_boots: 2, sc_luggage: 2, clean_tools: ['扫地机器人'], guest_freq: '偶尔'
+  });
+  INST['卫生间'] = [newInst('卫生间', '主卫'), newInst('卫生间', '客卫')];
+  Object.assign(INST['卫生间'][0].values, { wc_drywet: '是', wc_toilet: '智能马桶', wc_bath: '浴缸加淋浴' });
+  Object.assign(INST['卫生间'][1].values, { wc_drywet: '是', wc_toilet: '普通马桶', wc_bath: '淋浴' });
+  INST['其他卧室'] = [newInst('其他卧室', '儿童房')];
+  Object.assign(INST['其他卧室'][0].values, { room_type: '儿童房', room_bed: '1.5m', room_desk: '可升降书桌' });
+  INST['书房与电竞房'] = [];
+  EXPANDED = '认识你家';
+  renderAll();
+  toast('已填入示例：89㎡ 旧房翻新 + 养猫 + 两个卫生间，点右下角助手看建议');
+}
+
+/* ============ 草稿 ============ */
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      V, INST, AI, DK, NO_NEED, QUIET, DISMISS, EXPANDED, seq, doneOrder
+    }));
+  } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    V = d.V || {}; AI = d.AI || {}; DK = d.DK || {}; NO_NEED = d.NO_NEED || {};
+    QUIET = !!d.QUIET; DISMISS = d.DISMISS || 0; seq = d.seq || 0;
+    EXPANDED = d.EXPANDED || null;
+    doneOrder = Array.isArray(d.doneOrder) ? d.doneOrder : [];
+    INST = {};
+    Object.entries(d.INST || {}).forEach(([sec, list]) => {
+      INST[sec] = list.map(i => ({ key: i.key, section: i.section, values: i.values || {} }));
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ============ 事件 ============ */
+let refreshTimer = null;
+function debouncedRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => { renderProgress(); renderFab(); renderSheet(); renderNav(); save(); }, 500);
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'toggle') {
+    const name = el.dataset.sec;
+    EXPANDED = EXPANDED === name ? null : name;
+    renderForm(); renderNav();
+  } else if (act === 'jump') {
+    jumpSection(el.dataset.sec);
+  } else if (act === 'chip') {
+    const key = el.dataset.key;
+    const val = el.dataset.val;
+    const [instKey, id] = key.includes('.') ? key.split('.') : [null, key];
+    const f = byId.get(id);
+    const inst = findInst(key);
+    if (f.type === '多选') {
+      const cur = Array.isArray(inst ? inst.values[id] : V[id]) ? (inst ? inst.values[id] : V[id]).slice() : [];
+      const i = cur.indexOf(val);
+      if (i >= 0) cur.splice(i, 1); else cur.push(val);
+      setValue(key, cur);
+    } else {
+      setValue(key, (inst ? inst.values[id] : V[id]) === val ? '' : val);
+    }
+    renderForm(); debouncedRefresh();
+  } else if (act === 'add-inst') {
+    addInstance(el.dataset.sec);
+  } else if (act === 'del-inst') {
+    removeInstance(el.dataset.sec, el.dataset.key);
+  } else if (act === 'no-need') {
+    NO_NEED[el.dataset.sec] = !NO_NEED[el.dataset.sec];
+    renderAll();
+  } else if (act === 'goto') {
+    gotoField(el.dataset.key);
+  } else if (act === 'open-sheet') {
+    openSheet();
+  } else if (act === 'adopt') {
+    adopt(el.dataset.id);
+  } else if (act === 'ignore') {
+    ignore(el.dataset.id);
+  } else if (act === 'undo') {
+    undoAI(el.dataset.key);
+  } else if (act === 'reveal') {
+    REVEAL = true; renderSheet();
+  } else if (act === 'demo') {
+    fillDemo();
+  } else if (act === 'reset') {
+    V = {}; INST = {}; AI = {}; DK = {}; NO_NEED = {}; QUIET = false; DISMISS = 0;
+    REVEAL = false; seq = 0; doneOrder = []; EXPANDED = null;
+    ensureInstances();
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    renderAll(); toast('已重置');
+  } else if (act === 'edit') {
+    const id = el.dataset.id;
+    const s = getSuggestion(id);
+    const box = el.closest('.dk');
+    if (!s || !box) return;
+    box.querySelector('.dk-acts').innerHTML =
+      '<textarea class="dk-edit">' + s.text + '</textarea>' +
+      '<div class="dk-acts"><button class="btn btn-primary" data-act="edit-ok" data-id="' + id + '">确认写入</button>' +
+      '<button class="btn" data-act="edit-cancel">取消</button></div>';
+  } else if (act === 'edit-ok') {
+    const box = el.closest('.dk');
+    adopt(el.dataset.id, box.querySelector('.dk-edit').value.trim());
+  } else if (act === 'edit-cancel') {
+    renderSheet();
+  }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-act="input"]');
+  if (!el) return;
+  const key = el.dataset.key;
+  const [, id] = key.includes('.') ? key.split('.') : [null, key];
+  const f = byId.get(id);
+  const v = el.value;
+  setValue(key, f.type === '数字' ? (v === '' ? '' : Number(v)) : v);
+  debouncedRefresh();
+});
+
+$('#mask').onclick = closeSheets;
+$('#cf-cancel').onclick = closeSheets;
+$('#cf-ok').onclick = () => { closeSheets(); toast('演示中不真正提交，正式版会生成两份材料'); };
+$('#sum-back').onclick = $('#sum-done').onclick = () => $('#summary-page').classList.remove('on');
+$('#sum-copy').onclick = $('#sum-copy2').onclick = async () => {
+  try { await navigator.clipboard.writeText($('#sum-text').textContent); toast('已复制到剪贴板'); }
+  catch (e) { toast('当前浏览器不允许自动复制，请手动选择文本'); }
+};
+$('#btn-summary').onclick = openSummary;
+$('#btn-submit').onclick = () => {
+  const { total, done } = recStats();
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const open = openSuggestions().length;
+  const adoptedN = Object.values(DK).filter(d => d.status === 'adopted').length;
+  openConfirm('提交前检查',
+    '需求清晰度 ' + pct + '%（推荐项 ' + done + '/' + total + '）\n' +
+    '已确认助手发现 ' + adoptedN + ' 条\n' +
+    (open ? '还有 ' + open + ' 条发现未处理，可以先回去看看。' : '发现项已处理完毕。') +
+    '\n\n提交后会生成《需求意向书》和《量房确认清单》两份材料（演示中不实现）。',
+    open ? '仍要提交' : '知道了');
+};
+$('#btn-quiet').onclick = () => {
+  QUIET = !QUIET;
+  $('#btn-quiet').textContent = QUIET ? '恢复建议' : '暂时不要建议';
+  toast(QUIET ? '已进入静默模式' : '已恢复建议');
+  renderFab(); renderSheet(); save();
+};
+
+/* 抽屉拖拽：下滑关闭，上滑全屏 */
+(() => {
+  const sheet = $('#sheet');
+  let startY = null;
+  const grab = $('#sheet-grab');
+  grab.addEventListener('pointerdown', e => {
+    startY = e.clientY;
+    sheet.style.transition = 'none';
+    grab.setPointerCapture(e.pointerId);
+  });
+  grab.addEventListener('pointermove', e => {
+    if (startY === null) return;
+    const dy = e.clientY - startY;
+    sheet.style.transform = 'translate(-50%,' + dy + 'px)';
+  });
+  const end = e => {
+    if (startY === null) return;
+    const dy = e.clientY - startY;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    startY = null;
+    if (dy > 70) closeSheets();
+    else if (dy < -60) sheet.classList.add('full');
+    else if (sheet.classList.contains('full') && dy > 30) sheet.classList.remove('full');
+  };
+  grab.addEventListener('pointerup', end);
+  grab.addEventListener('pointercancel', end);
+})();
+
+/* ============ 启动 ============ */
+const restored = HAS_SPEC ? load() : false;
+ensureInstances();
+if (HAS_SPEC && !EXPANDED && !Object.keys(V).length) EXPANDED = '认识你家';
+$('#btn-quiet').textContent = QUIET ? '恢复建议' : '暂时不要建议';
+renderAll();
+if (HAS_SPEC && !Object.keys(V).length && !restored) {
+  setTimeout(() => toast('这是演示数据。点「填入示例需求」可以快速看完整流程'), 400);
+}
+</script>
+</body>
+</html>
