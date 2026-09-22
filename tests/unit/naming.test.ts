@@ -24,7 +24,7 @@ const DOCS = [
   'demo/README.md',
   'docs/装修需求发现助手_产品设计文档_V1.md',
   'docs/装修需求发现助手_技术方案_V1.md',
-  'docs/装修需求理解Agent_产品设计文档_V1.md',
+  'docs/设计需求解读台_产品设计文档_V1.md',
 ];
 
 describe('面向用户的表述', () => {
@@ -59,20 +59,18 @@ describe('文档一致性', () => {
     expect(doc).toContain('不做模型调用');
   });
 
-  it('需求理解 Agent 文档只让模型做理解与追问', () => {
-    const doc = read('docs/装修需求理解Agent_产品设计文档_V1.md');
-    expect(doc).toContain('模型只做理解与追问');
-    expect(doc).toContain('刻意不产出发现、建议与摘要');
+  it('设计需求解读台文档把模型的产出限定为「要问的问题」', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    expect(doc).toContain('量房沟通清单');
+    expect(doc).toContain('每条清单项必须能指到字段');
   });
 
-  it('需求理解 Agent 文档承接需求采集，不引入外部项目的说法', () => {
-    const doc = read('docs/装修需求理解Agent_产品设计文档_V1.md');
-    // 功能编号接续产品文档的 F1–F8
-    expect(doc).toContain('| F9 |');
-    expect(doc).toContain('| F14 |');
-    // 与现有实现挂接，而不是另起一套
-    expect(doc).toContain('draft.aiMarks');
-    expect(doc).toContain('需求清晰度');
+  it('设计需求解读台文档承接采集端，不引入外部项目的说法', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    // 接采集端的数据与资产
+    expect(doc).toContain('aiMarks');
+    expect(doc).toContain('量房确认清单');
+    expect(doc).toContain('推荐填写');
     // 不引入不属于本项目的机制
     expect(doc).not.toContain('免责等级');
     expect(doc).not.toContain('输出契约');
