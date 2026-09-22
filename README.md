@@ -50,20 +50,23 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 小程序端用微信开发者工具打开 `app/`（`project.config.json` 的 `miniprogramRoot` 指向 `dist/weapp/`）。
 
 ## 上线（Web 端 / 展示版）
-+
-+```bash
-+pnpm run build:h5          # 产物：app/dist/h5
-+pnpm run preview:h5        # 本机 http://127.0.0.1:4173
-+pnpm run preview:h5:lan    # 局域网/手机可访问
-+pnpm run test:preview      # 上线前冒烟：HTTP 行为 + 真实地址首屏
-+pnpm run test:live         # 上线后验证线上地址
-+pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
-+```
-+
-+上线方式、缓存策略、发版流程见 `deploy/README.md`；Vercel / Netlify / Nginx 的现成配置在 `deploy/` 下。
-+同一份产物宽屏是 Web 端、窄屏是展示版，不必分别构建。
-+
-+## 验证清单
+
+- 线上地址（GitHub Pages）：<https://xinhao021121-web.github.io/zhuangxiu-demand/>
+- 仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
+
+```bash
+pnpm run build:h5          # 产物：app/dist/h5
+pnpm run preview:h5        # 本机 http://127.0.0.1:4173
+pnpm run preview:h5:lan    # 局域网/手机可访问
+pnpm run test:preview      # 上线前冒烟：HTTP 行为 + 真实地址首屏
+pnpm run test:live         # 上线后验证线上地址
+pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
+```
+
+上线方式、缓存策略、发版流程见 `deploy/README.md`；Vercel / Netlify / Nginx 的现成配置在 `deploy/` 下。
+同一份产物宽屏是 Web 端、窄屏是展示版，不必分别构建。
+
+## 验证清单
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |

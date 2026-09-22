@@ -1,6 +1,6 @@
 # Web 端上线
-+
-+当前线上地址：<https://xinhao021121-web.github.io/zhuangxiu-demand/>（仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>）
+
+当前线上地址：<https://xinhao021121-web.github.io/zhuangxiu-demand/>（仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>）
 
 Web 端与展示版是同一份 H5 产物（`app/dist/h5`）：宽屏是 Web 端，窄屏是展示版。
 产物是纯静态站点，形态上只有一个要求——**必须挂在某个目录下用 HTTP 访问**，
