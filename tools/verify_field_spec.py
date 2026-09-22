@@ -25,7 +25,7 @@ BOOK = (
     / "装修需求采集表_字段清单_V2.xlsx"
 )
 
-SUGGEST_VALUES = {"推荐填写", "选填"}
+SUGGEST_VALUES = {"推荐填写", "选填", "实例必选"}
 
 
 def doc_counts() -> dict[str, int]:
@@ -79,6 +79,15 @@ def main() -> int:
     if f"{survey_n} 项" not in text:
         problems.append(f"文档未声明量房确认项数 {survey_n}")
 
+    m = re.search(r"(\d+) 项标为「推荐填写」、(\d+) 项为实例必选", text)
+    if not m:
+        problems.append("文档未声明推荐填写与实例必选的数量")
+    else:
+        if int(m.group(1)) != suggests.count("推荐填写"):
+            problems.append(f"推荐填写数量不一致：文档 {m.group(1)} / 清单 {suggests.count('推荐填写')}")
+        if int(m.group(2)) != suggests.count("实例必选"):
+            problems.append(f"实例必选数量不一致：文档 {m.group(2)} / 清单 {suggests.count('实例必选')}")
+
     if bad:
         problems.append("字段清单出现必填或非法填写建议：" + "、".join(bad[:6]))
     if suggests.count("推荐填写") == 0:
@@ -92,7 +101,7 @@ def main() -> int:
 
     print(
         f"PASS 大类 {len(book)} 个、表单字段 {total} 个、推荐填写 {suggests.count('推荐填写')} 项、"
-        f"量房确认 {survey_n} 项、无必填项，与文档一致"
+        f"实例必选 {suggests.count('实例必选')} 项、量房确认 {survey_n} 项、无必填项，与文档一致"
     )
     return 0
 
