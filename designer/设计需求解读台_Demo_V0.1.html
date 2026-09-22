@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设计需求解读台 · Demo V0.1</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --line:#e5e8ee; --line2:#eef1f5;
+  --ink:#1e2430; --dim:#6b7480; --dim2:#98a1ad;
+  --brand:#2f6fed; --brand-weak:#eaf1ff;
+  --amber:#a9751b; --amber-weak:#fdf5e6;
+  --green:#2c7a54; --green-weak:#e9f5ef;
+  --red:#bd3b3b; --red-weak:#fdeceb;
+  --purple:#6b4fbb; --purple-weak:#f1ecfb;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+button{font:inherit;cursor:pointer}
+.top{height:56px;display:flex;align-items:center;gap:12px;padding:0 20px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top h1{font-size:15px;margin:0;font-weight:600}
+.top .sub{font-size:12px;color:var(--dim2)}
+.top .spacer{flex:1}
+.pill{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--dim);background:#fafbfc}
+.btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 13px;color:var(--ink);transition:.15s}
+.btn:hover{border-color:#cfd6e0;background:#fafbfc}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{border-color:transparent;color:var(--dim);background:transparent;padding:6px 8px}
+.btn.ghost:hover{background:#f2f4f7;color:var(--ink)}
+.btn.sm{padding:3px 9px;font-size:12px;border-radius:6px}
+.layout{display:grid;grid-template-columns:296px 1fr;min-height:calc(100vh - 56px)}
+.side{border-right:1px solid var(--line);background:#fbfcfd;padding:14px 12px}
+.side h2{font-size:12px;color:var(--dim2);margin:2px 6px 10px;font-weight:600;letter-spacing:.04em}
+.dcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:.15s}
+.dcard:hover{border-color:#cdd6e3}
+.dcard.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-weak)}
+.dcard .row1{display:flex;align-items:center;gap:8px}
+.dcard .nm{font-weight:600}
+.dcard .st{font-size:11px;padding:1px 7px;border-radius:999px;margin-left:auto}
+.st.wait{background:var(--amber-weak);color:var(--amber)}
+.st.done{background:var(--green-weak);color:var(--green)}
+.dcard .ov{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.5}
+.dcard .mt{font-size:11px;color:var(--dim2);margin-top:6px;display:flex;gap:8px}
+.main{padding:18px 22px 60px;min-width:0}
+.head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.head h2{margin:0;font-size:17px}
+.head .meta{font-size:12px;color:var(--dim);margin-top:5px;display:flex;gap:14px;flex-wrap:wrap}
+.head .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:8px;border:1px solid transparent;color:var(--dim);background:#eceff3}
+.tab.on{background:#fff;border-color:var(--line);color:var(--ink);font-weight:600}
+.tab .n{font-size:11px;color:var(--dim2);margin-left:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:14px;display:flex;align-items:center;gap:8px}
+.card h3 .cnt{font-size:12px;color:var(--dim2);font-weight:400}
+.sec{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;background:#fff}
+.sec-h{display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;background:#fbfcfd}
+.sec-h:hover{background:#f6f8fb}
+.sec-h .num{width:20px;height:20px;border-radius:5px;background:#eef1f5;color:var(--dim);font-size:11px;display:flex;align-items:center;justify-content:center}
+.sec-h .t{font-weight:600}
+.sec-h .m{font-size:12px;color:var(--dim2);margin-left:auto}
+.sec-b{padding:12px 13px 14px;border-top:1px solid var(--line2);display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px 18px}
+.fld{display:flex;gap:8px;align-items:baseline;min-width:0}
+.fld .k{color:var(--dim);font-size:13px;flex:0 0 auto;max-width:52%}
+.fld .v{font-size:13px;min-width:0;word-break:break-word}
+.fld.empty .v{color:var(--dim2)}
+.fld.found{background:var(--amber-weak);border-radius:6px;padding:2px 6px;margin:-2px -6px}
+.tag{font-size:10px;padding:1px 5px;border-radius:4px;background:var(--brand-weak);color:var(--brand);white-space:nowrap}
+.inst{border:1px dashed var(--line);border-radius:8px;padding:9px 11px;margin:8px 0}
+.inst .ih{font-size:12px;color:var(--dim);margin-bottom:6px}
+.kv{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#f2f4f7;color:#414b59}
+.item{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:#fff;position:relative}
+.item.del{opacity:.55;background:#fafbfc}
+.item.del .q{text-decoration:line-through;color:var(--dim)}
+.item .q{font-weight:600;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start}
+.item .line{font-size:12.5px;color:var(--dim);margin-top:3px;display:flex;gap:6px}
+.item .line b{color:#4a5462;font-weight:500;flex:0 0 auto}
+.item .acts{position:absolute;right:10px;top:9px;display:flex;gap:4px}
+.badge{font-size:10.5px;padding:1px 7px;border-radius:999px;white-space:nowrap;font-weight:500}
+.b-must{background:var(--red-weak);color:var(--red)}
+.b-sug{background:#eef1f5;color:var(--dim)}
+.b-src-rule{background:var(--purple-weak);color:var(--purple)}
+.b-src-survey{background:#eef1f5;color:var(--dim)}
+.b-src-both{background:var(--brand-weak);color:var(--brand)}
+.grp{font-size:12px;color:var(--dim2);margin:14px 0 7px;font-weight:600;letter-spacing:.03em}
+.grp:first-child{margin-top:4px}
+.empty-st{text-align:center;padding:44px 16px;color:var(--dim)}
+.empty-st .big{font-size:15px;color:var(--ink);font-weight:600;margin-bottom:6px}
+.mask{position:fixed;inset:0;background:rgba(24,30,40,.42);display:none;z-index:40}
+.mask.on{display:block}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,92vw);max-height:86vh;overflow:auto;
+  background:#fff;border-radius:14px;z-index:50;display:none;box-shadow:0 20px 60px rgba(20,26,40,.24)}
+.modal.on{display:block}
+.modal .mh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
+.modal .mh h3{margin:0;font-size:15px}
+.modal .mb{padding:16px 20px}
+.modal .mf{padding:13px 20px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;position:sticky;bottom:0;background:#fff}
+.modal .mf .hint{font-size:12.5px;color:var(--dim)}
+.modal .mf .spacer{flex:1}
+.sgroup{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.sgroup .gh{padding:9px 13px;background:#fbfcfd;font-size:13px;display:flex;align-items:center;gap:8px}
+.sgroup .gh .why{font-size:11.5px;color:var(--dim2);font-weight:400}
+.sgroup .gb{padding:10px 13px}
+.sline{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px}
+.sline:last-child{border-bottom:0}
+.sline .k{flex:0 0 168px;color:var(--dim)}
+.sline .v{flex:1;min-width:0;word-break:break-word}
+.sline .redact{background:var(--amber-weak);color:var(--amber);border-radius:4px;padding:0 5px;font-size:12px}
+.sline input{margin-top:4px}
+.note{font-size:12px;color:var(--dim);background:#fafbfc;border:1px dashed var(--line);border-radius:8px;padding:9px 12px;margin-top:10px}
+.boot{text-align:center;color:var(--dim);padding:60px 0}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--brand-weak);border-top-color:var(--brand);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+pre.md{background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12.5px;line-height:1.65;
+  white-space:pre-wrap;word-break:break-word;max-height:52vh;overflow:auto;margin:0}
+/* 窄屏回退：设计师端以宽屏为主，窄窗口下侧栏改为横向卡片条，避免横向溢出 */
+@media (max-width: 900px){
+  .top{height:auto;flex-wrap:wrap;padding:10px 14px}
+  .top .sub{display:none}
+  .layout{grid-template-columns:1fr}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:10px 12px;min-width:0;overflow:hidden}
+  #list{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px}
+  .dcard{flex:0 0 auto;min-width:236px;margin-bottom:0}
+  .main{padding:14px 14px 60px;min-width:0}
+  .sec-b{grid-template-columns:1fr}
+  .head .acts{margin-left:0}
+  .sline .k{flex:0 0 96px}
+  .modal{width:96vw}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>设计需求解读台</h1>
+  <span class="sub">Demo V0.1 · 数据模拟</span>
+  <span class="pill">本地运行 · 不联网</span>
+  <div class="spacer"></div>
+  <button class="btn ghost" id="btn-reset">重置演示数据</button>
+</header>
+<main class="layout">
+  <aside class="side">
+    <h2>需求单</h2>
+    <div id="list"></div>
+  </aside>
+  <section class="main" id="main"></section>
+</main>
+<div class="mask" id="mask"></div>
+<div class="modal" id="modal"></div>
+<script>
+const SPEC = [{"id":"base_city","section":"认识你家","group":"房屋情况","label":"所在城市","type":"文本","unit":"城市名","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_community","section":"认识你家","group":"房屋情况","label":"小区/楼盘名称","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_area","section":"认识你家","group":"房屋情况","label":"建筑面积（大致即可）","type":"数字","unit":"㎡","options":[],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"base_layout","section":"认识你家","group":"房屋情况","label":"户型结构","type":"文本","unit":"如 3室2厅1卫","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_floor_pos","section":"认识你家","group":"房屋情况","label":"楼层位置","type":"单选","unit":"","options":["顶楼","中间层","底层","不清楚"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_house_state","section":"认识你家","group":"房屋情况","label":"房屋现状","type":"单选","unit":"","options":["毛坯","旧房翻新","精装改造","不清楚"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"base_height","section":"认识你家","group":"房屋情况","label":"层高","type":"数字","unit":"米","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_regret","section":"认识你家","group":"房屋情况","label":"对现在住房或户型不满意的地方","type":"文本","unit":"长文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_type","section":"认识你家","group":"居住成员","label":"居住性质","type":"单选","unit":"","options":["长期居住","偶尔居住"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_members","section":"认识你家","group":"居住成员","label":"常住人口构成","type":"多选","unit":"","options":["独居","夫妻","儿子","女儿","父母","保姆或其他同住","未来成员"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"live_ages","section":"认识你家","group":"居住成员","label":"成员年龄","type":"文本","unit":"如 10岁/3岁","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_change","section":"认识你家","group":"居住成员","label":"未来5年家庭变化","type":"多选","unit":"","options":["添丁计划","老人同住","孩子长大","无变化"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_elder","section":"认识你家","group":"居住成员","label":"是否有老人或行动不便成员","type":"单选","unit":"","options":["是","否"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"live_allergy","section":"认识你家","group":"居住成员","label":"是否有鼻炎或过敏成员","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_pet","section":"认识你家","group":"居住成员","label":"是否养宠物","type":"多选","unit":"","options":["无","猫","狗","其他"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"live_pet_count","section":"认识你家","group":"居住成员","label":"宠物数量","type":"数字","unit":"只","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_smoke","section":"认识你家","group":"居住成员","label":"是否有吸烟成员","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"live_helper","section":"认识你家","group":"居住成员","label":"是否有住家保姆","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"budget_total","section":"认识你家","group":"预算与工期","label":"装修预算（大致范围）","type":"单选","unit":"","options":["10万以下","10-20万","20-30万","30-50万","50万以上","还没想好"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"budget_focus","section":"认识你家","group":"预算与工期","label":"预算侧重","type":"多选","unit":"","options":["硬装","主材","家电","软装","全屋定制"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"budget_reserve","section":"认识你家","group":"预算与工期","label":"是否预留备用金","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"mode","section":"认识你家","group":"预算与工期","label":"装修模式","type":"单选","unit":"","options":["纯设计","半包","全包","拎包","还不了解，需要设计师建议"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"date_start","section":"认识你家","group":"预算与工期","label":"计划动工时间","type":"日期","unit":"年-月","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"date_finish","section":"认识你家","group":"预算与工期","label":"计划完工时间","type":"日期","unit":"年-月","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"date_movein","section":"认识你家","group":"预算与工期","label":"计划入住时间","type":"日期","unit":"年-月","options":[],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"style_pref","section":"认识你家","group":"风格与生活方式","label":"装修风格偏好","type":"多选","unit":"","options":["现代简约","美式","轻奢","原木","新中式","法式","中古","奶油","侘寂","工业风","说不好，想看参考案例"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"color_pref","section":"认识你家","group":"风格与生活方式","label":"色彩与色调偏好","type":"多选","unit":"","options":["暖色","冷色","中性色","高饱和","浅色系"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"light_pref","section":"认识你家","group":"风格与生活方式","label":"照明方式偏好","type":"单选","unit":"","options":["主灯","无主灯","混合"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"office_need","section":"认识你家","group":"风格与生活方式","label":"办公需求","type":"单选","unit":"","options":["长期居家办公","偶尔","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"hobby","section":"认识你家","group":"风格与生活方式","label":"兴趣爱好","type":"多选","unit":"","options":["手办","盲盒","钢琴","瑜伽","喝茶","咖啡","健身","阅读","收藏","游戏","乐器","绘画"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"hobby_other","section":"认识你家","group":"风格与生活方式","label":"兴趣爱好补充","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"guest_freq","section":"认识你家","group":"风格与生活方式","label":"聚会与来客频率","type":"单选","unit":"","options":["经常","偶尔","几乎没有"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"stay_need","section":"认识你家","group":"风格与生活方式","label":"是否需要留宿空间","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"clean_who","section":"认识你家","group":"风格与生活方式","label":"家庭清洁负责人","type":"单选","unit":"","options":["自己","保洁","扫地机器人为主"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"clean_tools","section":"认识你家","group":"风格与生活方式","label":"常用清洁工具","type":"多选","unit":"","options":["吸尘器","洗地机","扫地机器人","拖把扫把"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"pain_points","section":"认识你家","group":"特殊需求","label":"最担心的问题","type":"多选","unit":"","options":["超预算","工期延误","增项","施工质量","环保污染","效果不符","说不上来"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"religion","section":"认识你家","group":"特殊需求","label":"宗教信仰","type":"单选","unit":"","options":["有","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"taboo","section":"认识你家","group":"特殊需求","label":"风俗忌讳","type":"单选","unit":"","options":["有","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"fengshui","section":"认识你家","group":"特殊需求","label":"是否讲究风水","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"hand_use","section":"认识你家","group":"特殊需求","label":"左右手习惯","type":"单选","unit":"","options":["左","右"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"old_furniture","section":"认识你家","group":"特殊需求","label":"旧家具是否沿用","type":"单选","unit":"","options":["沿用","部分沿用","不沿用"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"cabinets_type","section":"认识你家","group":"特殊需求","label":"柜体制作方式","type":"单选","unit":"","options":["木工现场","全屋定制","成品柜"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"base_other","section":"认识你家","group":"其他","label":"其他补充","type":"长文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_ac","section":"设备与系统","group":"空调与采暖","label":"空调需求","type":"多选","unit":"","options":["中央空调","普通空调（挂机柜机）","不确定，听设计师建议"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_freshair","section":"设备与系统","group":"空调与采暖","label":"新风系统","type":"单选","unit":"","options":["需要","不需要","不确定"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_water","section":"设备与系统","group":"水与热水","label":"水质与饮水需求","type":"多选","unit":"","options":["想喝直饮水（净水）","水垢重，想做软水","不清楚，听设计师建议"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_hotwater","section":"设备与系统","group":"水与热水","label":"生活热水偏好","type":"单选","unit":"","options":["希望打开就有热水","无所谓","不确定"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_drain","section":"设备与系统","group":"水与热水","label":"排水特殊需求","type":"多选","unit":"","options":["干区地漏","墙排水","露天阳台排水"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_smart","section":"设备与系统","group":"智能与弱电","label":"智能与网络需求","type":"多选","unit":"","options":["智能灯光","电动窗帘","全屋WIFI","全屋监控","智能门锁","背景音响"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_circuit","section":"设备与系统","group":"智能与弱电","label":"生活便利类电路需求","type":"多选","unit":"","options":["起夜灯","感应灯","USB插座","背景音乐"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_other","section":"设备与系统","group":"智能与弱电","label":"其他补充","type":"长文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dev_heat","section":"设备与系统","group":"空调与采暖","label":"取暖方式","type":"多选","unit":"","options":["地暖","暖气片墙暖","只靠空调","不确定"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_main","section":"玄关","group":"基础","label":"玄关定位","type":"单选","unit":"","options":["实用为主","装饰为主"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_first","section":"玄关","group":"基础","label":"回家第一件事","type":"单选","unit":"","options":["立即换家居服","放下包再说"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_coat","section":"玄关","group":"收纳","label":"外套与包包区","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_mirror","section":"玄关","group":"收纳","label":"全身镜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_shoe","section":"玄关","group":"收纳","label":"鞋柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_shoe_count","section":"玄关","group":"收纳","label":"鞋子数量","type":"数字","unit":"双","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_boots","section":"玄关","group":"收纳","label":"高筒靴数量","type":"数字","unit":"双","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_bench","section":"玄关","group":"收纳","label":"换鞋凳","type":"单选","unit":"","options":["固定","活动","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_storage","section":"玄关","group":"收纳","label":"雨具与行李箱置物","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_dryer","section":"玄关","group":"收纳","label":"烘鞋器或充电插座","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_wardrobe","section":"玄关","group":"收纳","label":"入户衣柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_desk","section":"玄关","group":"收纳","label":"随手置物台面","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ex_other","section":"玄关","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_type","section":"客厅","group":"基础","label":"客厅类型","type":"单选","unit":"","options":["简约型","储物型"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_core","section":"客厅","group":"基础","label":"核心功能","type":"单选","unit":"","options":["会客为主","家人休闲","亲子活动","学习阅读"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_screen","section":"客厅","group":"影音","label":"电视或投影","type":"单选","unit":"","options":["电视","投影","都不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_wall","section":"客厅","group":"影音","label":"背景墙","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_tv_cabinet","section":"客厅","group":"影音","label":"电视柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_bookshelf","section":"客厅","group":"功能","label":"书墙或大长桌","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_snack","section":"客厅","group":"功能","label":"零食柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_piano","section":"客厅","group":"功能","label":"钢琴放置","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_fitness","section":"客厅","group":"功能","label":"健身器材","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_play","section":"客厅","group":"功能","label":"儿童活动或手工区","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_sofa","section":"客厅","group":"家具","label":"沙发形式","type":"单选","unit":"","options":["传统沙发","灵活家具","地台软垫","沙发床"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"lv_other","section":"客厅","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_people","section":"餐厅","group":"基础","label":"日常用餐人数","type":"数字","unit":"人","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_table","section":"餐厅","group":"基础","label":"餐桌形式","type":"单选","unit":"","options":["圆桌","方桌","岛台餐桌结合","其他"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_cabinet","section":"餐厅","group":"收纳","label":"餐厅柜子","type":"多选","unit":"","options":["餐边柜","酒柜","装饰柜","其他"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_coffee","section":"餐厅","group":"功能","label":"咖啡机","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_bar","section":"餐厅","group":"功能","label":"吧台","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_work","section":"餐厅","group":"功能","label":"是否在餐桌办公或写作业","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_fan","section":"餐厅","group":"功能","label":"吊扇灯","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_party","section":"餐厅","group":"功能","label":"聚会或派对需求","type":"单选","unit":"","options":["经常","偶尔","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"dn_other","section":"餐厅","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_height_m","section":"厨房","group":"身高","label":"男主人身高","type":"数字","unit":"cm","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_height_f","section":"厨房","group":"身高","label":"女主人身高","type":"数字","unit":"cm","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_freq","section":"厨房","group":"使用习惯","label":"下厨频率","type":"单选","unit":"","options":["基本不","偶尔","经常"],"suggest":"推荐填写","scope":"固定","applies":"全部"},{"id":"kt_cooker","section":"厨房","group":"使用习惯","label":"主要做饭人","type":"多选","unit":"","options":["男主人","女主人","父母","保姆"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_cooker_h","section":"厨房","group":"使用习惯","label":"其他做饭人身高","type":"数字","unit":"cm","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_cuisine","section":"厨房","group":"使用习惯","label":"菜系偏好","type":"单选","unit":"","options":["中餐为主","中西结合","西餐为主"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_form","section":"厨房","group":"形式","label":"厨房形式","type":"单选","unit":"","options":["开放式","半开放式","封闭式"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_door","section":"厨房","group":"形式","label":"厨房门形式","type":"单选","unit":"","options":["推拉门","平开门","无门"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_hood","section":"厨房","group":"设备","label":"油烟机形式","type":"单选","unit":"","options":["侧吸","顶吸","集成灶"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_sink","section":"厨房","group":"设备","label":"水槽形式","type":"单选","unit":"","options":["大单槽","双槽"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_counter","section":"厨房","group":"设备","label":"高低台面","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_dishwasher","section":"厨房","group":"设备","label":"洗碗机","type":"单选","unit":"","options":["前开式","水槽式","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_fridge","section":"厨房","group":"设备","label":"冰箱形式","type":"单选","unit":"","options":["内嵌","非内嵌","单开","多开","大双开"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_freezer","section":"厨房","group":"设备","label":"是否需要冰柜","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_appliances","section":"厨房","group":"设备","label":"厨房小电器","type":"多选","unit":"","options":["空气炸锅","微波炉","蒸烤箱","消毒柜","咖啡机","燃气热水器","垃圾处理器","电饭煲"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_storage","section":"厨房","group":"收纳","label":"备餐与调料收纳","type":"多选","unit":"","options":["台面调料架","柜内拉篮","活动小推车","蔬菜收纳筐"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_light","section":"厨房","group":"照明","label":"吊柜下照明","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"kt_other","section":"厨房","group":"其他","label":"其他补充","type":"长文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_washer","section":"阳台","group":"洗烘","label":"洗衣机","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_washer_top","section":"阳台","group":"洗烘","label":"洗衣机上方空间利用","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_dryer","section":"阳台","group":"洗烘","label":"烘干机","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_mini","section":"阳台","group":"洗烘","label":"小洗衣机或壁挂洗衣机","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_sink","section":"阳台","group":"洗烘","label":"水槽区","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_mop","section":"阳台","group":"洗烘","label":"拖把池","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_hanger","section":"阳台","group":"晾晒","label":"晾晒方式","type":"多选","unit":"","options":["明装晾衣架","暗装晾衣架","以烘干为主"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_pet","section":"阳台","group":"功能","label":"宠物洗澡或猫窝","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_func","section":"阳台","group":"功能","label":"阳台其他功能","type":"多选","unit":"","options":["休闲","养花","咖啡角","健身","烧烤","其他"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_window","section":"阳台","group":"功能","label":"是否封窗","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_robot","section":"阳台","group":"功能","label":"扫地机器人或洗地机位置","type":"多选","unit":"","options":["阳台","卫生间","玄关","厨房"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"bl_other","section":"阳台","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_bed","section":"主卧","group":"基础","label":"床尺寸","type":"单选","unit":"","options":["1.5m","1.8m","2.0m"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_side","section":"主卧","group":"基础","label":"夫妻睡眠位置","type":"单选","unit":"","options":["男左女右","男右女左"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_light","section":"主卧","group":"睡眠与灯光","label":"睡眠灯光需求","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_night","section":"主卧","group":"睡眠与灯光","label":"起夜习惯","type":"单选","unit":"","options":["无","偶尔喝水","频繁起夜"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_read","section":"主卧","group":"睡眠与灯光","label":"床上阅读习惯","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_quiet","section":"主卧","group":"睡眠与灯光","label":"是否需要隔音","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_curtain","section":"主卧","group":"睡眠与灯光","label":"窗帘需求","type":"单选","unit":"","options":["全遮光","自然采光"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_av","section":"主卧","group":"功能","label":"影音设备","type":"单选","unit":"","options":["电视","投影","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_dresser","section":"主卧","group":"功能","label":"化妆台","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_desk","section":"主卧","group":"功能","label":"书桌","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_storage","section":"主卧","group":"收纳","label":"需强化收纳","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_clothes","section":"主卧","group":"收纳","label":"衣物类型","type":"多选","unit":"","options":["长衣","短衣","叠放","被褥","配饰"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_secondhand","section":"主卧","group":"收纳","label":"次净衣区","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"br_other","section":"主卧","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"ch_gender_age","section":"其他卧室","group":"儿童房","label":"孩子性别与年龄","type":"文本","unit":"如 女孩/7岁","options":[],"suggest":"选填","scope":"次卧","applies":"儿童房"},{"id":"ch_activity","section":"其他卧室","group":"儿童房","label":"活动空间或黑板墙","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"次卧","applies":"儿童房"},{"id":"ch_read","section":"其他卧室","group":"儿童房","label":"阅读与陪读区","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"次卧","applies":"儿童房"},{"id":"el_twin","section":"其他卧室","group":"长辈房","label":"是否布置两张单人床","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"次卧","applies":"长辈房"},{"id":"el_safety","section":"其他卧室","group":"长辈房","label":"紧急按钮或防滑扶手","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"次卧","applies":"长辈房"},{"id":"el_equip","section":"其他卧室","group":"长辈房","label":"按摩椅或医疗设备","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"次卧","applies":"长辈房"},{"id":"gh_freq","section":"其他卧室","group":"客房","label":"客房使用频率","type":"单选","unit":"","options":["经常","偶尔","极少"],"suggest":"选填","scope":"次卧","applies":"客房"},{"id":"room_type","section":"其他卧室","group":"房间定义","label":"这个房间主要用来做什么","type":"单选","unit":"","options":["儿童房","长辈房","客房","书房","电竞房","多功能房","其他"],"suggest":"实例必选","scope":"次卧","applies":"全部"},{"id":"room_bed","section":"其他卧室","group":"通用","label":"床型与尺寸","type":"单选","unit":"","options":["不需要","1.2m","1.5m","1.8m","高低床","沙发床","榻榻米"],"suggest":"选填","scope":"次卧","applies":"全部"},{"id":"room_desk","section":"其他卧室","group":"通用","label":"书桌","type":"单选","unit":"","options":["不需要","固定书桌","可升降书桌"],"suggest":"选填","scope":"次卧","applies":"全部"},{"id":"room_storage","section":"其他卧室","group":"通用","label":"收纳需求","type":"多选","unit":"","options":["衣柜","书柜","玩具柜","杂物柜"],"suggest":"选填","scope":"次卧","applies":"全部"},{"id":"room_other","section":"其他卧室","group":"其他","label":"其他补充","type":"长文本","unit":"文本","options":[],"suggest":"选填","scope":"次卧","applies":"全部"},{"id":"st_open","section":"书房与电竞房","group":"基础","label":"空间开放度","type":"单选","unit":"","options":["完全封闭","半开放","开放"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_bedroom","section":"书房与电竞房","group":"基础","label":"兼具卧室功能","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_cloakroom","section":"书房与电竞房","group":"基础","label":"与衣帽间一体化","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_books","section":"书房与电竞房","group":"收纳","label":"藏书量","type":"单选","unit":"","options":["多","少"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_buybooks","section":"书房与电竞房","group":"收纳","label":"是否定期买书","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_desktop","section":"书房与电竞房","group":"设备","label":"台式电脑数量","type":"单选","unit":"","options":["无","1台","2台"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_laptop","section":"书房与电竞房","group":"设备","label":"笔记本电脑数量","type":"单选","unit":"","options":["无","1台","2台"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_printer","section":"书房与电竞房","group":"设备","label":"打印机","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_device_count","section":"书房与电竞房","group":"设备","label":"需配置电器数量","type":"数字","unit":"台","options":[],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_users","section":"书房与电竞房","group":"使用","label":"同时使用人数","type":"数字","unit":"人","options":[],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_live","section":"书房与电竞房","group":"使用","label":"是否需要直播或录音","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_network","section":"书房与电竞房","group":"使用","label":"网络与插座需求","type":"多选","unit":"","options":["有线上网口","多插座","USB插座"],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"st_other","section":"书房与电竞房","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"书房","applies":"全部"},{"id":"wc_drywet","section":"卫生间","group":"基础","label":"干湿分离","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_hidden","section":"卫生间","group":"收纳","label":"隐形储物间","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_dresser","section":"卫生间","group":"收纳","label":"化妆台","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_laundry","section":"卫生间","group":"收纳","label":"脏衣区","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_toilet","section":"卫生间","group":"洁具","label":"马桶类型","type":"单选","unit":"","options":["智能马桶","普通马桶","蹲便"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_bath","section":"卫生间","group":"洁具","label":"泡澡需求","type":"单选","unit":"","options":["浴缸","淋浴","浴缸加淋浴"],"suggest":"推荐填写","scope":"卫生间","applies":"全部"},{"id":"wc_shower","section":"卫生间","group":"洁具","label":"淋浴形式","type":"单选","unit":"","options":["淋浴房玻璃","浴帘"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_sink","section":"卫生间","group":"洁具","label":"洗手盆","type":"单选","unit":"","options":["单盆","双盆"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_safe","section":"卫生间","group":"洁具","label":"紧急按钮或防滑扶手","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_spray","section":"卫生间","group":"洁具","label":"喷枪","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_towel","section":"卫生间","group":"电器","label":"电热毛巾架","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_showerhead","section":"卫生间","group":"电器","label":"恒温花洒","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_heater","section":"卫生间","group":"电器","label":"暖风机","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_hairdryer","section":"卫生间","group":"电器","label":"吹风机","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_floorheat","section":"卫生间","group":"电器","label":"加热地板","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_mirror","section":"卫生间","group":"柜体","label":"智能镜柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_mirror_cab","section":"卫生间","group":"柜体","label":"收纳镜柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_basin","section":"卫生间","group":"柜体","label":"一体台下盆","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_outside_cab","section":"卫生间","group":"柜体","label":"浴室柜外置","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_other","section":"卫生间","group":"其他","label":"其他需求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"卫生间","applies":"全部"},{"id":"wc_type","section":"卫生间","group":"房间定义","label":"这间卫生间","type":"单选","unit":"","options":["主卫","客卫","次卫","其他"],"suggest":"实例必选","scope":"卫生间","applies":"全部"},{"id":"sc_cloakroom","section":"收纳与家政","group":"衣帽间","label":"是否需要衣帽间","type":"单选","unit":"","options":["是","否"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_cloakroom_share","section":"收纳与家政","group":"衣帽间","label":"衣帽间共用方式","type":"单选","unit":"","options":["共用","分开"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_cloakroom_form","section":"收纳与家政","group":"衣帽间","label":"衣帽间形式","type":"单选","unit":"","options":["开放式","封闭式"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_storage_room","section":"收纳与家政","group":"储物间","label":"是否需要储物间","type":"单选","unit":"","options":["独立储物间","与其他空间融合","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_storage_items","section":"收纳与家政","group":"储物间","label":"储物间需要存放的物品","type":"多选","unit":"","options":["吸尘器","梯子","维修工具","行李箱","露营装备","风扇","电暖器","换季被褥"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_luggage","section":"收纳与家政","group":"储物间","label":"行李箱数量","type":"数字","unit":"个","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_collection","section":"收纳与家政","group":"展示","label":"收藏品展示需求","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_valuable","section":"收纳与家政","group":"展示","label":"贵重物品存放","type":"单选","unit":"","options":["保险箱","密码抽","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_housekeeping","section":"收纳与家政","group":"家政","label":"家政柜","type":"单选","unit":"","options":["需要","不需要"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_seasonal","section":"收纳与家政","group":"家政","label":"换季物品存放","type":"多选","unit":"","options":["被褥","羽绒服","电风扇","取暖器"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"sc_other","section":"收纳与家政","group":"其他","label":"其他补充","type":"长文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"note_free","section":"补充说明","group":"自由填写","label":"其他补充需求","type":"文本","unit":"长文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"note_scene","section":"补充说明","group":"自由填写","label":"畅想未来的生活场景","type":"文本","unit":"长文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"note_ref","section":"补充说明","group":"自由填写","label":"是否有参考图或效果图","type":"单选","unit":"","options":["有","无"],"suggest":"选填","scope":"固定","applies":"全部"},{"id":"note_process","section":"补充说明","group":"自由填写","label":"对流程与沟通的要求","type":"文本","unit":"文本","options":[],"suggest":"选填","scope":"固定","applies":"全部"}];
+const SURVEY = [{"no":1,"item":"各房间实际净尺寸与层高","goal":"定家具尺寸、吊顶与中央空调可行性","source":"层高（原 base_height）"},{"no":2,"item":"承重墙、梁位与门窗洞口位置","goal":"判断可拆改范围，避免违规","source":"结构类，业主无法判断"},{"no":3,"item":"上下水点位、排水立管与管井","goal":"厨卫布局与设备落位","source":"排水点位（原 dev_drain）"},{"no":4,"item":"同层排水与马桶移位条件","goal":"决定马桶位置能否调整","source":"马桶类型（原 wc_toilet）"},{"no":5,"item":"燃气表位置与排烟条件","goal":"开放式厨房的合规与油烟方案","source":"厨房形式（原 kt_form）"},{"no":6,"item":"配电箱回路容量、弱电箱与入户网络","goal":"决定电路改造与网络方案","source":"电路细节、网络需求"},{"no":7,"item":"空调外机位与冷凝水排放","goal":"确认中央空调或分体机可行性","source":"空调类型（原 dev_ac）"},{"no":8,"item":"采暖分水器与暖气片位置","goal":"地暖或暖气片的施工条件","source":"取暖方式（原 dev_heat）"},{"no":9,"item":"阳台承重、封窗与排水条件","goal":"封窗方案与洗衣机、拖把池落位","source":"是否封窗、阳台功能"},{"no":10,"item":"墙体材质与可开槽条件","goal":"决定开槽与墙面处理方式","source":"结构类，业主无法判断"},{"no":11,"item":"旧房管线年限、防水与墙体状况","goal":"翻新项目的隐蔽工程范围","source":"房屋现状（原 base_house_state）"},{"no":12,"item":"采光朝向与噪音源","goal":"窗帘、隔音与灯光方案","source":"是否需要隔音（原 br_quiet）"},{"no":13,"item":"定制柜安装深度与墙面垂直度","goal":"柜体能否做到顶、是否需补板","source":"柜体制作方式"},{"no":14,"item":"地面完成面高度衔接","goal":"地暖、地板的完成面与门槛关系","source":"取暖方式（原 dev_heat）"},{"no":15,"item":"大件电器型号与尺寸确认","goal":"冰箱、洗碗机、热水器的预留条件","source":"冰箱与洗碗机需求"},{"no":16,"item":"入户门与窗户是否更换及尺寸","goal":"更换周期与施工顺序","source":"门窗相关需求"}];
+const DEMANDS = [{"id":"d1","name":"张先生","status":"done","submitted":"2026-09-21 20:14","overview":"89㎡ · 旧房翻新 · 预算 20-30万 · 夫妻 + 女儿 + 猫","values":{"base_city":"武汉","base_community":"万科城市花园","base_area":89,"base_layout":"3室2厅2卫","base_floor_pos":"中间层","base_house_state":"旧房翻新","base_height":2.75,"base_regret":"厨房小、储物不够、采光一般","live_type":"长期居住","live_members":["夫妻","女儿"],"live_ages":"36岁 / 34岁 / 6岁","live_change":["孩子长大"],"live_pet":["猫"],"live_pet_count":1,"live_smoke":"否","budget_total":"20-30万","budget_focus":["硬装","主材","全屋定制"],"mode":"半包","style_pref":["现代简约","原木"],"color_pref":["暖色","浅色系"],"light_pref":"无主灯","office_need":"偶尔","hobby":["阅读","咖啡"],"guest_freq":"偶尔","clean_who":"扫地机器人为主","clean_tools":["扫地机器人","吸尘器"],"pain_points":["超预算","增项","施工质量"],"old_furniture":"部分沿用","cabinets_type":"全屋定制","base_other":"我平时上班忙，有事先微信我 13812345678；家里地址是洪山区珞喻路 88 号 3 栋 1502","dev_ac":["中央空调"],"dev_freshair":"不确定","dev_heat":["地暖"],"dev_water":["想喝直饮水（净水）"],"dev_hotwater":"希望打开就有热水","dev_smart":["智能灯光","电动窗帘","全屋WIFI"],"dev_circuit":["感应灯","USB插座"],"ex_main":"实用为主","ex_coat":"需要","ex_mirror":"需要","ex_shoe":"需要","ex_storage":"需要","lv_type":"储物型","lv_core":"家人休闲","lv_screen":"投影","lv_bookshelf":"需要","lv_play":"需要","lv_sofa":"灵活家具","dn_people":3,"dn_table":"岛台餐桌结合","dn_coffee":"是","dn_work":"是","kt_freq":"经常","kt_form":"开放式","kt_hood":"集成灶","kt_dishwasher":"前开式","kt_fridge":"内嵌","kt_sink":"大单槽","kt_counter":"需要","bl_washer":"是","bl_dryer":"是","bl_mop":"是","bl_hanger":["以烘干为主"],"bl_pet":"需要","bl_window":"是","bl_robot":["阳台"],"br_bed":"1.8m","br_quiet":"需要","br_curtain":"全遮光","br_dresser":"需要","br_storage":"是","br_clothes":["长衣","短衣","叠放","被褥"],"br_secondhand":"需要","sc_cloakroom":"是","sc_cloakroom_form":"封闭式","sc_storage_room":"与其他空间融合","sc_housekeeping":"需要","note_free":"希望厨房能做开放式，但担心油烟；收纳一定要够","note_scene":"周末在家做咖啡、陪孩子阅读，猫在阳台晒太阳","note_process":"设计方案希望先看平面，不要一上来就出效果图"},"aiMarks":["kt_fridge","br_secondhand","bl_hanger"],"instances":{"卫生间":[{"key":"wc1","type":"主卫","values":{"wc_type":"主卫","wc_drywet":"是","wc_toilet":"智能马桶","wc_bath":"浴缸加淋浴","wc_shower":"淋浴房玻璃","wc_sink":"双盆","wc_towel":"需要","wc_heater":"需要","wc_mirror_cab":"需要"}},{"key":"wc2","type":"客卫","values":{"wc_type":"客卫","wc_drywet":"是","wc_toilet":"普通马桶","wc_shower":"淋浴房玻璃","wc_sink":"单盆","wc_laundry":"需要"}}],"其他卧室":[{"key":"room1","type":"儿童房","values":{"room_type":"儿童房","ch_gender_age":"女儿 6 岁","ch_activity":"需要","ch_read":"需要","room_bed":"1.2m","room_desk":"可升降书桌","room_storage":["衣柜","玩具柜"]}}]}},{"id":"d2","name":"李女士","status":"wait","submitted":"2026-09-22 09:40","overview":"120㎡ · 毛坯 · 预算 30-50万 · 夫妻 + 儿子","values":{"base_city":"杭州","base_area":120,"base_house_state":"毛坯","live_members":["夫妻","儿子"],"budget_total":"30-50万","date_movein":"2026-12","kt_freq":"偶尔","kt_form":"封闭式","style_pref":["奶油"],"dev_ac":["中央空调"],"bl_window":"是","light_pref":"主灯","cabinets_type":"全屋定制"},"aiMarks":[],"instances":{"卫生间":[{"key":"wc1","type":"主卫","values":{"wc_type":"主卫","wc_drywet":"是","wc_toilet":"智能马桶","wc_bath":"淋浴"}}]}},{"id":"d3","name":"陈先生","status":"wait","submitted":"2026-09-22 21:05","overview":"65㎡ · 老房翻新 · 预算 10-20万 · 独居","values":{"base_city":"长沙","base_area":65,"base_house_state":"旧房翻新","live_members":["独居"],"budget_total":"10-20万","kt_form":"封闭式","light_pref":"主灯"},"aiMarks":[],"instances":{}}];
+/* ===================== 基础 ===================== */
+const SECTIONS = [...new Set(SPEC.map(f => f.section))];
+const F = {}; SPEC.forEach(f => { F[f.id] = f; });
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const show = v => Array.isArray(v) ? v.join('、') : (v == null ? '' : String(v));
+const isEmpty = v => v == null || v === '' || (Array.isArray(v) && !v.length);
+const REC = SPEC.filter(f => f.suggest === '推荐填写');
+const UNCLEAR = /不清楚|不确定|听设计师建议|还没想好|说不好/;
+
+/* ===================== 脱敏（演示级） ===================== */
+const REDACT = [
+  [/1[3-9]\d{9}/g, '手机号'],
+  [/0\d{2,3}-?\d{7,8}/g, '固定电话'],
+  [/[\w.+-]+@[\w-]+\.[\w.]+/g, '邮箱'],
+  [/[\u4e00-\u9fa5A-Za-z0-9\s]{0,14}\d+\s*(?:号|栋|幢|单元|室)/g, '门牌地址'],
+];
+function redact(s) {
+  let t = String(s); const hits = [];
+  REDACT.forEach(([re, label]) => {
+    const g = new RegExp(re.source, 'g');
+    const m = t.match(g);
+    if (m) { if (!hits.includes(label)) hits.push(label); t = t.replace(g, '[已隐去：' + label + ']'); }
+  });
+  return { text: t, hits };
+}
+const NO_SEND = ['base_community'];
+const GENERALIZE = {
+  base_city: v => ({ label: '所在城市', to: '新一线城市' }),
+  live_ages: v => ({ label: '成员年龄', to: '成年 2 人、学龄 1 人' }),
+  ch_gender_age: v => ({ label: '孩子性别与年龄', to: '学龄儿童 1 人' }),
+};
+const isFreeText = f => f && (f.type === '文本' || f.type === '长文本');
+
+/* ===================== 清单规则（模拟模型输出的推导项） ===================== */
+const RULES = [
+  { space:'厨房', obj:'排烟', tier:'must', when:{ kt_form:['开放式'], kt_freq:['经常'] },
+    q:'厨房是否接受开放式？油烟与燃气条件能不能满足',
+    why:'房主填了「厨房形式：开放式」和「下厨频率：经常」',
+    verify:['烟道位置与排烟条件','燃气备案要求'], fields:['kt_form','kt_freq'] },
+  { space:'全屋', obj:'层高吊顶', tier:'must', when:{ light_pref:['无主灯'], dev_ac:['中央空调'] },
+    q:'层高能不能同时满足无主灯吊顶与中央空调',
+    why:'房主填了「照明方式偏好：无主灯」和「空调需求：中央空调」',
+    verify:['各房间净高与梁位'], fields:['light_pref','dev_ac'] },
+  { space:'全屋', obj:'柜体收纳', tier:'must', when:{ cabinets_type:['全屋定制'], br_storage:['是'] },
+    q:'全屋定制 + 强化收纳，现有柜体体积够不够',
+    why:'房主填了「柜体制作方式：全屋定制」和「需强化收纳：是」',
+    verify:['柜体能否做到顶'], fields:['cabinets_type','br_storage'] },
+  { space:'全屋', obj:'旧房隐蔽', tier:'must', when:{ base_house_state:['旧房翻新'] },
+    q:'旧房管线、防水与墙体状况要核到什么范围',
+    why:'房主填了「房屋现状：旧房翻新」',
+    verify:['旧管线年限'], fields:['base_house_state'] },
+  { space:'阳台', obj:'家政封窗', tier:'must', when:{ bl_washer:['是'], bl_dryer:['是'], bl_window:['是'] },
+    q:'阳台能不能同时放洗衣机、烘干机和猫窝',
+    why:'房主填了「洗衣机：是」「烘干机：是」「宠物洗澡或猫窝：需要」「是否封窗：是」',
+    verify:['封窗方案'], fields:['bl_washer','bl_dryer','bl_pet','bl_window'] },
+  { space:'卫生间', obj:'马桶移位', tier:'suggest', whenInst:{ wc_toilet:['智能马桶'] },
+    q:'两个卫生间的马桶位置能不能调整',
+    why:'主卫选了「马桶类型：智能马桶」',
+    verify:['排污管位置'], fields:['wc_toilet'] },
+  { space:'卫生间', obj:'猫砂盆位置', tier:'suggest', when:{ live_pet:['猫'] },
+    q:'猫砂盆放哪个卫生间？排水与通风怎么处理',
+    why:'房主填了「是否养宠物：猫」',
+    verify:['卫生间排水点位与通风条件'], fields:['live_pet'] },
+  { space:'主卧', obj:'采光噪音', tier:'suggest', when:{ br_quiet:['需要'], br_curtain:['全遮光'] },
+    q:'主卧的朝向、噪音与采光实际情况',
+    why:'房主填了「是否需要隔音：需要」「窗帘需求：全遮光」',
+    verify:['窗洞尺寸'], fields:['br_quiet','br_curtain'] },
+  { space:'客厅', obj:'亲子阅读', tier:'suggest', when:{ lv_bookshelf:['需要'], lv_play:['需要'] },
+    q:'客厅的阅读区与亲子活动区怎么划分',
+    why:'房主填了「书墙或大长桌：需要」「儿童活动或手工区：需要」',
+    verify:['客厅实际净尺寸'], fields:['lv_bookshelf','lv_play'] },
+  { space:'厨房', obj:'大件电器', tier:'suggest', when:{ kt_fridge:['内嵌'], kt_dishwasher:['前开式'] },
+    q:'内嵌冰箱与洗碗机的尺寸、电源与进水位置',
+    why:'房主填了「冰箱形式：内嵌」「洗碗机：前开式」',
+    verify:['插座与进水位置'], fields:['kt_fridge','kt_dishwasher'] },
+];
+
+/* 16 项通用清单的归属空间与档位 */
+const SURVEY_MAP = {
+  1:{ space:'全屋', obj:'层高吊顶', tier:'must' },
+  2:{ space:'全屋', obj:'结构', tier:'must' },
+  3:{ space:'全屋', obj:'上下水', tier:'must' },
+  4:{ space:'卫生间', obj:'马桶移位', tier:'suggest' },
+  5:{ space:'厨房', obj:'排烟', tier:'must' },
+  6:{ space:'全屋', obj:'配电', tier:'must' },
+  7:{ space:'全屋', obj:'空调外机', tier:'suggest' },
+  8:{ space:'全屋', obj:'采暖', tier:'suggest' },
+  9:{ space:'阳台', obj:'家政封窗', tier:'must' },
+  10:{ space:'全屋', obj:'墙体', tier:'must' },
+  11:{ space:'全屋', obj:'旧房隐蔽', tier:'must' },
+  12:{ space:'主卧', obj:'采光噪音', tier:'suggest' },
+  13:{ space:'全屋', obj:'柜体收纳', tier:'suggest' },
+  14:{ space:'全屋', obj:'地面完成面', tier:'suggest' },
+  15:{ space:'厨房', obj:'大件电器', tier:'suggest' },
+  16:{ space:'全屋', obj:'门窗', tier:'suggest' },
+};
+const SPACE_ORDER = ['全屋', ...SECTIONS];
+
+/* 表格理解（模拟模型输出） */
+const MOCK = {
+  d1: {
+    profile:[
+      ['家庭', '夫妻 36/34 岁，女儿 6 岁，养 1 只猫，长期居住'],
+      ['预算与工期', '20-30 万，半包，预算侧重硬装与全屋定制；入住时间未填'],
+      ['风格与偏好', '现代简约 + 原木，暖色浅色系，无主灯，偶尔居家办公'],
+      ['生活方式', '下厨频率高、在家喝咖啡、重视阅读，清洁以扫地机器人为主'],
+    ],
+    needs:[
+      '厨房想要开放式，但担心油烟——这是全篇最能影响方案走向的一条',
+      '收纳要够：全屋定制 + 衣帽间 + 强化主卧收纳，说明现有储物是主要不满',
+      '阳台要同时承担家政（洗衣机 + 烘干机）与养猫，空间是紧的',
+      '客厅希望兼顾阅读与亲子活动，同时保留投影',
+    ],
+    risks:[
+      ['预算与配置', '全屋定制 + 中央空调 + 地暖三项叠加，容易顶到 30 万上限；房主自己也把「超预算」列为最担心的问题'],
+      ['工期与入住', '计划入住时间未填，而全屋定制与中央空调都需要提前锁方案，建议当面确认时间线'],
+      ['需求与现场条件', '无主灯与中央空调都压层高，旧房实测层高 2.75m，必须先核实梁位才能定顶面做法'],
+    ],
+  },
+  d2: {
+    profile:[['家庭','夫妻 + 儿子，长期居住'],['预算与工期','30-50 万，毛坯新装，计划 12 月入住'],['风格与偏好','奶油风，偶尔下厨']],
+    needs:['毛坯房，重点是设备与系统的整体规划','下厨频率低，厨房可以压缩'],
+    risks:[['工期','12 月入住与毛坯施工周期偏紧，主材需提前锁定']],
+  },
+  d3: {
+    profile:[['家庭','独居，长期居住'],['预算与工期','10-20 万，老房翻新']],
+    needs:['一个人住，重点是收纳与老房隐蔽工程'],
+    risks:[['信息不足','需求单完成度偏低，多数判断要到现场才能落']],
+  },
+};
+
+/* ===================== 工具 ===================== */
+function recStats(d) {
+  let total = 0, filled = 0;
+  REC.forEach(f => {
+    if (f.scope === '固定') { total++; if (!isEmpty(d.values[f.id])) filled++; }
+    else { const list = d.instances[f.section] || []; total += list.length; list.forEach(i => { if (!isEmpty(i.values[f.id])) filled++; }); }
+  });
+  return { total, filled, pct: total ? Math.round(filled / total * 100) : 0 };
+}
+function hit(d, when) { return Object.entries(when || {}).every(([k, vs]) => vs.some(v => show(d.values[k]).includes(v))); }
+function hitInst(d, whenInst) {
+  return Object.entries(whenInst || {}).every(([k, vs]) =>
+    Object.values(d.instances || {}).some(list => list.some(i => vs.some(v => show(i.values[k]).includes(v)))));
+}
+function pending(d) {
+  const out = [];
+  REC.forEach(f => {
+    if (f.scope === '固定') { if (isEmpty(d.values[f.id])) out.push({ label: f.label, why: '推荐填写项未填' }); }
+    else {
+      (d.instances[f.section] || []).forEach(i => { if (isEmpty(i.values[f.id])) out.push({ label: f.label + '（' + (i.type || i.key) + '）', why: '推荐填写项未填' }); });
+    }
+  });
+  Object.entries(d.values).forEach(([k, v]) => { if (!isEmpty(v) && UNCLEAR.test(show(v))) out.push({ label: (F[k] || {}).label || k, why: '房主选了「' + show(v) + '」，等于把判断交给设计师' }); });
+  return out;
+}
+function buildItems(d) {
+  const items = [];
+  RULES.forEach(r => {
+    const ok = hit(d, r.when) || hitInst(d, r.whenInst);
+    if (ok) items.push({ space: r.space, obj: r.obj, tier: r.tier, q: r.q, why: r.why, verify: r.verify.slice(), fields: r.fields.slice(), src: 'rule' });
+  });
+  SURVEY.forEach(s => {
+    const m = SURVEY_MAP[s.no]; if (!m) return;
+    const ex = items.find(i => i.space === m.space && i.obj === m.obj);
+    if (ex) { ex.verify = [...new Set([...ex.verify, s.item])]; ex.src = 'both'; }
+    else items.push({ space: m.space, obj: m.obj, tier: m.tier, q: s.item, why: '通用量房核实项：' + s.goal, verify: [s.item], fields: [], src: 'survey' });
+  });
+  return items;
+}
+const keyOf = it => it.space + '|' + it.obj;
+const TIER_NAME = { must: '必问', suggest: '建议问' };
+const SRC_NAME = { rule: '需求推导', survey: '通用核实', both: '需求推导 + 通用核实' };
+
+/* ===================== 状态 ===================== */
+const state = { cur: DEMANDS[0].id, tab: 'form', del: {}, gen: {}, open: {}, flash: null, sent: null, boot: false };
+const demand = () => DEMANDS.find(d => d.id === state.cur);
+const ready = d => d.status === 'done' || state.gen[d.id];
+
+/* ===================== 渲染 ===================== */
+const $ = id => document.getElementById(id);
+function render() { renderList(); renderMain(); }
+function renderList() {
+  $('list').innerHTML = DEMANDS.map(d => {
+    const st = recStats(d);
+    const done = ready(d);
+    return '<div class="dcard' + (d.id === state.cur ? ' on' : '') + '" data-d="' + d.id + '">' +
+      '<div class="row1"><span class="nm">' + esc(d.name) + '</span>' +
+      '<span class="st ' + (done ? 'done' : 'wait') + '">' + (done ? '已解读' : '待解读') + '</span></div>' +
+      '<div class="ov">' + esc(d.overview) + '</div>' +
+      '<div class="mt"><span>提交 ' + esc(d.submitted) + '</span><span>完成度 ' + st.pct + '%</span></div></div>';
+  }).join('');
+}
+function renderMain() {
+  const d = demand(); const st = recStats(d); const done = ready(d);
+  const cntItems = done ? buildItems(d).filter(i => !(state.del[d.id] || {})[keyOf(i)]).length : 0;
+  const cntRisk = (MOCK[d.id] || {}).risks ? MOCK[d.id].risks.length : 0;
+  const tabs = [['form', '房主填写的表格'], ['under', '表格理解', cntRisk ? cntRisk + ' 项风险' : ''], ['list', '量房沟通清单', cntItems ? cntItems + ' 条' : '']];
+  let body = '';
+  if (state.tab === 'form') body = viewForm(d);
+  else if (!done) body = emptyState(d);
+  else if (state.tab === 'under') body = viewUnder(d);
+  else body = viewList(d);
+  if (state.boot) body = '<div class="boot"><span class="spin"></span>正在脱敏并生成清单…</div>';
+
+  $('main').innerHTML =
+    '<div class="head"><div><h2>' + esc(d.name) + '</h2>' +
+      '<div class="meta"><span>' + esc(d.overview) + '</span><span>提交 ' + esc(d.submitted) + '</span>' +
+      '<span>推荐项完成度 ' + st.filled + '/' + st.total + '（' + st.pct + '%）</span></div></div>' +
+      '<div class="acts">' +
+      (done ? '<button class="btn" id="btn-replay">重新解读</button>' : '<button class="btn primary" id="btn-gen">开始解读</button>') +
+      (done ? '<button class="btn" id="btn-export">导出清单</button>' : '') +
+      '</div></div>' +
+    '<div class="tabs">' + tabs.map(t => '<button class="tab' + (state.tab === t[0] ? ' on' : '') + '" data-tab="' + t[0] + '">' + t[1] +
+      (t[2] ? '<span class="n">' + t[2] + '</span>' : '') + '</button>').join('') + '</div>' + body;
+}
+function emptyState(d) {
+  return '<div class="card"><div class="empty-st"><div class="big">这份需求单还没有解读</div>' +
+    '<div>解读会调用模型，所以先过一道外发确认：哪些字段出门、脱敏后长什么样，都由你点头。</div>' +
+    '<div style="margin-top:16px"><button class="btn primary" id="btn-gen2">开始解读</button></div></div></div>';
+}
+function viewForm(d) {
+  return SECTIONS.map((name, idx) => {
+    const fields = SPEC.filter(f => f.section === name && f.scope === '固定');
+    const instDef = SPEC.filter(f => f.section === name && f.scope !== '固定');
+    const list = d.instances[name] || [];
+    let filled = fields.filter(f => !isEmpty(d.values[f.id])).length;
+    let total = fields.length;
+    if (state.open[name] === undefined) state.open[name] = idx === 0;
+    const open = state.open[name];
+    let inner = '';
+    if (fields.length) inner += '<div class="sec-b">' + fields.map(f => fld(d, f)).join('') + '</div>';
+    if (instDef.length) {
+      inner += '<div class="sec-b" style="display:block">' + (list.length ? list.map(i => {
+        const vs = Object.entries(i.values).filter(([, v]) => !isEmpty(v));
+        return '<div class="inst"><div class="ih">' + esc(i.type || i.key) + '　已填 ' + vs.length + ' 项</div>' +
+          (vs.length ? '<div class="kv">' + vs.map(([k, v]) => '<span class="chip">' + esc((F[k] || {}).label || k) + '：' + esc(show(v)) + '</span>').join('') + '</div>' : '<span style="color:var(--dim2)">未填写</span>') + '</div>';
+      }).join('') : '<span style="color:var(--dim2)">未添加</span>') + '</div>';
+    }
+    return '<div class="sec"><div class="sec-h" data-sec="' + esc(name) + '"><span class="num">' + (idx + 1) + '</span>' +
+      '<span class="t">' + esc(name) + '</span><span class="m">' + (instDef.length ? list.length + ' 个空间' : filled + ' / ' + total + ' 已填') + '</span>' +
+      '<span style="color:var(--dim2)">' + (open ? '▾' : '▸') + '</span></div>' + (open ? inner : '') + '</div>';
+  }).join('');
+}
+function fld(d, f) {
+  const v = d.values[f.id]; const empty = isEmpty(v);
+  const ai = (d.aiMarks || []).includes(f.id);
+  return '<div class="fld' + (empty ? ' empty' : '') + (state.flash === f.id ? ' found' : '') + '" data-fld="' + f.id + '">' +
+    '<span class="k">' + esc(f.label) + '</span>' +
+    '<span class="v">' + (empty ? '未填' : esc(show(v))) + (ai ? ' <span class="tag">助手建议</span>' : '') + '</span></div>';
+}
+function viewUnder(d) {
+  const m = MOCK[d.id] || {};
+  const pd = pending(d);
+  return '<div class="card"><h3>客户画像<span class="cnt">' + ((m.profile || []).length) + ' 条</span></h3>' +
+      (m.profile || []).map(([k, v]) => '<div class="sline"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>').join('') + '</div>' +
+    '<div class="card"><h3>核心诉求与优先级<span class="cnt">' + ((m.needs || []).length) + ' 条</span></h3>' +
+      (m.needs || []).map((t, i) => '<div class="sline"><span class="k">P' + (i + 1) + '</span><span class="v">' + esc(t) + '</span></div>').join('') + '</div>' +
+    '<div class="card"><h3>矛盾与风险<span class="cnt">' + ((m.risks || []).length) + ' 条</span></h3>' +
+      (m.risks || []).map(([k, v]) => '<div class="sline"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>').join('') + '</div>' +
+    '<div class="card"><h3>待确认项<span class="cnt">' + pd.length + ' 条</span></h3>' +
+      (pd.length ? pd.map(p => '<div class="sline"><span class="k">' + esc(p.label) + '</span><span class="v" style="color:var(--dim)">' + esc(p.why) + '</span></div>').join('')
+                 : '<div style="color:var(--dim2)">没有待确认项</div>') + '</div>';
+}
+function viewList(d) {
+  const all = buildItems(d); const del = state.del[d.id] || {};
+  const must = all.filter(i => i.tier === 'must').length;
+  const groups = {};
+  all.forEach(i => { (groups[i.space] = groups[i.space] || []).push(i); });
+  const order = SPACE_ORDER.filter(s => groups[s]);
+  let html = '<div class="card"><h3>量房沟通清单<span class="cnt">必问 ' + must + ' 条 · 共 ' + all.length + ' 条（已删减 ' + Object.keys(del).length + ' 条）</span></h3>' +
+    '<div class="note">按现场动线排：先进门核结构与尺寸，再一个空间一个空间走。删掉的那条是「判断这条值不值得带到现场」，动作会记录下来，用来回头调判据。</div></div>';
+  order.forEach(space => {
+    const items = groups[space].slice().sort((a, b) =>
+      (a.tier === b.tier ? 0 : a.tier === 'must' ? -1 : 1) || (a.src === b.src ? 0 : a.src === 'rule' ? -1 : b.src === 'rule' ? 1 : 0));
+    html += '<div class="grp">' + esc(space) + '　' + items.filter(i => !del[keyOf(i)]).length + ' 条</div>';
+    items.forEach(i => {
+      const k = keyOf(i); const isDel = !!del[k];
+      const srcCls = i.src === 'both' ? 'b-src-both' : i.src === 'rule' ? 'b-src-rule' : 'b-src-survey';
+      html += '<div class="item' + (isDel ? ' del' : '') + '" data-key="' + esc(k) + '">' +
+        '<div class="acts"><button class="btn sm" data-act="del">' + (isDel ? '撤销' : '删减') + '</button></div>' +
+        '<div class="q"><span class="badge ' + (i.tier === 'must' ? 'b-must' : 'b-sug') + '">' + TIER_NAME[i.tier] + '</span>' +
+        '<span class="badge ' + srcCls + '">' + SRC_NAME[i.src] + '</span><span>' + esc(i.q) + '</span></div>' +
+        '<div class="line"><b>为什么问</b><span>' + esc(i.why) + '</span></div>' +
+        '<div class="line"><b>现场要核实</b><span>' + esc(i.verify.join('；')) + '</span></div>' +
+        (i.fields.length ? '<div class="line"><b>关联字段</b>' + i.fields.map(f => '<span class="tag" data-jump="' + f + '">' + esc((F[f] || {}).label || f) + '</span>').join(' ') + '</div>' : '') +
+        '</div>';
+    });
+  });
+  return html;
+}
+
+/* ===================== 外发前确认 ===================== */
+function openSend() {
+  const d = demand();
+  const noSend = [], gen = [], free = [], raw = [];
+  Object.entries(d.values).forEach(([k, v]) => {
+    if (isEmpty(v)) return;
+    const f = F[k]; if (!f) return;
+    if (NO_SEND.includes(k)) { noSend.push([f.label, show(v)]); return; }
+    if (GENERALIZE[k]) { const g = GENERALIZE[k](v); gen.push([g.label, show(v) + ' → ' + g.to]); return; }
+    if (isFreeText(f)) { const r = redact(show(v)); free.push([f.id, f.label, r.text, r.hits]); return; }
+    raw.push([f.label, show(v)]);
+  });
+  const blocks =
+    grp('不外发｜留在本机', '这些内容不进入任何请求', noSend.map(([k, v]) => line(k, v)).join('')) +
+    grp('泛化后外发', '本地先转成粗粒度描述', gen.map(([k, v]) => line(k, v)).join('')) +
+    grp('自由文本｜默认不勾选', '唯一可能夹带姓名的类别，需要你主动判断', free.map(([id, k, t, hits]) =>
+      '<div class="sline"><input type="checkbox" data-send="' + id + '" />' +
+      '<span class="k">' + esc(k) + '</span><span class="v">' + esc(t) +
+      (hits.length ? '　<span class="redact">原文含：' + hits.join('、') + '（已隐去）</span>' : '') + '</span></div>').join('')) +
+    grp('原样外发｜选项类字段', '本身就是粗粒度选项，不含可识别信息', '<div class="kv" style="padding:4px 0">' +
+      raw.slice(0, 26).map(([k, v]) => '<span class="chip">' + esc(k) + '：' + esc(v) + '</span>').join('') +
+      (raw.length > 26 ? '<span class="chip">… 共 ' + raw.length + ' 项</span>' : '') + '</div>');
+  showModal('外发前确认 · ' + esc(d.name), blocks,
+    '<span class="hint">未勾选的 ' + free.length + ' 条自由文本不会参与解读</span><div class="spacer"></div>' +
+    '<button class="btn" id="send-cancel">取消</button><button class="btn primary" id="send-ok">确认并生成</button>');
+}
+const grp = (t, why, body) => '<div class="sgroup"><div class="gh">' + esc(t) + '<span class="why">' + esc(why) + '</span></div><div class="gb">' + (body || '<span style="color:var(--dim2)">无</span>') + '</div></div>';
+const line = (k, v) => '<div class="sline"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+function showModal(title, body, foot) {
+  $('modal').innerHTML = '<div class="mh"><h3>' + title + '</h3></div><div class="mb">' + body + '</div><div class="mf">' + foot + '</div>';
+  $('modal').classList.add('on'); $('mask').classList.add('on');
+}
+function closeModal() { $('modal').classList.remove('on'); $('mask').classList.remove('on'); }
+
+/* ===================== 导出 ===================== */
+function exportMd(d) {
+  const all = buildItems(d); const del = state.del[d.id] || {};
+  const keep = all.filter(i => !del[keyOf(i)]);
+  const groups = {}; keep.forEach(i => { (groups[i.space] = groups[i.space] || []).push(i); });
+  let out = '# 量房沟通清单 · ' + d.name + '\n\n> ' + d.overview + '（提交 ' + d.submitted + '）\n';
+  SPACE_ORDER.filter(s => groups[s]).forEach(s => {
+    out += '\n## ' + s + '\n';
+    groups[s].sort((a, b) => (a.tier === b.tier ? 0 : a.tier === 'must' ? -1 : 1)).forEach(i => {
+      out += '\n- [' + TIER_NAME[i.tier] + '] ' + i.q + '\n  为什么问：' + i.why + '\n  现场要核实：' + i.verify.join('；') + '\n';
+    });
+  });
+  return out;
+}
+function jumpTo(fid) {
+  const f = F[fid]; if (!f) return;
+  state.open[f.section] = true; state.flash = fid; state.tab = 'form';
+  render();
+  const el = document.querySelector('[data-fld="' + fid + '"]');
+  if (el) el.scrollIntoView({ block: 'center' });
+  setTimeout(() => { state.flash = null; render(); }, 2000);
+}
+
+/* ===================== 事件 ===================== */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const card = t.closest('[data-d]'); if (card) { state.cur = card.dataset.d; state.tab = 'form'; state.boot = false; render(); return; }
+  const tab = t.closest('[data-tab]'); if (tab) { state.tab = tab.dataset.tab; render(); return; }
+  const sec = t.closest('[data-sec]'); if (sec && !t.closest('[data-act]')) {
+    const n = sec.dataset.sec; state.open[n] = !(state.open[n] !== undefined ? state.open[n] : false); render(); return; }
+  const jp = t.closest('[data-jump]'); if (jp) { jumpTo(jp.dataset.jump); return; }
+  const act = t.closest('[data-act]');
+  if (act) {
+    const item = act.closest('[data-key]'); const d = demand(); const k = item.dataset.key;
+    state.del[d.id] = state.del[d.id] || {};
+    if (state.del[d.id][k]) delete state.del[d.id][k]; else state.del[d.id][k] = true;
+    render(); return;
+  }
+  if (t.id === 'btn-gen' || t.id === 'btn-gen2' || t.id === 'btn-replay') { openSend(); return; }
+  if (t.id === 'send-cancel') { closeModal(); return; }
+  if (t.id === 'send-ok') {
+    const d = demand();
+    closeModal(); state.boot = true; render();
+    setTimeout(() => { state.boot = false; state.gen[d.id] = true; d.status = 'done'; state.tab = 'list'; render(); }, 900);
+    return;
+  }
+  if (t.id === 'btn-export') {
+    const d = demand();
+    showModal('导出量房沟通清单 · ' + esc(d.name), '<pre class="md">' + esc(exportMd(d)) + '</pre>',
+      '<span class="hint">Demo 里只做展示与复制</span><div class="spacer"></div>' +
+      '<button class="btn" id="exp-ok">关闭</button><button class="btn primary" id="exp-copy">复制 Markdown</button>');
+    return;
+  }
+  if (t.id === 'exp-ok') { closeModal(); return; }
+  if (t.id === 'exp-copy') {
+    const d = demand();
+    const done = () => { t.textContent = '已复制'; setTimeout(() => { t.textContent = '复制 Markdown'; }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(exportMd(d)).then(done, done); else done();
+    return;
+  }
+  if (t.id === 'btn-reset') { location.reload(); return; }
+});
+$('mask').addEventListener('click', closeModal);
+render();
+</script>
+</body>
+</html>

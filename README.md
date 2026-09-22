@@ -5,6 +5,7 @@
 - 产品设计文档：`docs/装修需求发现助手_产品设计文档_V1.md`
 - 技术方案：`docs/装修需求发现助手_技术方案_V1.md`
 - 设计需求解读台（规划中）：`docs/设计需求解读台_产品设计文档_V1.md`
+- Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
 - 正式实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
 - 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储，零框架依赖）
 
@@ -21,6 +22,7 @@ packages/
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 产品文档与技术方案
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
+designer/            设计需求解读台 Demo（设计师端，数据模拟）
 tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）
 ```
 
@@ -76,6 +78,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |
+| 设计需求解读台 Demo | `pnpm run test:designer` | 需求单列表、原始表格、外发前确认（含脱敏）、表格理解、清单删减与撤销、导出 |
 
 小程序端没有稳定的自动验证手段（需要开发者工具），因此规则、排序、去重、静默、摘要、草稿迁移
 全部放在零框架依赖的领域包里用 Vitest 覆盖，呈现层只做「读状态、渲染、派发事件」。
