@@ -98,4 +98,12 @@ describe('文档一致性', () => {
     expect(doc).toContain('删减');
     expect(doc).not.toContain('误伤与漏检如何取舍');
   });
+
+  it('设计需求解读台文档写明了通用清单与推导问题的合并排序规则', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    expect(doc).toContain('归属空间 + 核实对象');
+    expect(doc).toContain('related_fields');
+    expect(doc).toContain('全屋');
+    expect(doc).not.toContain('16 项通用量房清单与推导出的问题如何合并去重');
+  });
 });
