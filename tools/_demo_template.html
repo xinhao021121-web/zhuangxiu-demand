@@ -199,6 +199,9 @@ button{font-family:inherit;cursor:pointer}
 /* 字段清单由 tools/build_demo.py 从字段清单 xlsx 注入，保证 Demo 与规格一致 */
 const FIELD_SPEC = /*__FIELD_SPEC__*/[];
 
+/* 未注入字段数据（直接打开模板文件）时的保护：给出明确提示，避免空白页面与 NaN */
+const HAS_SPEC = FIELD_SPEC.length > 0;
+
 /* ============ 规则库（纯规则，MVP 演示版） ============ */
 const has = (v, x) => Array.isArray(v) ? v.includes(x) : v === x;
 const RULES = [
@@ -367,6 +370,11 @@ function controlOf(f) {
 }
 
 function renderForm() {
+  if (!HAS_SPEC) {
+    $('#form-col').innerHTML = '<div class="card" style="padding:44px 24px;text-align:center;color:#5a5f66;line-height:2">' +
+      '这是构建用的模板文件，不包含字段数据。<br/>请打开：<b>demo/装修需求发现助手_Demo_V0.1.html</b></div>';
+    return;
+  }
   $('#form-col').innerHTML = SECTIONS.map((s, i) => {
     const fields = s.groups.flatMap(g => g.fields);
     const done = fields.filter(f => !empty(V[f.id])).length;
@@ -404,6 +412,12 @@ function missingItems() {
 }
 
 function renderSide() {
+  if (!HAS_SPEC) {
+    $('#c-found').textContent = '0'; $('#c-handled').textContent = '0'; $('#c-open').textContent = '0';
+    $('#resume').style.display = 'none';
+    $('#dk-list').innerHTML = '<div class="empty">这是构建用的模板文件，<br/>请打开 demo/装修需求发现助手_Demo_V0.1.html</div>';
+    return;
+  }
   const newOnes = activeRules();
   const missing = missingItems();
   const total = RULES.filter(r => { try { return !!r.when(V); } catch (e) { return false; } }).length;
@@ -458,7 +472,7 @@ function renderDots() {
 
 function renderProgress() {
   const done = requiredFields.filter(f => !empty(V[f.id])).length;
-  const pct = Math.round(done / requiredFields.length * 100);
+  const pct = requiredFields.length ? Math.round(done / requiredFields.length * 100) : 0;
   $('#prog-bar').style.width = pct + '%';
   $('#prog-num').textContent = '完整度 ' + pct + '% · 必填 ' + done + '/' + requiredFields.length;
 }
@@ -669,7 +683,7 @@ $('#btn-reset').onclick = () => {
 $('#btn-summary').onclick = $('#btn-summary2').onclick = () => showModal('需求摘要（模拟生成）', summaryText());
 $('#btn-submit').onclick = () => {
   const done = requiredFields.filter(f => !empty(V[f.id])).length;
-  const pct = Math.round(done / requiredFields.length * 100);
+  const pct = requiredFields.length ? Math.round(done / requiredFields.length * 100) : 0;
   const open = activeRules().length + missingItems().length;
   showModal('提交前检查', '本次需求完整度 ' + pct + '%（必填 ' + done + '/' + requiredFields.length + '）\n' +
     '已确认助手发现 ' + Object.values(DK).filter(d => d.status === 'adopted').length + ' 条\n' +
@@ -690,10 +704,10 @@ $('#modal-copy').onclick = async () => {
 };
 
 /* ============ 启动 ============ */
-load();
+if (HAS_SPEC) load();
 COLLAPSED = Object.fromEntries(SECTIONS.map((s, i) => [s.name, i > 1]));
 renderAll();
-if (!Object.keys(V).length) toast('提示：点右上角「填入示例需求」可以快速体验完整流程');
+if (HAS_SPEC && !Object.keys(V).length) toast('提示：点右上角「填入示例需求」可以快速体验完整流程');
 </script>
 </body>
 </html>

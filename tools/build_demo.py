@@ -2,7 +2,7 @@
 
 用法（需使用内置 Python，因其带有 openpyxl）：
   python tools/build_demo.py
-产物：demo/装修需求发现助手_Demo_V0.1.html
+模板：tools/_demo_template.html（勿直接打开，直接打开会因缺少字段数据而只显示提示）`r`n产物：demo/装修需求发现助手_Demo_V0.1.html
 """
 
 import json
@@ -18,7 +18,7 @@ BOOK = (
     / "01a0c95f-3b4f-7762-ad52-61bb13941fcc"
     / "装修需求采集表_字段清单_V1.xlsx"
 )
-TEMPLATE = ROOT / "demo" / "_template.html"
+TEMPLATE = ROOT / "tools" / "_demo_template.html"
 OUTPUT = ROOT / "demo" / "装修需求发现助手_Demo_V0.1.html"
 PLACEHOLDER = "/*__FIELD_SPEC__*/[]"
 

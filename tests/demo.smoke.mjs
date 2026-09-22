@@ -118,6 +118,14 @@ await page.waitForTimeout(300);
 ok((await page.locator("#prog-num").innerText()).includes("完整度 0%"), "重置后回到初始状态");
 ok(await count(page, ".ai-badge") === 0, "重置后清除 AI 标记");
 
+// 11. 回归：直接打开模板文件时不能是空白页，也不能出现 NaN
+const tplPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await tplPage.goto(pathToFileURL(path.join(ROOT, "tools", "_demo_template.html")).href);
+await tplPage.waitForTimeout(300);
+const tplText = await tplPage.locator("body").innerText();
+ok(tplText.includes("模板文件"), "直接打开模板时给出明确提示");
+ok(!tplText.includes("NaN"), "直接打开模板时不出现 NaN");
+await tplPage.close();
 ok(errors.length === 0, errors.length ? "控制台无错误：" + errors.join(" | ") : "控制台无错误");
 
 await browser.close();
