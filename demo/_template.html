@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>筑云 · 装修需求发现助手 Demo V0.1</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg-page:#f4f5f7; --bg-card:#ffffff; --bg-hover:#f1f3f5; --bg-active:#e9f1fb;
+  --border:#e6e8eb; --border-strong:#d4d7db;
+  --text-1:#16181c; --text-2:#5a5f66; --text-3:#9aa0a6;
+  --primary:#2a78d6; --primary-hover:#256abf; --primary-weak:#e9f1fb;
+  --success:#0ca30c; --warning:#fab219; --danger:#d03b3b;
+  --success-bg:#e7f6e7; --warning-bg:#fdf3d7; --danger-bg:#fbe7e7;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 4px 16px rgba(16,24,40,.10);
+  --shadow-lg:0 12px 32px rgba(16,24,40,.16);
+  --radius:10px; --radius-sm:7px;
+  --font:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg-page);color:var(--text-1);font-family:var(--font);font-size:14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:30;height:60px;display:flex;align-items:center;gap:16px;
+  padding:0 22px;background:var(--bg-card);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;white-space:nowrap}
+.brand .dot{width:22px;height:22px;border-radius:6px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:12px}
+.topbar .spacer{flex:1}
+.progress-wrap{display:flex;align-items:center;gap:10px;min-width:260px}
+.progress{position:relative;flex:1;height:8px;border-radius:99px;background:#eceef1;overflow:hidden}
+.progress i{position:absolute;inset:0 auto 0 0;background:var(--primary);border-radius:99px;transition:width .3s}
+.progress-num{font-size:12.5px;color:var(--text-2);white-space:nowrap}
+.btn{border:1px solid var(--border-strong);background:#fff;color:var(--text-1);border-radius:var(--radius-sm);
+  padding:7px 13px;font-size:13px;transition:.15s}
+.btn:hover{background:var(--bg-hover)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover)}
+.btn-soft{background:var(--primary-weak);border-color:transparent;color:var(--primary)}
+.btn-sm{padding:4px 10px;font-size:12.5px;border-radius:6px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- 布局 ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:16px;align-items:start;
+  max-width:1480px;margin:16px auto;padding:0 16px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+
+/* ---------- 表单 ---------- */
+.form-col{display:flex;flex-direction:column;gap:14px;padding-bottom:40px}
+.sec-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer}
+.sec-num{width:22px;height:22px;border-radius:50%;background:var(--primary-weak);color:var(--primary);
+  font-size:12px;display:grid;place-items:center;font-weight:600;flex:none}
+.sec-title{font-weight:600;font-size:14px}
+.sec-meta{margin-left:auto;font-size:12px;color:var(--text-3)}
+.sec-body{padding:6px 18px 16px}
+.sec-card.collapsed .sec-body{display:none}
+.group-title{font-size:12.5px;color:var(--text-3);margin:14px 0 8px;padding-top:10px;border-top:1px dashed var(--border)}
+.group-title:first-child{border-top:0;padding-top:4px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.wide{grid-column:1 / -1}
+.field label{font-size:12.5px;color:var(--text-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.field .req{color:var(--danger);font-size:11px}
+.field input[type=text],.field input[type=number],.field input[type=month],.field textarea,.field select{
+  width:100%;padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  font-size:13.5px;font-family:inherit;color:var(--text-1);background:#fff;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-weak)}
+.field textarea{min-height:74px;resize:vertical}
+.unit{font-size:12px;color:var(--text-3)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--border-strong);background:#fff;border-radius:99px;padding:5px 12px;font-size:12.5px;
+  color:var(--text-2);transition:.15s}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.ai-badge{display:inline-flex;align-items:center;gap:4px;background:var(--primary-weak);color:var(--primary);
+  border-radius:99px;padding:1px 8px;font-size:11px;cursor:pointer}
+.flash{animation:flash 1.6s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--primary)}100%{box-shadow:0 0 0 3px transparent}}
+
+/* ---------- 侧栏 ---------- */
+.side{position:sticky;top:76px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 92px)}
+.side-card{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.side-head{padding:14px 16px;border-bottom:1px solid var(--border)}
+.side-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.side-title .tag{font-size:11px;font-weight:400;color:var(--primary);background:var(--primary-weak);padding:1px 7px;border-radius:99px}
+.counts{display:flex;gap:14px;margin-top:9px;font-size:12.5px;color:var(--text-2)}
+.counts b{color:var(--text-1)}
+.resume{margin-top:9px;padding:8px 10px;background:var(--bg-active);border-radius:var(--radius-sm);font-size:12.5px;color:var(--primary)}
+.side-body{padding:12px 14px;overflow:auto;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 350px)}
+.dk{border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius-sm);padding:11px 12px;background:#fff}
+.dk.p0{border-left-color:var(--danger)}
+.dk.p1{border-left-color:var(--warning)}
+.dk.risk{background:#fffdf7}
+.dk.done{background:var(--success-bg);border-left-color:var(--success)}
+.dk.ignored{opacity:.5}
+.dk-top{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.prio{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--bg-hover);color:var(--text-2)}
+.prio.p0{background:var(--danger-bg);color:var(--danger)}
+.prio.p1{background:var(--warning-bg);color:#8a6200}
+.prio.p2{background:var(--bg-hover);color:var(--text-2)}
+.dk-kind{font-size:11px;color:var(--text-3)}
+.dk-title{font-size:13px;font-weight:600;line-height:1.45}
+.dk-text{font-size:12.5px;color:var(--text-2);margin-top:5px}
+.dk-why{font-size:11.5px;color:var(--text-3);margin-top:6px}
+.dk-target{display:inline-block;font-size:11px;color:var(--primary);background:var(--primary-weak);
+  border-radius:4px;padding:1px 6px;margin-top:7px}
+.dk-acts{display:flex;gap:7px;margin-top:10px}
+.dk-edit{width:100%;min-height:64px;margin-top:8px;padding:7px 9px;border:1px solid var(--border-strong);
+  border-radius:6px;font-family:inherit;font-size:12.5px}
+.empty{padding:26px 12px;text-align:center;color:var(--text-3);font-size:12.5px}
+.more{font-size:12.5px;color:var(--primary);text-align:center;padding:6px;cursor:pointer}
+.dots{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;border-top:1px solid var(--border)}
+.sdot{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text-3);border:1px solid var(--border);
+  border-radius:99px;padding:3px 9px;background:#fff}
+.sdot i{width:6px;height:6px;border-radius:50%;background:var(--border-strong)}
+.sdot.part i{background:var(--warning)}
+.sdot.done i{background:var(--success)}
+.sdot:hover{border-color:var(--primary);color:var(--primary)}
+.side-foot{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border)}
+.side-foot .btn{flex:1;text-align:center}
+.quiet{font-size:12.5px;color:var(--warning);padding:10px 14px;background:var(--warning-bg);border-radius:var(--radius-sm)}
+
+/* ---------- 弹窗 / 提示 ---------- */
+.mask{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:24px}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-lg);max-width:660px;width:100%;max-height:82vh;display:flex;flex-direction:column}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.modal-head h3{margin:0;font-size:15px}
+.modal-head .btn{margin-left:auto}
+.modal-body{padding:18px 20px;overflow:auto;font-size:13px;white-space:pre-wrap;line-height:1.75}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(12px);background:#16181c;color:#fff;
+  padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:80}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:1120px){
+  .layout{grid-template-columns:1fr}
+  .side{position:static;max-height:none}
+  .side-body{max-height:none}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="dot">筑</span> 装修需求采集 · 房主端</div>
+  <div class="progress-wrap">
+    <div class="progress"><i id="prog-bar" style="width:0%"></i></div>
+    <span class="progress-num" id="prog-num">完整度 0%</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="btn-demo">填入示例需求</button>
+  <button class="btn" id="btn-reset">重置</button>
+  <button class="btn btn-primary" id="btn-summary">生成需求摘要</button>
+  <button class="btn btn-primary" id="btn-submit">提交设计师</button>
+</header>
+
+<main class="layout">
+  <div class="form-col" id="form-col"></div>
+
+  <aside class="side">
+    <section class="card side-card">
+      <div class="side-head">
+        <div class="side-title">需求发现助手 <span class="tag">纯规则</span></div>
+        <div class="counts">
+          <span>已发现 <b id="c-found">0</b></span>
+          <span>已处理 <b id="c-handled">0</b></span>
+          <span>待看 <b id="c-open">0</b></span>
+        </div>
+        <div class="resume" id="resume" style="display:none"></div>
+      </div>
+      <div class="side-body" id="dk-list"></div>
+      <div class="dots" id="dots"></div>
+      <div class="side-foot">
+        <button class="btn btn-sm" id="btn-quiet">暂时不要建议</button>
+        <button class="btn btn-sm btn-soft" id="btn-summary2">需求摘要</button>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-title">需求摘要</h3><button class="btn btn-sm" id="modal-close">关闭</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-sm" id="modal-copy">复制文本</button>
+      <button class="btn btn-sm btn-primary" id="modal-ok">知道了</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 字段清单由 tools/build_demo.py 从字段清单 xlsx 注入，保证 Demo 与规格一致 */
+const FIELD_SPEC = /*__FIELD_SPEC__*/[];
+
+/* ============ 规则库（纯规则，MVP 演示版） ============ */
+const has = (v, x) => Array.isArray(v) ? v.includes(x) : v === x;
+const RULES = [
+  { id:'r-pet-cat', p:'P1', when:v=>has(v.live_pet,'猫'), target:'note_free', action:'append',
+    title:'养猫家庭的专属空间与材质',
+    text:'建议在阳台或卫生间预留猫砂盆位置，并避免大面积绒面与皮质家具；猫爬架附近预留插座。',
+    why:v=>'因为你填了「是否养宠物：'+(v.live_pet||[]).join('、')+'」' },
+  { id:'r-pet-robot', p:'P2', when:v=>has(v.live_pet,'猫')||has(v.live_pet,'狗'), target:'bl_robot', action:'replace',
+    title:'预留扫地机器人位置与回充点位',
+    text:'养宠家庭地面清洁频率高，建议明确扫地机器人回充位置并预留插座。',
+    why:v=>'因为你养了宠物' },
+  { id:'r-kitchen-open', p:'P0', kind:'risk', when:v=>has(v.kt_form,'开放式')&&has(v.kt_freq,'经常'), target:'kt_hood', action:'replace',
+    title:'开放式厨房遇到高频下厨，油烟方案要先定',
+    text:'建议确认油烟机形式与风量（侧吸或集成灶），并提前了解当地燃气公司对开放厨房的备案要求。',
+    why:v=>'因为你填了「厨房形式：开放式」和「下厨频率：经常」' },
+  { id:'r-kitchen-height', p:'P1', when:v=>!!(v.kt_height_m||v.kt_height_f), target:'kt_counter', action:'replace',
+    title:'按身高做高低台面',
+    text:'按主要做饭人身高计算，洗切区比烹饪区高 8-10cm 更省腰；建议做高低台面。',
+    why:v=>'因为你填了身高「'+(v.kt_height_m||'-')+' / '+(v.kt_height_f||'-')+' cm」' },
+  { id:'r-budget-ratio', p:'P0', kind:'risk', when:v=>!!(v.base_area&&v.budget_total), target:'budget_reserve', action:'replace',
+    title:'预算与面积匹配度提醒',
+    text:'按当前面积与预算折算单价，建议在预算外单独预留 20% 作为增项备用金。',
+    why:v=>'因为你填了「建筑面积：'+v.base_area+'㎡」和「预算：'+v.budget_total+'万」' },
+  { id:'r-schedule', p:'P0', kind:'risk', when:v=>!!(v.date_finish&&v.date_movein), target:'date_start', action:'replace',
+    title:'入住时间与定制家具周期冲突',
+    text:'定制柜与木作的制作安装通常需要 45-60 天，建议把下单时间提前，避免影响入住。',
+    why:v=>'因为你填了「计划完工」和「计划入住」两个时间' },
+  { id:'r-elder', p:'P0', when:v=>has(v.live_elder,'是'), target:'el_safety', action:'replace',
+    title:'适老安全设施',
+    text:'建议长辈房与卫生间增加紧急按钮、防滑扶手与感应夜灯，地面避免高差。',
+    why:v=>'因为你填了「有老人或行动不便成员：是」' },
+  { id:'r-allergy', p:'P1', when:v=>has(v.live_allergy,'是'), target:'note_special', action:'append',
+    title:'过敏成员的材质注意事项',
+    text:'有过敏成员，软装避免长毛地毯与绒面沙发，优先选择可擦洗的材质，并考虑新风与除螨。',
+    why:v=>'因为你填了「有鼻炎或过敏成员：是」' },
+  { id:'r-smoke', p:'P2', when:v=>has(v.live_smoke,'是'), target:'note_free', action:'append',
+    title:'吸烟区与排风方案',
+    text:'建议明确一个可关门的吸烟位置并做独立排风，避免烟味扩散到卧室与衣物。',
+    why:v=>'因为你填了「有吸烟成员：是」' },
+  { id:'r-ac', p:'P1', when:v=>has(v.dev_ac,'中央空调')||has(v.dev_ac,'风管机'), target:'note_free', action:'append',
+    title:'中央空调的吊顶与检修口',
+    text:'中央空调需要吊顶包裹管道，请在需要的位置预留检修口，并确认层高是否满足。',
+    why:v=>'因为你填了「空调类型：'+(v.dev_ac||[]).join('、')+'」' },
+  { id:'r-floorheat', p:'P1', when:v=>has(v.dev_floorheat,'是'), target:'note_free', action:'append',
+    title:'地暖带来的地面抬高',
+    text:'地暖完成面通常抬高 8-10cm，木地板建议选地暖专用款，并注意与入户门槛的高度衔接。',
+    why:v=>'因为你填了「地暖：是」' },
+  { id:'r-kids', p:'P1', when:v=>has(v.live_members,'儿子')||has(v.live_members,'女儿')||has(v.live_members,'未来成员'), target:'ch_activity', action:'replace',
+    title:'儿童房要留成长空间',
+    text:'建议儿童房预留可升降书桌与活动空间，家具做倒圆角处理，衣柜 1.2m 以下留给孩子自己收纳。',
+    why:v=>'因为你填的家庭成员里有孩子' },
+  { id:'r-secondhand', p:'P2', when:v=>has(v.br_secondhand,'需要'), target:'br_clothes', action:'replace',
+    title:'次净衣区的落位',
+    text:'建议在衣柜侧边留出次净衣区，底部配脏衣篓，入住后衣物不容易堆在椅子或床尾。',
+    why:v=>'因为你选择了「次净衣区：需要」' },
+  { id:'r-dishwasher', p:'P2', when:v=>has(v.kt_dishwasher,'前开式')||has(v.kt_dishwasher,'水槽式'), target:'kt_storage', action:'replace',
+    title:'洗碗机的水电与橱柜尺寸',
+    text:'洗碗机需要进水、排水与插座，建议在橱柜设计前确定型号，避免后期改柜。',
+    why:v=>'因为你填了「洗碗机：'+v.kt_dishwasher+'」' },
+  { id:'r-dryer', p:'P1', when:v=>has(v.bl_dryer,'是'), target:'bl_hanger', action:'replace',
+    title:'有烘干机后，阳台可以重新规划',
+    text:'如果以烘干为主，可以减少晾晒空间，把阳台改成家政柜加收纳，或做成休闲区。',
+    why:v=>'因为你填了「烘干机：是」' },
+  { id:'r-bookshelf', p:'P2', when:v=>has(v.lv_bookshelf,'需要'), target:'lv_sofa', action:'replace',
+    title:'学习型客厅的家具取舍',
+    text:'做整墙书柜时建议减少沙发体量与茶几，用大长桌替代，客厅的使用率会明显提高。',
+    why:v=>'因为你填了「书墙或大长桌：需要」' },
+  { id:'r-office', p:'P1', when:v=>has(v.office_need,'长期居家办公'), target:'dev_wifi', action:'replace',
+    title:'居家办公的网络与隔音',
+    text:'建议工位预留有线网口，并给书房做隔音处理；全屋建议做 WIFI 全覆盖。',
+    why:v=>'因为你填了「办公需求：长期居家办公」' },
+  { id:'r-coffee', p:'P2', when:v=>has(v.dn_coffee,'是'), target:'note_free', action:'append',
+    title:'咖啡机的台面与插座',
+    text:'咖啡机建议放在餐边柜或水吧台面，并预留带开关的插座，避免频繁插拔。',
+    why:v=>'因为你填了「咖啡机：是」' },
+  { id:'r-toilet', p:'P1', when:v=>has(v.wc_toilet,'智能马桶'), target:'note_free', action:'append',
+    title:'智能马桶的插座与防溅',
+    text:'智能马桶需要在马桶侧预留插座，并做好防溅处理；如考虑移位需提前确认排污条件。',
+    why:v=>'因为你填了「马桶类型：智能马桶」' },
+  { id:'r-bath', p:'P2', when:v=>has(v.wc_bath,'浴缸')||has(v.wc_bath,'浴缸加淋浴'), target:'note_free', action:'append',
+    title:'浴缸尺寸与给排水',
+    text:'常见浴缸长度 1.5-1.7m，需要确认空间尺寸、给排水位置与地面承重。',
+    why:v=>'因为你填了「泡澡需求：'+v.wc_bath+'」' },
+  { id:'r-boots', p:'P2', when:v=>Number(v.ex_boots)>0, target:'ex_shoe', action:'replace',
+    title:'高筒靴需要活动层板',
+    text:'有高筒靴时鞋柜建议做活动层板，留出 30cm 以上层高，不要全做均分格。',
+    why:v=>'因为你填了「高筒靴数量：'+v.ex_boots+' 双」' },
+  { id:'r-luggage', p:'P1', when:v=>Number(v.sc_luggage)>=2||has(v.sc_storage_items,'露营装备'), target:'sc_storage_room', action:'replace',
+    title:'行李箱与户外装备的收纳位置',
+    text:'建议在储物间或衣柜顶柜预留大件存放区，避免 28 寸行李箱堆在玄关。',
+    why:v=>'因为你填了大件物品的收纳需求' },
+  { id:'r-clean', p:'P2', when:v=>has(v.clean_tools,'洗地机')||has(v.clean_tools,'扫地机器人'), target:'sc_housekeeping', action:'replace',
+    title:'家政柜与清洁工具收纳',
+    text:'建议做一组家政柜集中收纳清洁工具，并在柜内预留插座给吸尘器与洗地机充电。',
+    why:v=>'因为你填了清洁工具：'+(v.clean_tools||[]).join('、') },
+  { id:'r-guest', p:'P2', when:v=>has(v.guest_freq,'经常'), target:'gh_need', action:'replace',
+    title:'常来客人的客房规划',
+    text:'客人常来建议保留独立客房或可展开的沙发床，同时兼顾日常的储物与办公需求。',
+    why:v=>'因为你填了「聚会与来客频率：经常」' },
+  { id:'r-religion', p:'P2', when:v=>has(v.religion,'有')||has(v.fengshui,'是'), target:'note_special', action:'append',
+    title:'信仰与风水相关的预留',
+    text:'建议提前说明供奉位置或风水上的具体要求（门位、镜面、床位），设计阶段一次性规避。',
+    why:v=>'因为你填了信仰或风水相关的选项' },
+  { id:'r-piano', p:'P2', when:v=>has(v.lv_piano,'需要'), target:'note_free', action:'append',
+    title:'钢琴位置的地面与隔音',
+    text:'钢琴自重较大，建议靠承重墙放置，并考虑对邻居的隔音处理。',
+    why:v=>'因为你填了「钢琴放置：需要」' },
+  { id:'r-cloakroom', p:'P2', when:v=>has(v.sc_cloakroom,'是'), target:'sc_cloakroom_share', action:'replace',
+    title:'衣帽间的共用方式',
+    text:'建议先确认衣帽间是夫妻共用还是分开，这直接决定柜体分区与通道宽度。',
+    why:v=>'因为你填了「是否需要衣帽间：是」' },
+  { id:'r-washer-top', p:'P2', when:v=>has(v.bl_washer,'是'), target:'bl_washer_top', action:'replace',
+    title:'洗衣机上方空间利用',
+    text:'洗衣机上方可做吊柜或台面，增加收纳与分拣空间；注意预留龙头与插座高度。',
+    why:v=>'因为你填了「洗衣机：是」' },
+  { id:'r-mop', p:'P2', when:v=>has(v.bl_window,'是')||has(v.bl_sink,'是'), target:'bl_mop', action:'replace',
+    title:'拖把池与家政动线',
+    text:'有阳台水槽或封窗时，建议预留拖把池位置，家务动线会更顺。',
+    why:v=>'因为你填了阳台相关的功能选项' }
+];
+
+/* ============ 状态 ============ */
+const SECTIONS = (() => {
+  const map = new Map();
+  FIELD_SPEC.forEach(f => {
+    if (!map.has(f.section)) map.set(f.section, new Map());
+    const g = map.get(f.section);
+    if (!g.has(f.group)) g.set(f.group, []);
+    g.get(f.group).push(f);
+  });
+  return [...map.entries()].map(([name, groups]) => ({
+    name, groups: [...groups.entries()].map(([g, fields]) => ({ name: g, fields }))
+  }));
+})();
+
+const STORE_KEY = 'zy_demand_demo_v1';
+let V = {};                 // 字段值
+let AI = {};                // fieldId -> 助手写入的说明
+let DK = {};                // ruleId -> {status, text}
+let QUIET = false;
+let DISMISS = 0;
+let COLLAPSED = {};
+let REVEAL = false;
+let pendingEdit = null;
+
+const $ = s => document.querySelector(s);
+const requiredFields = FIELD_SPEC.filter(f => f.required);
+const fieldById = id => FIELD_SPEC.find(f => f.id === id);
+const labelOf = id => (fieldById(id) || {}).label || id;
+const empty = v => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
+
+/* ============ 渲染：表单 ============ */
+function controlOf(f) {
+  const v = V[f.id];
+  if (f.type === '单选' || f.type === '多选') {
+    const multi = f.type === '多选';
+    return '<div class="chips">' + f.options.map(o =>
+      '<button class="chip' + (multi ? (has(v, o) ? ' on' : '') : (v === o ? ' on' : '')) +
+      '" data-act="chip" data-id="' + f.id + '" data-val="' + o.replace(/"/g, '&quot;') + '">' + o + '</button>').join('') + '</div>';
+  }
+  if (f.type === '长文本') return '<textarea data-act="input" data-id="' + f.id + '" placeholder="' + (f.unit || '') + '">' + (v || '') + '</textarea>';
+  const t = f.type === '数字' ? 'number' : (f.type === '日期' ? 'month' : 'text');
+  const val = v === undefined || v === null ? '' : v;
+  return '<input type="' + t + '" data-act="input" data-id="' + f.id + '" value="' + String(val).replace(/"/g, '&quot;') +
+    '" placeholder="' + (f.unit || '') + '" />' + (f.unit && f.type === '数字' ? '<span class="unit">' + f.unit + '</span>' : '');
+}
+
+function renderForm() {
+  $('#form-col').innerHTML = SECTIONS.map((s, i) => {
+    const fields = s.groups.flatMap(g => g.fields);
+    const done = fields.filter(f => !empty(V[f.id])).length;
+    return '<section class="card sec-card' + (COLLAPSED[s.name] ? ' collapsed' : '') + '" data-sec="' + s.name + '">' +
+      '<div class="sec-head" data-act="toggle" data-sec="' + s.name + '">' +
+        '<span class="sec-num">' + (i + 1) + '</span><span class="sec-title">' + s.name + '</span>' +
+        '<span class="sec-meta">' + done + ' / ' + fields.length + (COLLAPSED[s.name] ? ' · 展开' : '') + '</span>' +
+      '</div><div class="sec-body">' +
+      s.groups.map(g => '<div class="group-title">' + g.name + '</div><div class="grid">' +
+        g.fields.map(f => '<div class="field' + (f.type === '长文本' ? ' wide' : '') + '" id="fi-' + f.id + '">' +
+          '<label>' + f.label + (f.required ? '<span class="req">必填</span>' : '') +
+          (AI[f.id] ? '<span class="ai-badge" data-act="undo" data-id="' + f.id + '">✦ AI 建议 · 撤销</span>' : '') +
+          '</label>' + controlOf(f) + '</div>').join('') + '</div>').join('') +
+      '</div></section>';
+  }).join('');
+}
+
+/* ============ 渲染：侧栏 ============ */
+function activeRules() {
+  return RULES.filter(r => { try { return !!r.when(V); } catch (e) { return false; } })
+    .filter(r => { const d = DK[r.id]; return !d || d.status === 'new'; })
+    .map(r => ({ ...r, _status: (DK[r.id] || {}).status || 'new' }))
+    .sort((a, b) => (a.p - b.p ? a.p < b.p ? -1 : 1 : 0));
+}
+
+function missingItems() {
+  const gap = requiredFields.filter(f => empty(V[f.id]));
+  if (!gap.length) return [];
+  return gap.slice(0, 2).map(f => ({
+    id: 'missing-' + f.id, p: 'P1', kind: 'fill', target: f.id, action: 'none',
+    title: '还差一项关键信息：' + f.label,
+    text: '这项直接影响下游设计与报价的准确度，建议现在补充。',
+    why: () => '必填项未填写'
+  }));
+}
+
+function renderSide() {
+  const newOnes = activeRules();
+  const missing = missingItems();
+  const total = RULES.filter(r => { try { return !!r.when(V); } catch (e) { return false; } }).length;
+  const handled = Object.values(DK).filter(d => d.status !== 'new').length;
+  $('#c-found').textContent = total + missing.length;
+  $('#c-handled').textContent = handled;
+  $('#c-open').textContent = newOnes.length + missing.length;
+
+  const resume = $('#resume');
+  if (handled > 0 && newOnes.length + missing.length > 0) {
+    resume.style.display = 'block';
+    resume.textContent = '你已处理 ' + handled + ' 条发现，还有 ' + (newOnes.length + missing.length) + ' 条待看';
+  } else resume.style.display = 'none';
+
+  const list = $('#dk-list');
+  if (QUIET) {
+    list.innerHTML = '<div class="quiet">已进入静默模式，暂停主动建议。你可以点击下方「恢复建议」重新开启。</div>';
+    return;
+  }
+  const all = [...missing, ...newOnes];
+  if (!all.length) {
+    list.innerHTML = '<div class="empty">当前没有新的发现。<br />继续填写表单，助手会自动跟进。</div>';
+    return;
+  }
+  const shown = REVEAL ? all : all.slice(0, 3);
+  list.innerHTML = shown.map(r => {
+    const kind = r.kind === 'risk' ? '风险提醒' : (r.kind === 'fill' ? '信息补充' : '需求发现');
+    return '<div class="dk ' + r.p.toLowerCase() + (r.kind === 'risk' ? ' risk' : '') + '" data-rule="' + r.id + '">' +
+      '<div class="dk-top"><span class="prio ' + r.p.toLowerCase() + '">' + r.p + '</span>' +
+      '<span class="dk-kind">' + kind + '</span></div>' +
+      '<div class="dk-title">' + r.title + '</div>' +
+      '<div class="dk-text">' + (r.kind === 'fill' ? r.text : (typeof r.text === 'function' ? r.text(V) : r.text)) + '</div>' +
+      '<div class="dk-why">' + (typeof r.why === 'function' ? r.why(V) : r.why) + '</div>' +
+      '<span class="dk-target" data-act="goto" data-id="' + r.target + '">→ ' + labelOf(r.target) + '</span>' +
+      (r.action === 'none'
+        ? '<div class="dk-acts"><button class="btn btn-sm btn-soft" data-act="goto" data-id="' + r.target + '">去填写</button></div>'
+        : '<div class="dk-acts"><button class="btn btn-sm btn-primary" data-act="adopt" data-rule="' + r.id + '">加入</button>' +
+          '<button class="btn btn-sm" data-act="edit" data-rule="' + r.id + '">改一改</button>' +
+          '<button class="btn btn-sm" data-act="ignore" data-rule="' + r.id + '">不感兴趣</button></div>') +
+      '</div>';
+  }).join('') + (all.length > 3 && !REVEAL ? '<div class="more" data-act="reveal">展开更多（还有 ' + (all.length - 3) + ' 条）</div>' : '');
+}
+
+function renderDots() {
+  $('#dots').innerHTML = SECTIONS.map(s => {
+    const fields = s.groups.flatMap(g => g.fields);
+    const done = fields.filter(f => !empty(V[f.id])).length;
+    const cls = done === 0 ? '' : (done >= fields.length ? 'done' : 'part');
+    return '<span class="sdot ' + cls + '" data-act="goto-sec" data-sec="' + s.name + '"><i></i>' + s.name + '</span>';
+  }).join('');
+}
+
+function renderProgress() {
+  const done = requiredFields.filter(f => !empty(V[f.id])).length;
+  const pct = Math.round(done / requiredFields.length * 100);
+  $('#prog-bar').style.width = pct + '%';
+  $('#prog-num').textContent = '完整度 ' + pct + '% · 必填 ' + done + '/' + requiredFields.length;
+}
+
+function renderAll() { renderForm(); renderSide(); renderDots(); renderProgress(); save(); }
+
+/* ============ 动作 ============ */
+function writeTarget(fieldId, text, action) {
+  const f = fieldById(fieldId);
+  if (!f) return;
+  if (f.type === '长文本' || f.type === '文本') {
+    const cur = V[fieldId] || '';
+    V[fieldId] = cur ? (cur + '\n' + text) : text;
+  } else if (f.type === '多选') {
+    const cur = Array.isArray(V[fieldId]) ? V[fieldId].slice() : [];
+    if (!cur.includes(text)) cur.push(text);
+    V[fieldId] = cur;
+  } else {
+    V[fieldId] = text;
+  }
+  AI[fieldId] = text;
+}
+
+function adopt(ruleId, customText) {
+  const r = [...RULES, ...missingItems()].find(x => x.id === ruleId);
+  if (!r) return;
+  const f = fieldById(r.target);
+  const text = customText || (typeof r.text === 'function' ? r.text(V) : r.text);
+  const needConfirm = f && !empty(V[r.target]) && f.type !== '长文本' && f.type !== '文本' && f.type !== '多选';
+  if (needConfirm) {
+    if (!confirm('「' + f.label + '」已填写「' + (Array.isArray(V[r.target]) ? V[r.target].join('、') : V[r.target]) + '」，是否替换为助手建议？')) return;
+  }
+  if (f && f.type === '单选') {
+    const opt = f.options.find(o => text.includes(o));
+    writeTarget(r.target, opt || text, r.action);
+  } else {
+    writeTarget(r.target, text, r.action);
+  }
+  DK[ruleId] = { status: 'adopted', text };
+  toast('已加入「' + labelOf(r.target) + '」，可在字段旁撤销');
+  renderAll();
+}
+
+function ignore(ruleId) {
+  DK[ruleId] = { status: 'ignored' };
+  DISMISS++;
+  if (DISMISS >= 3 && !QUIET) { QUIET = true; toast('连续 3 次不感兴趣，已进入静默模式'); }
+  else toast('已忽略，同类建议不再重复出现');
+  renderAll();
+}
+
+function undoAI(fieldId) {
+  delete AI[fieldId];
+  V[fieldId] = '';
+  toast('已撤销该字段的 AI 建议');
+  renderAll();
+}
+
+function gotoField(id) {
+  const el = document.getElementById('fi-' + id);
+  if (!el) return;
+  const sec = el.closest('.sec-card');
+  if (sec && sec.classList.contains('collapsed')) { COLLAPSED[sec.dataset.sec] = false; renderForm(); }
+  const t = document.getElementById('fi-' + id);
+  t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  t.classList.add('flash');
+  setTimeout(() => t.classList.remove('flash'), 1700);
+}
+
+function summaryText() {
+  const lines = [];
+  const adopted = Object.entries(DK).filter(([, d]) => d.status === 'adopted');
+  lines.push('【需求摘要】' + (V.base_area || '-') + '㎡ · ' + (V.base_house_state || '-') + ' · ' +
+    ((V.style_pref || []).join('、') || '-') + ' · 预算 ' + (V.budget_total || '-') + ' 万');
+  lines.push('');
+  lines.push('一、家庭与基本情况');
+  const base = ['live_members', 'live_ages', 'live_pet', 'base_height', 'mode', 'date_movein'];
+  lines.push(base.filter(id => !empty(V[id])).map(id => labelOf(id) + '：' + (Array.isArray(V[id]) ? V[id].join('、') : V[id])).join('；') || '（待补充）');
+  SECTIONS.filter(s => !['基础信息', '补充说明'].includes(s.name)).forEach(s => {
+    const items = s.groups.flatMap(g => g.fields).filter(f => !empty(V[f.id]))
+      .map(f => f.label + '：' + (Array.isArray(V[f.id]) ? V[f.id].join('、') : V[f.id]));
+    if (items.length) { lines.push(''); lines.push('· ' + s.name); lines.push('  ' + items.join('；')); }
+  });
+  if (adopted.length) {
+    lines.push('');
+    lines.push('二、助手发现并确认的需求');
+    adopted.forEach(([id, d]) => lines.push('  · ' + d.text));
+  }
+  if (!empty(V.note_free)) { lines.push(''); lines.push('三、其他补充'); lines.push('  ' + V.note_free); }
+  return lines.join('\n');
+}
+
+function showModal(title, body) {
+  $('#modal-title').textContent = title;
+  $('#modal-body').textContent = body;
+  $('#mask').classList.add('on');
+}
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+/* ============ 示例数据 ============ */
+function fillDemo() {
+  V = Object.assign({}, V, {
+    base_area: 89, base_house_state: '毛坯', base_height: 2.75, live_type: '长期居住',
+    live_members: ['夫妻', '儿子'], live_ages: '夫妻 28/30 岁，孩子 6 岁',
+    live_pet: ['猫'], live_pet_count: 1, live_allergy: '否', live_elder: '否',
+    budget_total: 18, mode: '半包', style_pref: ['现代简约'], office_need: '偶尔',
+    kt_freq: '经常', kt_form: '开放式', kt_height_m: 175, kt_height_f: 162,
+    kt_dishwasher: '前开式', lv_bookshelf: '需要', bl_washer: '是', bl_dryer: '是',
+    dn_people: 3, br_bed: '1.8m', wc_toilet: '智能马桶', wc_bath: '淋浴',
+    ex_boots: 2, sc_luggage: 2, clean_tools: ['扫地机器人'], guest_freq: '偶尔'
+  });
+  toast('已填入示例需求：89㎡ 三口之家 + 猫，注意右侧助手的变化');
+  renderAll();
+}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ V, AI, DK, QUIET, DISMISS })); } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    V = d.V || {}; AI = d.AI || {}; DK = d.DK || {}; QUIET = !!d.QUIET; DISMISS = d.DISMISS || 0;
+  } catch (e) {}
+}
+
+/* ============ 事件 ============ */
+let timer = null;
+function debouncedRefresh() {
+  clearTimeout(timer);
+  timer = setTimeout(() => { renderSide(); renderDots(); renderProgress(); save(); }, 500);
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === 'toggle') {
+    const sec = el.dataset.sec;
+    COLLAPSED[sec] = !COLLAPSED[sec];
+    renderForm();
+  } else if (act === 'chip') {
+    const f = fieldById(el.dataset.id);
+    const val = el.dataset.val;
+    if (f.type === '多选') {
+      const cur = Array.isArray(V[f.id]) ? V[f.id].slice() : [];
+      const i = cur.indexOf(val);
+      i >= 0 ? cur.splice(i, 1) : cur.push(val);
+      V[f.id] = cur;
+    } else {
+      V[f.id] = V[f.id] === val ? '' : val;
+    }
+    renderForm(); debouncedRefresh();
+  } else if (act === 'goto') {
+    gotoField(el.dataset.id);
+  } else if (act === 'goto-sec') {
+    const sec = document.querySelector('.sec-card[data-sec="' + el.dataset.sec + '"]');
+    if (sec) { COLLAPSED[el.dataset.sec] = false; renderForm(); document.querySelector('.sec-card[data-sec="' + el.dataset.sec + '"]').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  } else if (act === 'adopt') {
+    adopt(el.dataset.rule);
+  } else if (act === 'ignore') {
+    ignore(el.dataset.rule);
+  } else if (act === 'undo') {
+    undoAI(el.dataset.id);
+  } else if (act === 'reveal') {
+    REVEAL = true; renderSide();
+  } else if (act === 'edit') {
+    const id = el.dataset.rule;
+    const box = el.closest('.dk');
+    const r = RULES.find(x => x.id === id);
+    if (!box || !r) return;
+    box.querySelector('.dk-acts').innerHTML =
+      '<textarea class="dk-edit">' + (typeof r.text === 'function' ? r.text(V) : r.text) + '</textarea>' +
+      '<div style="display:flex;gap:7px;margin-top:8px"><button class="btn btn-sm btn-primary" data-act="edit-ok" data-rule="' + id + '">确认写入</button>' +
+      '<button class="btn btn-sm" data-act="edit-cancel" data-rule="' + id + '">取消</button></div>';
+  } else if (act === 'edit-ok') {
+    const box = el.closest('.dk');
+    adopt(el.dataset.rule, box.querySelector('.dk-edit').value.trim());
+  } else if (act === 'edit-cancel') {
+    renderSide();
+  }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-act="input"]');
+  if (!el) return;
+  const f = fieldById(el.dataset.id);
+  let v = el.value;
+  V[f.id] = f.type === '数字' ? (v === '' ? '' : Number(v)) : v;
+  AI[f.id] && delete AI[f.id];
+  debouncedRefresh();
+});
+
+$('#btn-demo').onclick = fillDemo;
+$('#btn-reset').onclick = () => {
+  V = {}; AI = {}; DK = {}; QUIET = false; DISMISS = 0; REVEAL = false;
+  try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  renderAll(); toast('已重置');
+};
+$('#btn-summary').onclick = $('#btn-summary2').onclick = () => showModal('需求摘要（模拟生成）', summaryText());
+$('#btn-submit').onclick = () => {
+  const done = requiredFields.filter(f => !empty(V[f.id])).length;
+  const pct = Math.round(done / requiredFields.length * 100);
+  const open = activeRules().length + missingItems().length;
+  showModal('提交前检查', '本次需求完整度 ' + pct + '%（必填 ' + done + '/' + requiredFields.length + '）\n' +
+    '已确认助手发现 ' + Object.values(DK).filter(d => d.status === 'adopted').length + ' 条\n' +
+    (open ? '还有 ' + open + ' 条发现未处理，可以选择「仍要提交」或先回去处理。' : '发现项已全部处理完毕，可以提交。') +
+    '\n\n提交后会自动跳转到 AI 需求分析页（Demo 中不实现）。');
+};
+$('#btn-quiet').onclick = () => {
+  QUIET = !QUIET;
+  $('#btn-quiet').textContent = QUIET ? '恢复建议' : '暂时不要建议';
+  toast(QUIET ? '已进入静默模式' : '已恢复建议');
+  renderSide(); save();
+};
+$('#modal-close').onclick = $('#modal-ok').onclick = () => $('#mask').classList.remove('on');
+$('#mask').onclick = e => { if (e.target === $('#mask')) $('#mask').classList.remove('on'); };
+$('#modal-copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('#modal-body').textContent); toast('已复制到剪贴板'); }
+  catch (e) { toast('当前浏览器不允许自动复制，请手动选择文本'); }
+};
+
+/* ============ 启动 ============ */
+load();
+COLLAPSED = Object.fromEntries(SECTIONS.map((s, i) => [s.name, i > 1]));
+renderAll();
+if (!Object.keys(V).length) toast('提示：点右上角「填入示例需求」可以快速体验完整流程');
+</script>
+</body>
+</html>
