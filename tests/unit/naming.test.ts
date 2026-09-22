@@ -76,4 +76,11 @@ describe('文档一致性', () => {
     expect(doc).not.toContain('输出契约');
     expect(doc).not.toContain('设备与智能');
   });
+
+  it('设计需求解读台文档写明了脱敏与数据边界', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    expect(doc).toContain('脱敏');
+    expect(doc).toContain('不外发');
+    expect(doc).toContain('小区 / 楼盘名称');
+  });
 });
