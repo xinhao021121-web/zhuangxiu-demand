@@ -58,4 +58,11 @@ describe('文档一致性', () => {
     expect(doc).toContain('刻意不交给模型');
     expect(doc).toContain('不做模型调用');
   });
+
+  it('需求理解 Agent 文档把建议与摘要排除在模型职责之外', () => {
+    const doc = read('docs/装修需求理解Agent_产品设计文档_V1.md');
+    expect(doc).toContain('模型只做理解与追问');
+    expect(doc).toContain('刻意不输出 suggestion 与 summary');
+    expect(doc).not.toContain('设备与智能');
+  });
 });
