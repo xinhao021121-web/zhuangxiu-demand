@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["@tarojs/taro", "webpack-env", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@zx/field-spec": ["../packages/field-spec/src/index.ts"],
+      "@zx/rules": ["../packages/rules/src/index.ts"],
+      "@zx/summary": ["../packages/summary/src/index.ts"],
+      "@zx/data": ["../packages/data/src/index.ts"]
+    }
+  },
+  "include": ["src", "config", "types"]
+}

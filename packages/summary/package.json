@@ -1,0 +1,15 @@
+{
+  "name": "@zx/summary",
+  "version": "0.1.0",
+  "private": true,
+  "description": "需求摘要、核心摘要与量房确认清单文本，纯模板拼装，零框架依赖",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@zx/field-spec": "workspace:*"
+  }
+}

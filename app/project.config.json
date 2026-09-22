@@ -1,0 +1,16 @@
+{
+  "miniprogramRoot": "dist/weapp/",
+  "projectname": "装修需求发现助手",
+  "description": "房主端需求采集与需求发现（微信小程序）",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "srcMiniprogramRoot": "dist/weapp/"
+}

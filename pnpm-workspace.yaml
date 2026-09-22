@@ -1,0 +1,8 @@
+packages:
+  - "app"
+  - "packages/*"
+
+# 仓库根目录的 node_modules 由运行环境提供（指向共享运行时目录），pnpm 不能接管它，
+# 因此依赖按包安装：pnpm install --dir <包目录> --ignore-workspace。
+# 关闭 pnpm run 前的自动依赖检查，避免它去动根目录。
+verifyDepsBeforeRun: false

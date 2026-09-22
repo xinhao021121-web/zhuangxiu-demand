@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@zx/field-spec": ["packages/field-spec/src/index.ts"],
+      "@zx/rules": ["packages/rules/src/index.ts"],
+      "@zx/summary": ["packages/summary/src/index.ts"],
+      "@zx/data": ["packages/data/src/index.ts"],
+      "vitest": ["packages/devtools/node_modules/vitest"]
+    }
+  },
+  "include": ["packages/**/*.ts", "tests/unit/**/*.ts", "vitest.config.ts"]
+}

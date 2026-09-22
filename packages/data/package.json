@@ -1,0 +1,16 @@
+{
+  "name": "@zx/data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "数据仓储接口与本地实现：草稿读写、版本迁移、提交与埋点",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@zx/field-spec": "workspace:*",
+    "@zx/rules": "workspace:*"
+  }
+}

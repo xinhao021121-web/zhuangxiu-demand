@@ -1,0 +1,12 @@
+{
+  "name": "@zx/devtools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "领域层单测与类型检查用的开发依赖，按包安装，不触碰仓库根目录的 node_modules",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.4"
+  }
+}
