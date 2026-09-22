@@ -83,4 +83,11 @@ describe('文档一致性', () => {
     expect(doc).toContain('不外发');
     expect(doc).toContain('小区 / 楼盘名称');
   });
+
+  it('设计需求解读台文档按判据筛清单，不设条数上限', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    expect(doc).toContain('不设条数上限');
+    expect(doc).toContain('影响可行性');
+    expect(doc).not.toContain('不超过 15 条');
+  });
 });
