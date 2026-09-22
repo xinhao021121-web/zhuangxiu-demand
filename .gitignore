@@ -1,0 +1,30 @@
+# 操作系统
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日志
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# 依赖
+node_modules/
+__pycache__/
+.venv/
+venv/
+
+# 构建产物
+dist/
+build/
+
+# 本地环境变量
+.env
+.env.local
+.env.*.local
