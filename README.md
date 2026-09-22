@@ -56,6 +56,7 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 +pnpm run preview:h5        # 本机 http://127.0.0.1:4173
 +pnpm run preview:h5:lan    # 局域网/手机可访问
 +pnpm run test:preview      # 上线前冒烟：HTTP 行为 + 真实地址首屏
++pnpm run test:live         # 上线后验证线上地址
 +pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 +```
 +
@@ -69,6 +70,7 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移 |
 | H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
+| 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |
 
 小程序端没有稳定的自动验证手段（需要开发者工具），因此规则、排序、去重、静默、摘要、草稿迁移

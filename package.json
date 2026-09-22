@@ -20,6 +20,7 @@
     "preview:h5": "node tools/serve-h5.mjs",
     "preview:h5:lan": "node tools/serve-h5.mjs --host 0.0.0.0",
     "test:preview": "node tests/preview.smoke.mjs",
+    "test:live": "node tests/live.smoke.mjs",
     "deploy:pages": "node tools/deploy-github-pages.mjs"
   }
 }
