@@ -11,7 +11,9 @@
     "test:unit": "pnpm --dir packages/devtools exec vitest run --root ../..",
     "test:app": "node tests/app.e2e.mjs",
     "test:demo": "node tests/demo.smoke.mjs && node tests/mobile.smoke.mjs",
-    "typecheck": "pnpm --dir packages/devtools exec tsc -p ../../tsconfig.json",
+    "typecheck": "pnpm run typecheck:domain && pnpm run typecheck:app",
+    "typecheck:domain": "pnpm --dir packages/devtools exec tsc -p ../../tsconfig.json",
+    "typecheck:app": "pnpm --dir app exec tsc -p tsconfig.json",
     "build:h5": "pnpm --dir app exec taro build --type h5",
     "build:weapp": "pnpm --dir app exec taro build --type weapp",
     "dev:h5": "pnpm --dir app exec taro build --type h5 --watch"

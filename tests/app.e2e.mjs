@@ -212,6 +212,12 @@ function watch(page) {
   await page.click('#cf-cancel');
   await page.waitForTimeout(200);
   ok((await count(page, '#cf-body')) === 0, '提交前检查可返回修改');
+  await page.click('#btn-submit');
+  await page.waitForTimeout(200);
+  await page.click('#cf-ok');
+  await page.waitForTimeout(250);
+  ok((await count(page, '#cf-body')) === 0, '确认提交后弹层关闭');
+  ok((await count(page, '#toast')) === 1, '提交后给出反馈提示');
 
   // 删除已填内容的实例需要二次确认
   const beforeDel = await count(page, '.inst-card');

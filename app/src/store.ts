@@ -19,6 +19,7 @@ import {
   toggleQuiet,
 } from '@zx/rules';
 import type { Suggestion } from '@zx/rules';
+import { buildSummary } from '@zx/summary';
 import { createDraft, createLocalRepository } from '@zx/data';
 import type { Draft } from '@zx/data';
 import { taroStorage } from './platform/storage';
@@ -232,8 +233,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       return;
     }
     set({ pending: null });
-    const { summary } = summarise(draft);
-    repository.submit({ summary });
+    const { adopted } = summarise(draft);
+    repository.submit({ summary: buildSummary(draft.model, adopted) });
     toast('已提交给设计师，正文与摘要在本机保存');
   },
 
