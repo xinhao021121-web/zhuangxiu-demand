@@ -13,7 +13,7 @@ export interface TrackEvent {
 export interface Draft {
   schemaVersion: number;
   model: FormModel;
-  /** 助手写入过的字段键，用于字段旁的「AI 建议 · 撤销」标记 */
+  /** 助手写入过的字段键，用于字段旁的「助手建议 · 撤销」标记 */
   aiMarks: Record<string, true>;
   assistant: AssistantState;
   /** 已声明「这个空间没有需求」的实例分区 */

@@ -433,7 +433,7 @@ function fieldHtml(f, inst) {
   const key = fk(inst, f.id);
   return '<div class="field' + (f.type === '长文本' ? ' wide' : '') + '" id="fi-' + key + '">' +
     '<label>' + f.label + (f.suggest === '推荐填写' ? '<span class="rec">推荐填写</span>' : '') +
-    (AI[key] ? '<span class="ai-badge" data-act="undo" data-key="' + key + '">✦ AI 建议 · 撤销</span>' : '') +
+    (AI[key] ? '<span class="ai-badge" data-act="undo" data-key="' + key + '">✦ 助手建议 · 撤销</span>' : '') +
     '</label>' + controlOf(f, inst) + '</div>';
 }
 function groupsHtml(fields, inst) {

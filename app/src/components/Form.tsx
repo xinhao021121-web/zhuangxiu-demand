@@ -81,7 +81,7 @@ export function Field({ model, field, inst, flashKey }: FieldProps) {
         {field.suggest === '推荐填写' ? <Text className="rec">推荐填写</Text> : null}
         {hasAi ? (
           <Text className="ai-badge" onClick={() => undoAI(key)}>
-            ✦ AI 建议 · 撤销
+            ✦ 助手建议 · 撤销
           </Text>
         ) : null}
       </View>

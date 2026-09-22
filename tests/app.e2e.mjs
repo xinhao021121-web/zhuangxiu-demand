@@ -127,7 +127,8 @@ function watch(page) {
   await page.locator('#ow-ok').click();
   await page.waitForTimeout(300);
   ok((await num(page, '#c-handled')) > before, '确认替换后已处理计数增加');
-  ok((await count(page, '.ai-badge')) >= 1, '采纳后字段出现「AI 建议 · 撤销」标记');
+  ok((await count(page, '.ai-badge')) >= 1, '采纳后字段出现「助手建议 · 撤销」标记');
+  ok(!(await text(page, '.ai-badge')).includes('AI'), '字段标记不再出现 AI 字样');
   ok((await count(page, '.dk.done')) >= 1, '已处理卡片变绿下沉到最近处理');
   ok((await text(page, '#fi-budget_reserve .chip.on')).includes('是'), '助手建议按规则写入目标字段的选项');
 
