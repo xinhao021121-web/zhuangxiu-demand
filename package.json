@@ -7,7 +7,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "build:spec": "python tools/build_field_spec.py",
-    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:demo",
+    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo",
     "test:unit": "pnpm --dir packages/devtools exec vitest run --root ../..",
     "test:app": "node tests/app.e2e.mjs",
     "test:demo": "node tests/demo.smoke.mjs && node tests/mobile.smoke.mjs",
@@ -16,6 +16,10 @@
     "typecheck:app": "pnpm --dir app exec tsc -p tsconfig.json",
     "build:h5": "pnpm --dir app exec taro build --type h5",
     "build:weapp": "pnpm --dir app exec taro build --type weapp",
-    "dev:h5": "pnpm --dir app exec taro build --type h5 --watch"
+    "dev:h5": "pnpm --dir app exec taro build --type h5 --watch",
+    "preview:h5": "node tools/serve-h5.mjs",
+    "preview:h5:lan": "node tools/serve-h5.mjs --host 0.0.0.0",
+    "test:preview": "node tests/preview.smoke.mjs",
+    "deploy:pages": "node tools/deploy-github-pages.mjs"
   }
 }

@@ -1,0 +1,31 @@
+# 可选方案：用 GitHub Actions 发布（把本文件复制到 .github/workflows/deploy-h5.yml）
+# 需要仓库允许 Actions，且推送方拥有 workflow 权限。默认方案是 tools/deploy-github-pages.mjs
+# 直接推 gh-pages 分支，不需要 Actions。
+name: deploy-h5
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i -g pnpm@11
+      - run: pnpm install --dir app --ignore-workspace
+      - run: pnpm run build:h5
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist/h5
+      - uses: actions/deploy-pages@v4

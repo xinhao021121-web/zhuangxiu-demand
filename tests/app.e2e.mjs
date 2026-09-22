@@ -6,7 +6,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { launchBrowser } from './browser.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DIST = path.join(ROOT, 'app', 'dist', 'h5');
@@ -46,36 +46,6 @@ function serveStatic(dir) {
   });
 }
 
-const exeCandidates = [
-  process.env.PLAYWRIGHT_CHROMIUM,
-  path.join(process.env.USERPROFILE || '', 'AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe'),
-  path.join(
-    process.env.USERPROFILE || '',
-    'AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe',
-  ),
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-].filter(Boolean);
-
-const available = exeCandidates.filter((p) => fs.existsSync(p));
-
-/* 逐个尝试：本机 ms-playwright 自带内核可能因缺少运行库无法启动，需回落到系统 Chrome / Edge */
-async function launchBrowser() {
-  const errors = [];
-  for (const candidate of available) {
-    try {
-      return await chromium.launch({ executablePath: candidate });
-    } catch (e) {
-      errors.push(candidate + '：' + String(e.message).split('\n')[0]);
-    }
-  }
-  try {
-    return await chromium.launch();
-  } catch (e) {
-    errors.push(String(e.message).split('\n')[0]);
-  }
-  throw new Error('没有可用的浏览器内核：\n' + errors.join('\n'));
-}
 
 if (!fs.existsSync(path.join(DIST, 'index.html'))) {
   console.error('找不到 H5 产物，请先运行：pnpm run build:h5');

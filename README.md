@@ -49,12 +49,26 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 小程序端用微信开发者工具打开 `app/`（`project.config.json` 的 `miniprogramRoot` 指向 `dist/weapp/`）。
 
-## 验证清单
+## 上线（Web 端 / 展示版）
++
++```bash
++pnpm run build:h5          # 产物：app/dist/h5
++pnpm run preview:h5        # 本机 http://127.0.0.1:4173
++pnpm run preview:h5:lan    # 局域网/手机可访问
++pnpm run test:preview      # 上线前冒烟：HTTP 行为 + 真实地址首屏
++pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
++```
++
++上线方式、缓存策略、发版流程见 `deploy/README.md`；Vercel / Netlify / Nginx 的现成配置在 `deploy/` 下。
++同一份产物宽屏是 Web 端、窄屏是展示版，不必分别构建。
++
++## 验证清单
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移 |
 | H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
+| Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |
 
 小程序端没有稳定的自动验证手段（需要开发者工具），因此规则、排序、去重、静默、摘要、草稿迁移
