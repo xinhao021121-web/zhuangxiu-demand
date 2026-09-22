@@ -18,7 +18,7 @@
   --shadow-lg:0 12px 32px rgba(16,24,40,.16);
   --radius:10px; --radius-sm:7px;
   --font:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
-  --app-w:430px; --navbar-h:44px; --actionbar-h:62px;
+  --app-w:430px; --navbar-h:44px; --bottom-h:108px;
   --safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -29,7 +29,7 @@ button{font-family:inherit;cursor:pointer}
 
 /* 手机框：宽屏时收成手机宽度 */
 .app{position:relative;width:100%;max-width:var(--app-w);min-height:100vh;background:var(--bg-page);
-  padding-bottom:calc(var(--actionbar-h) + var(--safe-b) + 14px)}
+  padding-bottom:calc(var(--bottom-h) + var(--safe-b) + 14px)}
 @media (min-width:520px){
   .app{box-shadow:0 0 0 1px rgba(16,24,40,.06),0 18px 48px rgba(16,24,40,.14)}
 }
@@ -121,24 +121,19 @@ button{font-family:inherit;cursor:pointer}
 .tool-card .btn{width:100%}
 .tool-note{font-size:11.5px;color:var(--text-3);margin-top:9px;line-height:1.6}
 
-/* 悬浮球 */
-.fab{position:fixed;right:max(16px,calc(50% - var(--app-w) / 2 + 16px));
-  bottom:calc(var(--actionbar-h) + var(--safe-b) + 16px);z-index:45;
-  width:56px;height:56px;border-radius:50%;border:0;background:var(--primary);color:#fff;
-  box-shadow:0 8px 22px rgba(42,120,214,.42);display:grid;place-items:center;font-size:20px;
-  transition:transform .16s,opacity .18s}
-.fab:active{transform:scale(.93)}
-.fab.hide{opacity:0;pointer-events:none;transform:scale(.8)}
-.fab.quiet{background:var(--text-3);box-shadow:0 8px 22px rgba(16,24,40,.24)}
-.fab .badge{position:absolute;top:-4px;right:-4px;min-width:21px;height:21px;padding:0 5px;border-radius:99px;
-  background:var(--danger);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center;
-  border:2px solid var(--bg-page)}
-
-/* 底部操作栏 */
-.actionbar{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:var(--app-w);
-  bottom:0;z-index:35;display:flex;align-items:center;gap:10px;
-  padding:9px 12px calc(9px + var(--safe-b));background:rgba(255,255,255,.96);
-  backdrop-filter:blur(8px);border-top:1px solid var(--border)}
+/* 底部常驻：发现横条 + 操作栏 */
+.bottom{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:var(--app-w);
+  bottom:0;z-index:35;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);
+  border-top:1px solid var(--border);padding-bottom:var(--safe-b)}
+.find-bar{display:flex;align-items:center;gap:9px;width:100%;min-height:46px;padding:0 14px;
+  border:0;border-bottom:1px solid var(--border);background:var(--primary-weak);
+  color:var(--primary);font-size:13.5px;text-align:left;transition:background .2s}
+.find-bar b{font-weight:600}
+.find-bar .find-icon{font-size:13px;flex:none}
+.find-bar .find-arrow{margin-left:auto;font-size:18px;line-height:1;opacity:.65}
+.find-bar.clear{background:#f3faf4;color:#2f7a2f}
+.find-bar.quiet{background:var(--bg-hover);color:var(--text-2)}
+.actionbar{display:flex;align-items:center;gap:10px;padding:9px 12px}
 .save-hint{font-size:11.5px;color:var(--text-3);flex:none;display:flex;align-items:center;gap:5px}
 .save-hint i{width:6px;height:6px;border-radius:50%;background:var(--success);display:block}
 .actionbar .btn-primary{margin-left:auto;flex:1;max-width:200px;min-height:42px;font-size:15px;border-radius:10px}
@@ -217,7 +212,7 @@ button{font-family:inherit;cursor:pointer}
   background:#fff;border-top:1px solid var(--border)}
 .page-foot .btn{flex:1;min-height:44px;font-size:15px;border-radius:10px}
 
-.toast{position:fixed;left:50%;bottom:calc(var(--actionbar-h) + var(--safe-b) + 26px);
+  bottom:calc(var(--bottom-h) + var(--safe-b) + 22px);
   transform:translateX(-50%) translateY(10px);background:rgba(22,24,28,.94);color:#fff;
   max-width:calc(var(--app-w) - 48px);text-align:center;
   padding:10px 15px;border-radius:9px;font-size:13px;line-height:1.6;opacity:0;pointer-events:none;
@@ -242,13 +237,16 @@ button{font-family:inherit;cursor:pointer}
 
   <main class="form-col" id="form-col"></main>
 
-  <button class="fab" id="fab" data-act="open-sheet" aria-label="需求发现助手">
-    <span>✦</span><span class="badge" id="fab-badge" style="display:none">0</span>
-  </button>
-
-  <div class="actionbar">
-    <span class="save-hint"><i></i>已自动保存</span>
-    <button class="btn btn-primary" id="btn-submit">提交设计师</button>
+  <div class="bottom">
+    <button class="find-bar" id="find-bar" data-act="open-sheet">
+      <span class="find-icon">✦</span>
+      <span id="find-text">还没有新的发现</span>
+      <span class="find-arrow">›</span>
+    </button>
+    <div class="actionbar">
+      <span class="save-hint"><i></i>已自动保存</span>
+      <button class="btn btn-primary" id="btn-submit">提交设计师</button>
+    </div>
   </div>
 
   <div class="mask" id="mask"></div>
@@ -648,7 +646,7 @@ function renderNav() {
   if (on) nav.scrollLeft = Math.max(0, on.offsetLeft - 60);
 }
 
-/* ============ 渲染：进度与悬浮球 ============ */
+/* ============ 渲染：进度与底部横条 ============ */
 function renderProgress() {
   const { total, done } = recStats();
   const pct = total ? Math.round(done / total * 100) : 0;
@@ -656,12 +654,14 @@ function renderProgress() {
   $('#prog-num').textContent = '清晰度 ' + pct + '%';
   $('#c-rec').textContent = done + '/' + total;
 }
-function renderFab() {
-  const n = QUIET ? 0 : openSuggestions().length;
-  const badge = $('#fab-badge');
-  badge.textContent = n > 99 ? '99+' : String(n);
-  badge.style.display = n > 0 ? 'grid' : 'none';
-  $('#fab').classList.toggle('quiet', QUIET);
+function renderFindBar() {
+  const bar = $('#find-bar');
+  const n = openSuggestions().length;
+  bar.classList.toggle('quiet', QUIET);
+  bar.classList.toggle('clear', !QUIET && n === 0);
+  if (QUIET) $('#find-text').textContent = '建议已暂停，点这里查看';
+  else if (n > 0) $('#find-text').innerHTML = '还有 <b>' + n + '</b> 条发现值得看一眼';
+  else $('#find-text').textContent = '发现都处理完了，继续填写会自动跟进';
 }
 
 /* ============ 渲染：发现弹层 ============ */
@@ -724,7 +724,7 @@ function renderSheet() {
   list.innerHTML = html;
 }
 
-function renderAll() { renderForm(); renderNav(); renderProgress(); renderFab(); renderSheet(); save(); }
+function renderAll() { renderForm(); renderNav(); renderProgress(); renderFindBar(); renderSheet(); save(); }
 
 /* ============ 动作 ============ */
 function setValue(key, val) {
@@ -857,7 +857,6 @@ function summaryText() {
 function openSheet() {
   $('#sheet').classList.add('on');
   $('#mask').classList.add('on');
-  $('#fab').classList.add('hide');
   $('#sheet').classList.remove('full');
 }
 function openConfirm(title, body, okText) {
@@ -866,7 +865,6 @@ function openConfirm(title, body, okText) {
   $('#cf-ok').textContent = okText || '知道了';
   $('#confirm').classList.add('on');
   $('#mask').classList.add('on');
-  $('#fab').classList.add('hide');
 }
 function openSummary() {
   $('#sum-text').textContent = summaryText();
@@ -876,7 +874,6 @@ function closeSheets() {
   $('#sheet').classList.remove('on', 'full');
   $('#confirm').classList.remove('on');
   $('#mask').classList.remove('on');
-  $('#fab').classList.remove('hide');
 }
 let toastTimer = null;
 function toast(msg) {
@@ -938,7 +935,7 @@ function load() {
 let refreshTimer = null;
 function debouncedRefresh() {
   clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => { renderProgress(); renderFab(); renderSheet(); renderNav(); save(); }, 500);
+  refreshTimer = setTimeout(() => { renderProgress(); renderFindBar(); renderSheet(); renderNav(); save(); }, 500);
 }
 
 document.addEventListener('click', e => {
@@ -1046,7 +1043,7 @@ $('#btn-quiet').onclick = () => {
   QUIET = !QUIET;
   $('#btn-quiet').textContent = QUIET ? '恢复建议' : '暂时不要建议';
   toast(QUIET ? '已进入静默模式' : '已恢复建议');
-  renderFab(); renderSheet(); save();
+  renderFindBar(); renderSheet(); save();
 };
 
 /* 抽屉拖拽：下滑关闭，上滑全屏 */

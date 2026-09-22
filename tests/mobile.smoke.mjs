@@ -21,6 +21,11 @@ const fails = [];
 const ok = (cond, msg) => { console.log((cond ? "PASS  " : "FAIL  ") + msg); if (!cond) fails.push(msg); };
 const count = (page, sel) => page.locator(sel).count();
 const num = async (page, sel) => Number((await page.locator(sel).innerText()).replace(/[^\d]/g, "")) || 0;
+const hitFindBar = (p) => p.evaluate(() => {
+  const r = document.querySelector("#find-bar").getBoundingClientRect();
+  const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return !!(el && el.closest("#find-bar"));
+});
 
 const exeCandidates = [
   process.env.PLAYWRIGHT_CHROMIUM,
@@ -75,7 +80,7 @@ ok(await count(page, ".sec-body") === 1, "首屏只展开一个大类（手风�
 ok(await count(page, ".sec-card.open") === 1, "首屏展开的是「认识你家」");
 ok((await page.locator(".nav-title").innerText()).includes("装修需求采集"), "顶部标题正确");
 ok(await count(page, ".capsule") === 1, "顶部有胶囊按钮区");
-ok(await count(page, "#fab .badge") === 1, "悬浮球带角标");
+ok((await page.locator("#find-bar").innerText()).includes("发现"), "底部常驻发现横条存在");
 ok((await page.locator("#prog-num").innerText()).includes("清晰度"), "顶部显示需求清晰度");
 await page.screenshot({ path: path.join(SHOT, "01-首屏.png") });
 
@@ -86,10 +91,13 @@ await page.screenshot({ path: path.join(SHOT, "01-首屏.png") });
   }));
   ok(overflow.doc <= overflow.win + 1, `无横向溢出（${overflow.doc} / ${overflow.win}）`);
 
-  const fabBox = await page.locator("#fab").boundingBox();
+  const findBox = await page.locator("#find-bar").boundingBox();
   const barBox = await page.locator(".actionbar").boundingBox();
-  ok(fabBox.y + fabBox.height <= barBox.y + 1, "悬浮球不遮挡底部操作栏");
-  ok(fabBox.x + fabBox.width <= VIEWPORT.width, "悬浮球未超出右边界");
+  const bottomBox = await page.locator(".bottom").boundingBox();
+  ok(findBox.y + findBox.height <= barBox.y + 1, "发现横条在操作栏上方，两者不重叠");
+  ok(Math.abs(bottomBox.y + bottomBox.height - VIEWPORT.height) < 1.5, "底部常驻区贴住屏幕底部");
+  ok(findBox.x >= 0 && findBox.x + findBox.width <= VIEWPORT.width + 1, "发现横条不超出屏幕");
+  ok(findBox.height >= 44, "发现横条触控高度 ≥ 44px");
 
   const smallTaps = await page.evaluate(() => {
     const bad = [];
@@ -128,12 +136,12 @@ await page.screenshot({ path: path.join(SHOT, "01-首屏.png") });
   const bar = await page.locator(".actionbar").boundingBox();
   ok(lastBox.y + lastBox.height <= bar.y + 1, "滚到底部时最后一张卡片不被底部操作栏遮挡");
 
-  await page.locator("#fab").click();
+  await page.locator("#find-bar").click();
   await page.waitForTimeout(420);
-  ok(await page.locator("#fab").evaluate((el) => el.classList.contains("hide")), "弹层打开时悬浮球隐藏避免叠加");
+  ok(await hitFindBar(page) === false, "弹层打开时底部横条被遮挡，不会误触");
   await page.locator("#mask").click({ position: { x: 10, y: 10 } });
   await page.waitForTimeout(350);
-  ok(!(await page.locator("#fab").evaluate((el) => el.classList.contains("hide"))), "关闭弹层后悬浮球恢复");
+  ok(await hitFindBar(page) === true, "关闭弹层后底部横条恢复可点");
 }
 
 
@@ -167,13 +175,13 @@ ok(await count(page, '[id$=".ch_activity"]') === 1, "选择儿童房后显示儿
 /* 6. 示例数据 → 发现 */
 await page.locator('[data-act="demo"]').first().click();
 await page.waitForTimeout(800);
-const badge = await page.locator("#fab .badge").innerText();
-ok(Number(badge) > 0, "填入示例后悬浮球角标 > 0");
+const findText = await page.locator("#find-text").innerText();
+ok(/还有 \d+ 条发现/.test(findText), "填入示例后横条显示待看条数（" + findText + "）");
 await page.screenshot({ path: path.join(SHOT, "02-表单已填.png") });
 
-await page.locator("#fab").click();
+await page.locator("#find-bar").click();
 await page.waitForTimeout(450);
-ok(await page.locator("#sheet").evaluate((el) => el.classList.contains("on")), "点击悬浮球打开发现弹层");
+ok(await page.locator("#sheet").evaluate((el) => el.classList.contains("on")), "点击底部横条打开发现弹层");
 ok(await count(page, ".dk") >= 3, "弹层展示发现卡片");
 ok((await page.locator("#dk-list").innerText()).includes("因为你"), "卡片带「因为你」依据");
 const firstPrio = await page.locator(".dk .prio").first().innerText();
@@ -212,7 +220,7 @@ await page.screenshot({ path: path.join(SHOT, "03-发现弹层.png") });
 }
 
 /* 9. 改一改 */
-await page.locator("#fab").click();
+await page.locator("#find-bar").click();
 await page.waitForTimeout(400);
 {
   const before = await num(page, "#c-handled");
@@ -244,7 +252,7 @@ await page.waitForTimeout(350);
 }
 
 /* 11. 连续忽略 → 静默 → 恢复 */
-await page.locator("#fab").click();
+await page.locator("#find-bar").click();
 await page.waitForTimeout(400);
 for (let i = 0; i < 3; i += 1) {
   const btn = page.locator('[data-act="ignore"]').first();
@@ -253,7 +261,7 @@ for (let i = 0; i < 3; i += 1) {
   await page.waitForTimeout(300);
 }
 ok((await page.locator("#dk-list").innerText()).includes("静默"), "连续 3 次不感兴趣进入静默");
-ok(await page.locator("#fab .badge").isHidden(), "静默时悬浮球不再显示待看角标");
+ok((await page.locator("#find-text").innerText()).includes("暂停"), "静默时横条提示建议已暂停");
 await page.locator("#btn-quiet").click();
 await page.waitForTimeout(350);
 ok(!(await page.locator("#dk-list").innerText()).includes("已进入静默模式"), "可一键恢复建议");
