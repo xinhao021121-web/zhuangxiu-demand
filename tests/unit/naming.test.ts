@@ -59,10 +59,23 @@ describe('文档一致性', () => {
     expect(doc).toContain('不做模型调用');
   });
 
-  it('需求理解 Agent 文档把建议与摘要排除在模型职责之外', () => {
+  it('需求理解 Agent 文档只让模型做理解与追问', () => {
     const doc = read('docs/装修需求理解Agent_产品设计文档_V1.md');
     expect(doc).toContain('模型只做理解与追问');
-    expect(doc).toContain('刻意不输出 suggestion 与 summary');
+    expect(doc).toContain('刻意不产出发现、建议与摘要');
+  });
+
+  it('需求理解 Agent 文档承接需求采集，不引入外部项目的说法', () => {
+    const doc = read('docs/装修需求理解Agent_产品设计文档_V1.md');
+    // 功能编号接续产品文档的 F1–F8
+    expect(doc).toContain('| F9 |');
+    expect(doc).toContain('| F14 |');
+    // 与现有实现挂接，而不是另起一套
+    expect(doc).toContain('draft.aiMarks');
+    expect(doc).toContain('需求清晰度');
+    // 不引入不属于本项目的机制
+    expect(doc).not.toContain('免责等级');
+    expect(doc).not.toContain('输出契约');
     expect(doc).not.toContain('设备与智能');
   });
 });
