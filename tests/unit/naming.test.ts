@@ -90,4 +90,12 @@ describe('文档一致性', () => {
     expect(doc).toContain('影响可行性');
     expect(doc).not.toContain('不超过 15 条');
   });
+
+  it('设计需求解读台文档落实了外发确认与清单删减', () => {
+    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+    expect(doc).toContain('外发前逐条确认');
+    expect(doc).toContain('自由文本默认不勾选');
+    expect(doc).toContain('删减');
+    expect(doc).not.toContain('误伤与漏检如何取舍');
+  });
 });
