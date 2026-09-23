@@ -100,7 +100,38 @@ describe('量房沟通清单', () => {
     list.items.forEach((i) => expect(['凭空来的', '没判据的']).not.toContain(i.object));
   });
 
-  it('每条都能溯源：要么有字段，要么标为来自通用量房清单', () => {
+  it('同一核实对象的分区以通用清单资产为准，不随模型给字段的顺序漂移', () => {
+    // 模型把主字段写成 base_house_state（房屋现状）时，「配电」不该落到「基本信息」，
+    // 否则它和通用清单里的「配电」并不到一条上，设计师会看到两条各说一半的条目。
+    const drifted: DerivedItem = {
+      object: '配电',
+      question: '旧房的配电箱回路够不够',
+      why: '房主填了「房屋现状：旧房翻新」',
+      onsiteChecks: ['配电箱回路容量'],
+      relatedFieldIds: ['base_house_state', 'dev_circuit'],
+      impact: ['feasibility'],
+    };
+    const list = buildChecklist({ model: SEED_MODEL, derived: [drifted] });
+    const items = list.items.filter((i) => i.object === '配电');
+    expect(items).toHaveLength(1);
+    expect(items[0].space).toBe('设备与系统');
+    expect(items[0].source).toBe('both');
+    expect(items[0].key).toBe('配电#dev_circuit');
+  });
+
+  it('资产里没有的核实对象才按模型指定的分区走', () => {
+    const cross: DerivedItem = {
+      object: '猫砂盆放哪',
+      question: '猫砂盆放哪个卫生间',
+      why: '房主填了「是否养宠物：猫」',
+      onsiteChecks: ['排水与通风'],
+      relatedFieldIds: ['live_pet'],
+      impact: ['cost'],
+      space: '卫生间',
+    };
+    const list = buildChecklist({ model: SEED_MODEL, derived: [cross] });
+    expect(list.items.find((i) => i.object === '猫砂盆放哪')!.space).toBe('卫生间');
+  });  it('每条都能溯源：要么有字段，要么标为来自通用量房清单', () => {
     seed().items.forEach((i) => {
       if (i.relatedFields.length) i.relatedFields.forEach((f) => expect(FIELD_BY_ID.has(f.split('.').pop()!)).toBe(true));
       else expect(i.source).toBe('survey');

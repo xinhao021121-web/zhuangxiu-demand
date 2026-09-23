@@ -4,10 +4,12 @@
  * 用 JSON Output，不解析自由文本（技术方案 4.7 第 1 条）；超时、重试与可中断由调用方管。
  */
 
-import { UNDERSTAND_TASK } from './provider';
+import { SURVEY_OBJECTS_HINT, UNDERSTAND_TASK } from './provider';
 import type { ModelProvider, UnderstandRequest } from './provider';
 
 const SYSTEM_PROMPT = `${UNDERSTAND_TASK}
+
+${SURVEY_OBJECTS_HINT}
 
 只返回一个 JSON 对象，结构如下：
 {
@@ -24,6 +26,14 @@ const SYSTEM_PROMPT = `${UNDERSTAND_TASK}
     "space": "归属分区，可省略"
   }]
 }`;
+
+/** 把模型偶尔裹上的 ```json 代码块剥掉：这是传输格式，不是自由文本解析。 */
+function stripFence(content: string): string {
+  return content
+    .replace(/^\s*```(?:json)?\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim();
+}
 
 export interface DeepSeekOptions {
   apiKey: string;
@@ -73,7 +83,11 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
         const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
         const content = body.choices?.[0]?.message?.content;
         if (!content) throw new Error('DeepSeek 返回里没有内容');
-        return JSON.parse(content) as unknown;
+        try {
+          return JSON.parse(stripFence(content)) as unknown;
+        } catch {
+          throw new Error('DeepSeek 返回的不是 JSON：' + stripFence(content).slice(0, 120).replace(/\s+/g, ' '));
+        }
       } finally {
         clearTimeout(timer);
       }

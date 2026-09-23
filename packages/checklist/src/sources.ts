@@ -87,19 +87,33 @@ export function openQuestions(model: FormModel): OpenQuestion[] {
   return [...missingRecommended(model), ...unclearAnswers(model)];
 }
 
-/** 从已填内容推导的问题：模型输出，先过判据，再过硬约束（指不到字段的不出现）。 */
+/**
+ * 从已填内容推导的问题：模型输出，先过判据，再过硬约束（指不到字段的不出现）。
+ *
+ * 分区按下面三条定，顺序不能反（产品文档 4.4 / 4.5.1）：
+ *   1. 与通用清单资产里的核实对象同名 → 用资产声明的分区。资产是确定的，
+ *      分区不该随模型给字段的先后顺序漂移（实测过：主字段写成 base_house_state 时，
+ *      「配电」会落到基本信息，和通用项里的「配电」并不到一条上）。
+ *   2. 模型显式指定了分区（跨空间的核实对象，如猫砂盆放哪个卫生间）→ 用它的。
+ *   3. 其余按主字段所在分区。
+ */
 export function derivedCandidates(
   derived: DerivedItem[],
   model: FormModel,
+  survey: SurveyItem[] = SURVEY_CHECKLIST,
 ): { candidates: Candidate[]; dropped: DerivedItem[] } {
   const { accepted, dropped } = classifyDerived(derived);
+  const canonicalSpace = new Map(survey.map((s) => [s.object, { space: s.space, section: s.section }]));
   const candidates = accepted.map(({ item, tier }) => {
     const [, primaryId] = splitKey(item.relatedFieldIds[0]!);
+    const fixed = canonicalSpace.get(item.object);
     return {
       object: item.object,
-      space: item.space
-        ? resolveSpace(model, item.space, sectionOf(primaryId))
-        : spaceOfFieldKey(model, item.relatedFieldIds[0]!),
+      space: fixed
+        ? resolveSpace(model, fixed.space, fixed.section)
+        : item.space
+          ? resolveSpace(model, item.space, sectionOf(primaryId))
+          : spaceOfFieldKey(model, item.relatedFieldIds[0]!),
       tier,
       question: item.question,
       why: item.why,

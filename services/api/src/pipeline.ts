@@ -112,6 +112,11 @@ export async function generateChecklist(
     issues = { structure: [error instanceof Error ? error.message : String(error)], unknownFields: [] };
   }
 
+  if (degraded) {
+    // 模型部分没生成的原因要看得见：M3 的埋点先落在服务端日志上
+    console.warn(['[清单降级]', input.demandSheetId, JSON.stringify(issues)].join(' '));
+  }
+
   // 四、判据筛选、合并、排序全部在领域包里，服务端只做编排
   const checklist = buildChecklist({ model, derived });
 
