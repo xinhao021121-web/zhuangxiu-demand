@@ -7,6 +7,13 @@
  *   node tools/deploy-github-pages.mjs --skip-build    # 复用已有产物
  *   node tools/deploy-github-pages.mjs --dry-run      # 只组装不推送（本地验证用）
  *
+ * 两个托管方的路径前缀不同，所以前缀是构建参数：
+ *   GitHub Pages 的仓库页挂在 /<repo>/ 下 → 默认前缀 /zhuangxiu-demand
+ *   Cloudflare Pages 挂在根 → --target pages（前缀为空）
+ * 采集端 H5 用的是相对路径，两边都不用改。
+ *
+ *   node tools/deploy-github-pages.mjs --target pages    # 发到 Cloudflare Pages（wrangler）
+ *
  * 目录结构（页面上就是这三个地址）：
  *   /                采集端 H5（app/dist/h5，宽屏 Web / 窄屏展示版）
  *   /studio/         桌面工作台（Next 静态导出，演示模式）
@@ -41,7 +48,17 @@ function git(args, options = {}) {
 }
 
 function parseArgs(argv) {
-  const args = { repo: '', skipBuild: argv.includes('--skip-build'), dryRun: argv.includes('--dry-run') };
+  const pick = (flag) => (argv.includes(flag) ? argv[argv.indexOf(flag) + 1] : '');
+  const args = {
+    repo: '',
+    skipBuild: argv.includes('--skip-build'),
+    dryRun: argv.includes('--dry-run'),
+    target: argv.includes('--target') ? argv[argv.indexOf('--target') + 1] : 'gh-pages',
+    prefix: argv.includes('--prefix') ? argv[argv.indexOf('--prefix') + 1] : null,
+    outDir: pick('--out'),
+  };
+  if (args.target !== 'gh-pages' && args.target !== 'pages') throw new Error('--target 只能是 gh-pages 或 pages');
+  if (args.prefix === null) args.prefix = args.target === 'pages' ? '' : '/zhuangxiu-demand';
   const i = argv.indexOf('--repo');
   if (i >= 0 && argv[i + 1]) args.repo = argv[i + 1];
   if (!args.repo) {
@@ -80,20 +97,24 @@ function run(command, args, extraEnv = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-const { repo, skipBuild, dryRun } = parseArgs(process.argv.slice(2));
+const { repo, skipBuild, dryRun, target, prefix, outDir } = parseArgs(process.argv.slice(2));
+const PAGES_PROJECT = process.env.PAGES_PROJECT ?? 'demand-studio';
 
 if (!skipBuild) {
   console.log('1/4 构建三个产物…');
   run('pnpm', ['run', 'build:h5']);
   // 演示模式：接口改用浏览器内的实现，这样纯静态托管也能点开
+  const studioBase = `${prefix}/studio`;
+  const onsiteBase = `${prefix}/onsite`;
+  console.log(`  路径前缀：${prefix || '（根目录）'}`);
   run('pnpm', ['--dir', 'studio', 'run', 'build'], {
     NEXT_PUBLIC_DEMO: '1',
-    EXPORT_BASE_PATH: `/${REPO_SLUG}/studio`,
+    EXPORT_BASE_PATH: studioBase,
     EXPORT_DIST_DIR: '.next-export',
   });
   run('pnpm', ['--dir', 'onsite', 'run', 'build'], {
     VITE_DEMO: '1',
-    EXPORT_BASE_PATH: `/${REPO_SLUG}/onsite`,
+    EXPORT_BASE_PATH: onsiteBase,
   });
 } else {
   console.log('1/4 跳过构建，复用现有产物');
@@ -107,7 +128,11 @@ for (const target of TARGETS) {
   }
 }
 
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zx-pages-'));
+// Cloudflare Pages 用固定目录（方便重复发布与排查），GitHub Pages 用临时目录
+const workDir = target === 'pages'
+  ? path.resolve(PROJECT_ROOT, outDir || '_deploy')
+  : fs.mkdtempSync(path.join(os.tmpdir(), 'zx-pages-'));
+if (target === 'pages') fs.rmSync(workDir, { recursive: true, force: true });
 console.log(`2/4 组装发布目录：${workDir}`);
 TARGETS.forEach((target) => {
   const dest = target.to ? path.join(workDir, target.to) : workDir;
@@ -119,6 +144,23 @@ fs.writeFileSync(path.join(workDir, '.nojekyll'), '');
 
 if (dryRun) {
   console.log(['--dry-run：只组装不推送。发布目录：', workDir].join(' '));
+  process.exit(0);
+}
+
+/* Cloudflare Pages：wrangler 直接发布目录，不走 git 分支 */
+if (target === 'pages') {
+  console.log('3/4 发布到 Cloudflare Pages…');
+  const result = spawnSync(
+    'npx',
+    ['--yes', 'wrangler@latest', 'pages', 'deploy', workDir, '--project-name', PAGES_PROJECT, '--branch', 'main'],
+    // 必须在产物目录里跑：仓库根是 pnpm 工作区，wrangler 会误判成 Workers 项目
+    { cwd: workDir, stdio: 'inherit', shell: true },
+  );
+  if (result.status !== 0) process.exit(result.status ?? 1);
+  console.log('\n发布完成。');
+  console.log(`站点：https://${PAGES_PROJECT}.pages.dev/`);
+  console.log(`  桌面工作台：https://${PAGES_PROJECT}.pages.dev/studio/`);
+  console.log(`  现场端：https://${PAGES_PROJECT}.pages.dev/onsite/`);
   process.exit(0);
 }
 

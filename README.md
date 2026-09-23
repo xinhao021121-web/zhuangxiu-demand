@@ -70,7 +70,10 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 - 采集端（房主填需求单）：<https://xinhao021121-web.github.io/zhuangxiu-demand/>
 - 桌面工作台（设计师出门前用）：<https://xinhao021121-web.github.io/zhuangxiu-demand/studio/>
 - 现场端 PWA（现场照着问）：<https://xinhao021121-web.github.io/zhuangxiu-demand/onsite/>
+- 同一份产物的备份地址（Cloudflare Pages）：<https://demand-studio.pages.dev/studio/>
 - 仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
+
+两条发布命令：`pnpm run deploy:pages`（GitHub Pages）与 `pnpm run deploy:cf-pages`（Cloudflare Pages）。
 
 **API 服务跑不在静态托管上**：两个端在没有 API 时走演示模式，判据、脱敏、合并、排序仍是
 `packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现；接回真服务时把

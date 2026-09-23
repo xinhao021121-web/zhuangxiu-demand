@@ -1,6 +1,16 @@
 # 上线
 
-当前线上地址：<https://xinhao021121-web.github.io/zhuangxiu-demand/>（仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>）
+两个线上地址（同一份产物，互为备份）：
+
+| 托管 | 地址 | 发布命令 |
+| --- | --- | --- |
+| Cloudflare Pages | <https://demand-studio.pages.dev/> | `pnpm run deploy:cf-pages` |
+| GitHub Pages | <https://xinhao021121-web.github.io/zhuangxiu-demand/> | `pnpm run deploy:pages` |
+
+两家的路径前缀不同（Pages 挂在根、GitHub Pages 的仓库页挂在 `/<repo>/` 下），所以前缀是构建参数：
+`--target pages` 用空前缀，GitHub Pages 用 `/zhuangxiu-demand`。采集端 H5 用的是相对路径，两边都不用改。
+
+仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
 
 Web 端与展示版是同一份 H5 产物（`app/dist/h5`）：宽屏是 Web 端，窄屏是展示版。
 产物是纯静态站点，形态上只有一个要求——**必须挂在某个目录下用 HTTP 访问**，

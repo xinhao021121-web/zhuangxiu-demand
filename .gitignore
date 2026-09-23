@@ -36,3 +36,7 @@ build/
 .next/
 *.tsbuildinfo
 .next-export/
+
+# 本地凭据（Cloudflare API Token 等，用完即删）
+.cf-token
+_deploy/
