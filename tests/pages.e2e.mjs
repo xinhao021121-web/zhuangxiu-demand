@@ -100,7 +100,7 @@ try {
   });
   await intake.goto(`${BASE}app/`);
   await intake.waitForTimeout(1200);
-  ok((await intake.title()).includes('装修需求采集'), '采集端 H5 打得开');
+  ok((await intake.title()).includes('问需 · 采集'), '采集端 H5 打得开');
   ok((await intake.locator('#app').count()) === 1, '采集端挂载点存在');
   ok(intakeErrors.length === 0, '采集端控制台无错误' + (intakeErrors.length ? '：' + intakeErrors.join(' | ') : ''));
   await intake.screenshot({ path: path.join(SHOT, 'pages-01-采集端.png') });

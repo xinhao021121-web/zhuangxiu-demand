@@ -28,7 +28,7 @@ export function LoginView({ onLogin }: { onLogin: (user: User) => void }) {
 
   return (
     <form className="login" onSubmit={submit}>
-      <h1>设计需求解读台</h1>
+      <h1>问需 · 解读</h1>
       <p>公司内部工具。登录后导入房主填好的需求单，出门前把量房沟通清单做出来。</p>
       <label htmlFor="phone">手机号</label>
       <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="username" />

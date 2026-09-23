@@ -180,7 +180,7 @@ export function Workbench() {
   return (
     <>
       <header className="top">
-        <h1>设计需求解读台</h1>
+        <h1>问需 · 解读</h1>
         <span className="sub">桌面工作台</span>
         {DEMO_MODE ? (
           <span className="pill" id="demo-pill">演示数据 · 在浏览器里跑，未接服务端</span>

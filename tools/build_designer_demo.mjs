@@ -1,5 +1,5 @@
 /**
- * 生成《设计需求解读台》Demo：把真实字段规格、16 项通用清单与模拟需求单注入模板。
+ * 生成《问需 · 解读》Demo：把真实字段规格、16 项通用清单与模拟需求单注入模板。
  * 用法：node tools/build_designer_demo.mjs
  * 模板：tools/_designer_template.html（勿直接打开，字段数据是空的）
  * 产物：designer/设计需求解读台_Demo_V0.1.html

@@ -39,7 +39,7 @@ if (landing.error) {
   const html = await landing.text();
   ok(landing.status === 200, `入口页返回 200（实际 ${landing.status}）`);
   ok(landing.headers.get('content-type')?.includes('text/html'), '入口页 Content-Type 是 text/html');
-  ok(html.includes('设计需求解读台'), '入口页是作品集首页');
+  ok(html.includes('问需'), '入口页是作品集首页');
   ok(
     html.includes('./studio/') && html.includes('./onsite/') && html.includes('./app/'),
     '入口页给出三个体验入口',

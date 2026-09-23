@@ -1,23 +1,23 @@
-# 装修需求发现助手
+# 问需
 
-用纯规则，从房主已经填写的装修需求里，找出他想要但没说出口的需求。
+把装修需求问全、问清、问定：房主填需求单 → 设计师出门前做出沟通清单 → 现场照着问、带一份记录回来。
 
-- 产品设计文档：`docs/装修需求发现助手_产品设计文档_V1.md`
-- 技术方案：`docs/装修需求发现助手_技术方案_V1.md`
-- 设计需求解读台（实现中）：`docs/设计需求解读台_产品设计文档_V1.md`
-- 设计需求解读台 · 技术方案：`docs/设计需求解读台_技术方案_V1.md`
-- Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
-- 手机端 Demo（现场量房）：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
-- 正式实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
+- 产品设计文档：`docs/问需_产品设计文档_V1.md`（定位、三个端、回流闭环）
+- 技术方案：`docs/问需_技术方案_V1.md`
+
+
+- 解读端 Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
+- 现场端 Demo：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
+- 采集端实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
 - 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储、清单判据、脱敏与外发，零框架依赖）
 
 ## 仓库结构
 
 ```
-landing/              入口页（作品集首页：讲清产品与关键设计点，再分发三个入口）
-app/                  Taro 应用（weapp + h5）
+landing/              入口页（作品集首页：讲清问需与关键设计点，再分发三个入口）
+app/                  采集端（Taro：weapp + h5）
 services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
-studio/               桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
+studio/               解读端 · 桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
 onsite/               现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录
 packages/
   field-spec/         字段规格（由字段清单 Excel 导出）、表单模型与校验
@@ -29,7 +29,7 @@ packages/
   contracts/          API 契约与共享类型（zod → 类型 + OpenAPI）
   devtools/           单测与类型检查用的开发依赖
 tools/                字段清单 Excel → JSON、Demo 构建脚本
-docs/                 产品文档与技术方案
+docs/                 问需的产品设计文档与技术方案
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
 designer/            设计需求解读台 Demo + 现场量房手机端 Demo（数据模拟）
 tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）
@@ -74,7 +74,7 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 | --- | --- | --- |
 | 入口页 | <https://demand-studio.pages.dev/> | <https://xinhao021121-web.github.io/zhuangxiu-demand/> |
 | 采集端（房主填需求单） | …`/app/` | …`/app/` |
-| 桌面工作台（设计师出门前用） | …`/studio/` | …`/studio/` |
+| 解读端 · 桌面工作台（设计师出门前用） | …`/studio/` | …`/studio/` |
 | 现场端 PWA（现场照着问） | …`/onsite/` | …`/onsite/` |
 
 - 仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
@@ -102,17 +102,17 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
-| 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、宽窄屏布局 |
+| 解读端 · 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、宽窄屏布局 |
 | 上线产物 | `pnpm run test:pages` | 按 gh-pages 的目录结构组装一次，用静态服务器按 /<repo>/ 前缀托管，逐个验证三个入口（含演示模式动线与 PWA manifest） |
 | 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
-| H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
+| 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |
-| 设计需求解读台 Demo | `pnpm run test:designer` | 需求单列表、原始表格、外发前确认（含脱敏）、表格理解、清单删减与撤销、导出 |
-| 现场量房（手机端）Demo | `pnpm run test:onsite` | 现场选单、逐空间问、记一笔、离线记录与同步、量房记录、手机布局指标 |
+| 解读端 Demo | `pnpm run test:designer` | 需求单列表、原始表格、外发前确认（含脱敏）、表格理解、清单删减与撤销、导出 |
+| 现场端 Demo | `pnpm run test:onsite` | 现场选单、逐空间问、记一笔、离线记录与同步、量房记录、手机布局指标 |
 
 小程序端没有稳定的自动验证手段（需要开发者工具），因此规则、排序、去重、静默、摘要、草稿迁移
 全部放在零框架依赖的领域包里用 Vitest 覆盖，呈现层只做「读状态、渲染、派发事件」。

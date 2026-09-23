@@ -1,5 +1,5 @@
 /**
- * 生成《现场量房》手机端 Demo：把真实字段规格、16 项通用清单、模拟需求单与现场记录注入模板。
+ * 生成《问需 · 现场》手机端 Demo：把真实字段规格、16 项通用清单、模拟需求单与现场记录注入模板。
  * 用法：node tools/build_onsite_demo.mjs
  * 模板：tools/_onsite_template.html（勿直接打开，数据是空的）
  * 产物：designer/现场量房_Demo_V0.1.html

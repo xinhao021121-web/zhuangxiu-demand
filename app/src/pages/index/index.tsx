@@ -70,7 +70,7 @@ export default function Index() {
       <View className="topbar">
         <View className="brand">
           <Text className="dot">筑</Text>
-          <Text className="brand-text">装修需求采集 · 房主端</Text>
+          <Text className="brand-text">问需 · 采集 · 房主端</Text>
         </View>
         <View className="progress-wrap">
           <View className="progress">

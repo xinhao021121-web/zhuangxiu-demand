@@ -1,4 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '装修需求采集',
+  navigationBarTitleText: '问需 · 采集',
   enablePullDownRefresh: false,
 });

@@ -78,7 +78,7 @@ ok(secCount === 13, `表单渲染 13 个大类（实际 ${secCount}）`);
 ok(await count(page, ".snav") === 13, "顶部分区导航 13 个");
 ok(await count(page, ".sec-body") === 1, "首屏只展开一个大类（手风琴）");
 ok(await count(page, ".sec-card.open") === 1, "首屏展开的是「认识你家」");
-ok((await page.locator(".nav-title").innerText()).includes("装修需求采集"), "顶部标题正确");
+ok((await page.locator(".nav-title").innerText()).includes("问需 · 采集"), "顶部标题正确");
 ok(await count(page, ".capsule") === 1, "顶部有胶囊按钮区");
 ok((await page.locator("#find-bar").innerText()).includes("发现"), "底部常驻发现横条存在");
 ok((await page.locator("#prog-num").innerText()).includes("清晰度"), "顶部显示需求清晰度");

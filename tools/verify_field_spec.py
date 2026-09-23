@@ -17,7 +17,7 @@ from pathlib import Path
 import openpyxl
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC = ROOT / "docs" / "装修需求发现助手_产品设计文档_V1.md"
+DOC = ROOT / "docs" / "问需_产品设计文档_V1.md"
 BOOK = (
     ROOT
     / "outputs"

@@ -1,7 +1,11 @@
 /**
  * 命名与文档一致性：对外表述必须与实现一致。
- * 发现引擎是确定性规则、不调用模型（见产品文档 4.2），
- * 因此面向用户的字段标记统一写「助手建议」，不写「AI 建议」。
+ *
+ * 两条约定写在这里：
+ * 1. 发现引擎是确定性规则、不调用模型（见产品文档 4.7），因此面向用户的字段标记统一写
+ *    「助手建议」，不写「AI 建议」。
+ * 2. 产品名统一为「问需」，三个端是 问需 · 采集 / 问需 · 解读 / 问需 · 现场；对外文档只有
+ *    一份产品设计文档 + 一份技术方案（两份合并前的旧文档已经不存在了）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,12 +23,25 @@ const UI_ARTIFACTS = [
   'mobile/装修需求发现助手_小程序端Demo_V0.1.html',
 ];
 
-const DOCS = [
-  'README.md',
-  'demo/README.md',
-  'docs/装修需求发现助手_产品设计文档_V1.md',
-  'docs/装修需求发现助手_技术方案_V1.md',
-  'docs/设计需求解读台_产品设计文档_V1.md',
+const PRODUCT_DOC = 'docs/问需_产品设计文档_V1.md';
+const TECH_DOC = 'docs/问需_技术方案_V1.md';
+
+const DOCS = ['README.md', 'demo/README.md', PRODUCT_DOC, TECH_DOC];
+
+/** 会展示产品名的界面入口。 */
+const TITLES = [
+  ['landing/index.html', '<h1>问需</h1>'],
+  ['landing/index.html', '<title>问需 · 作品集</title>'],
+  ['app/src/app.config.ts', "'问需 · 采集'"],
+  ['app/src/pages/index/index.config.ts', "'问需 · 采集'"],
+  ['app/src/index.html', '<title>问需 · 采集 · 房主端</title>'],
+  ['studio/src/app/layout.tsx', "title: '问需 · 解读'"],
+  ['onsite/index.html', '<title>问需 · 现场</title>'],
+  ['onsite/src/App.tsx', '<h1>问需 · 现场</h1>'],
+  ['demo/装修需求发现助手_Demo_V0.2.html', '<title>筑云 · 问需 · 采集 Demo V0.2</title>'],
+  ['mobile/装修需求发现助手_小程序端Demo_V0.1.html', '<span class="nav-title">问需 · 采集</span>'],
+  ['designer/设计需求解读台_Demo_V0.1.html', '<h1>问需 · 解读</h1>'],
+  ['designer/现场量房_Demo_V0.1.html', '<b>问需 · 现场</b>'],
 ];
 
 describe('面向用户的表述', () => {
@@ -46,6 +63,26 @@ describe('面向用户的表述', () => {
   });
 });
 
+describe('产品命名', () => {
+  it('三个端的对外标题统一到问需体系', () => {
+    TITLES.forEach(([rel, expected]) => expect(read(rel), rel).toContain(expected));
+  });
+
+  it('旧的产品名不再作为产品名出现在界面上', () => {
+    TITLES.map(([rel]) => rel).forEach((rel) => {
+      const text = read(rel);
+      expect(text, rel).not.toContain('<h1>设计需求解读台</h1>');
+      expect(text, rel).not.toContain('<title>设计需求解读台');
+      expect(text, rel).not.toContain('title: \'设计需求解读台\'');
+    });
+  });
+
+  it('对外文档只有两份：产品设计文档与技术方案', () => {
+    const files = fs.readdirSync(path.join(ROOT, 'docs')).filter((f) => f.endsWith('.md')).sort();
+    expect(files).toEqual(['问需_产品设计文档_V1.md', '问需_技术方案_V1.md']);
+  });
+});
+
 describe('文档一致性', () => {
   it('README 列出的文档都存在', () => {
     const links = [...read('README.md').matchAll(/`(docs\/[^`]+\.md)`/g)].map((m) => m[1]);
@@ -53,20 +90,20 @@ describe('文档一致性', () => {
     links.forEach((rel) => expect(fs.existsSync(path.join(ROOT, rel)), rel).toBe(true));
   });
 
-  it('产品文档写明了「规则刻意不交给模型」这条判断', () => {
-    const doc = read('docs/装修需求发现助手_产品设计文档_V1.md');
+  it('采集端的发现引擎写明「刻意不交给模型」', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('刻意不交给模型');
     expect(doc).toContain('不做模型调用');
   });
 
-  it('设计需求解读台文档把模型的产出限定为「要问的问题」', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('解读端把模型的产出限定为「要问的问题」', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('量房沟通清单');
     expect(doc).toContain('每条清单项必须能指到字段');
   });
 
-  it('设计需求解读台文档承接采集端，不引入外部项目的说法', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('解读端承接采集端，不引入外部项目的说法', () => {
+    const doc = read(PRODUCT_DOC);
     // 接采集端的数据与资产
     expect(doc).toContain('aiMarks');
     expect(doc).toContain('量房确认清单');
@@ -77,33 +114,51 @@ describe('文档一致性', () => {
     expect(doc).not.toContain('设备与智能');
   });
 
-  it('设计需求解读台文档写明了脱敏与数据边界', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('写明了脱敏与数据边界', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('脱敏');
     expect(doc).toContain('不外发');
     expect(doc).toContain('小区 / 楼盘名称');
   });
 
-  it('设计需求解读台文档按判据筛清单，不设条数上限', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('按判据筛清单，不设条数上限', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('不设条数上限');
     expect(doc).toContain('影响可行性');
     expect(doc).not.toContain('不超过 15 条');
   });
 
-  it('设计需求解读台文档落实了外发确认与清单删减', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('落实了外发确认与清单删减', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('外发前逐条确认');
     expect(doc).toContain('自由文本默认不勾选');
     expect(doc).toContain('删减');
     expect(doc).not.toContain('误伤与漏检如何取舍');
   });
 
-  it('设计需求解读台文档写明了通用清单与推导问题的合并排序规则', () => {
-    const doc = read('docs/设计需求解读台_产品设计文档_V1.md');
+  it('写明了通用清单与推导问题的合并排序规则', () => {
+    const doc = read(PRODUCT_DOC);
     expect(doc).toContain('归属空间 + 核实对象');
     expect(doc).toContain('related_fields');
     expect(doc).toContain('全屋');
     expect(doc).not.toContain('16 项通用量房清单与推导出的问题如何合并去重');
+  });
+
+  it('给出了把三个端焊在一起的回流闭环', () => {
+    const doc = read(PRODUCT_DOC);
+    expect(doc).toContain('回流闭环');
+    expect(doc).toContain('遗漏率');
+    expect(doc).toContain('系统只汇总与排序，不自动改规则');
+  });
+
+  it('合并后不再保留「采集端不接设计师端」这类过时边界', () => {
+    expect(read(PRODUCT_DOC)).not.toContain('不接下游设计师端');
+    expect(read(TECH_DOC)).not.toContain('不做：后端服务、模型调用');
+  });
+
+  it('技术方案写明了采集通道与内部通道的分离', () => {
+    const doc = read(TECH_DOC);
+    expect(doc).toContain('采集通道与内部通道分离');
+    expect(doc).toContain('DemandSheetImport');
   });
 });

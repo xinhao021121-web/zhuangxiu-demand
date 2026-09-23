@@ -2,7 +2,7 @@
   "name": "@zx/onsite",
   "version": "0.1.0",
   "private": true,
-  "description": "设计需求解读台 · 现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录",
+  "description": "问需 · 现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",

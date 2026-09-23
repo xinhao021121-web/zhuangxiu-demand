@@ -3,7 +3,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#ffffff',
-    navigationBarTitleText: '装修需求采集',
+    navigationBarTitleText: '问需 · 采集',
     navigationBarTextStyle: 'black',
   },
 });

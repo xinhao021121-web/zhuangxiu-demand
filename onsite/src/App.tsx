@@ -378,7 +378,7 @@ export function App() {
       return (
         <div className="bar">
           <div className="tt">
-            <b>现场量房</b>
+            <b>问需 · 现场</b>
             <span>{DEMO_MODE ? '演示数据 · 在浏览器里跑，未接服务端' : '选今天要去的这一家'}</span>
           </div>
           <div className="right">{netButton}</div>
@@ -975,7 +975,7 @@ function LoginView({ onLogin }: { onLogin: (user: User, token: string) => Promis
         }
       }}
     >
-      <h1>现场量房</h1>
+      <h1>问需 · 现场</h1>
       <p>公司内部工具。登录后按空间逐条走清单，记一句话结论，没网也能记。</p>
       <label htmlFor="phone">手机号</label>
       <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
