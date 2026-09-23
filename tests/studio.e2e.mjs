@@ -123,6 +123,15 @@ try {
   await page.locator('#exp-ok').click();
   await page.waitForTimeout(200);
 
+  // 八、外发记录事后可查
+  await page.locator('#btn-replay').click();
+  await page.waitForSelector('#modal');
+  const again = await text('#modal');
+  ok(again.includes('上次外发'), '重新解读时能查到上次外发发了什么');
+  ok(again.includes('默认合规策略 v1'), '记录里带当次生效的策略版本');
+  await page.locator('#send-cancel').click();
+  await page.waitForTimeout(200);
+
   // 八、布局指标
   await page.locator('.tab[data-tab="list"]').click();
   await page.waitForTimeout(300);

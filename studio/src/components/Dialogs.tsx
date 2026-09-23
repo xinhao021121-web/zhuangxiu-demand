@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { DemandSheetDetail } from '@zx/contracts';
+import type { DemandSheetDetail, OutboundRecordContract } from '@zx/contracts';
 
 function Shell({
   title,
@@ -58,11 +58,14 @@ function Group({
  */
 export function OutboundDialog({
   detail,
+  history,
   busy,
   onCancel,
   onConfirm,
 }: {
   detail: DemandSheetDetail;
+  /** 外发记录：谁、什么时候、发了哪些字段、用的哪版策略 */
+  history: OutboundRecordContract[];
   busy: boolean;
   onCancel: () => void;
   onConfirm: (selected: Record<string, boolean>) => void;
@@ -108,6 +111,13 @@ export function OutboundDialog({
       <div className="note">
         本次生效：默认合规策略 v1 · 不外发 / 泛化后外发 / 原样外发三级策略 · 自由文本默认不勾选 ·
         可按公司合规要求调整
+        {history.length ? (
+          <>
+            <br />
+            上次外发：{history[0].policyName} {history[0].policyVersion} · 外发 {history[0].fieldKeys.length}{' '}
+            个字段 · {history[0].operator} · {history[0].at}
+          </>
+        ) : null}
       </div>
       {groups.map((group) => (
         <Group key={group.tier} tier={group.tier} title={group.title} hint={group.hint}>

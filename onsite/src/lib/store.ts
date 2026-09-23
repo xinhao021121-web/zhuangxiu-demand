@@ -117,19 +117,3 @@ export function getMeta<T>(key: string): Promise<T | undefined> {
   return tx<{ key: string; value: T } | undefined>(META, 'readonly', (s) => s.get(key)).then((row) => row?.value);
 }
 
-export function clearAll(): Promise<void> {
-  return open().then(
-    (db) =>
-      new Promise<void>((resolve, reject) => {
-        const transaction = db.transaction([RECORDS, CHECKLISTS, META], 'readwrite');
-        transaction.objectStore(RECORDS).clear();
-        transaction.objectStore(CHECKLISTS).clear();
-        transaction.objectStore(META).clear();
-        transaction.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        transaction.onerror = () => reject(transaction.error);
-      }),
-  );
-}

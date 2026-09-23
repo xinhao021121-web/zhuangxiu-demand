@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildChecklistMarkdown } from '@zx/checklist';
-import type { ChecklistView, DemandSheetDetail, DemandSheetSummary, User } from '@zx/contracts';
+import type {
+  ChecklistView,
+  DemandSheetDetail,
+  DemandSheetSummary,
+  OutboundRecordContract,
+  User,
+} from '@zx/contracts';
 import { api, ApiError, getToken, setToken } from '../lib/api';
 import { ChecklistPanel } from './ChecklistPanel';
 import { ExportDialog, OutboundDialog } from './Dialogs';
@@ -42,12 +48,22 @@ export function Workbench() {
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  /** 外发记录：生成前给设计师看一眼上次发了什么（F3 的事后可查） */
+  const [history, setHistory] = useState<OutboundRecordContract[]>([]);
   const [error, setError] = useState('');
 
   const reloadSheets = useCallback(async () => {
     const list = await api.listSheets();
     setSheets(list);
     return list;
+  }, []);
+
+  const reloadHistory = useCallback(async (id: string) => {
+    try {
+      setHistory(await api.outboundRecords(id));
+    } catch {
+      setHistory([]);
+    }
   }, []);
 
   const reloadDetail = useCallback(async (id: string) => {
@@ -79,7 +95,8 @@ export function Workbench() {
   useEffect(() => {
     if (!currentId) return;
     reloadDetail(currentId).catch((err: unknown) => setError(err instanceof Error ? err.message : '加载失败'));
-  }, [currentId, reloadDetail]);
+    void reloadHistory(currentId);
+  }, [currentId, reloadDetail, reloadHistory]);
 
   const currentSummary = useMemo(() => sheets.find((s) => s.id === currentId) ?? null, [sheets, currentId]);
 
@@ -110,6 +127,7 @@ export function Workbench() {
     try {
       await api.generate(currentId, selected);
       await reloadDetail(currentId);
+      await reloadHistory(currentId);
       await reloadSheets();
       setDialog(null);
       setTab('list');
@@ -314,6 +332,7 @@ export function Workbench() {
       {dialog?.kind === 'outbound' && detail ? (
         <OutboundDialog
           detail={detail}
+          history={history}
           busy={busy}
           onCancel={() => setDialog(null)}
           onConfirm={confirmGenerate}

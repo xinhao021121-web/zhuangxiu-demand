@@ -10,7 +10,6 @@ import type {
   DemandSheetDetail,
   DemandSheetSummary,
   OutboundRecordContract,
-  SiteRecordContract,
   User,
 } from '@zx/contracts';
 
@@ -55,13 +54,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (type.includes('application/json') ? await response.json() : await response.text()) as T;
 }
 
-export interface ChecklistSummary {
-  checklist: ChecklistView;
-  demandName: string;
-  overview: string;
-  stats: { asked: number; skip: number; left: number; must: number; mustAsked: number };
-  recordMarkdown: string;
-}
 
 export const api = {
   login: (phone: string, code: string) =>
@@ -83,8 +75,5 @@ export const api = {
       { method: 'PATCH', body: JSON.stringify({ removed }) },
     ),
   outboundRecords: (id: string) => request<OutboundRecordContract[]>(`/demand-sheets/${id}/outbound-records`),
-  siteRecords: (checklistId: string) =>
-    request<{ records: SiteRecordContract[]; stats: ChecklistSummary['stats'] }>(
-      `/checklists/${checklistId}/site-records`,
-    ),
+
 };
