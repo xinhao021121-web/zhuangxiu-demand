@@ -102,6 +102,15 @@ try {
   await intake.waitForTimeout(1200);
   ok((await intake.title()).includes('问需 · 采集'), '采集端 H5 打得开');
   ok((await intake.locator('#app').count()) === 1, '采集端挂载点存在');
+  const intakeManifest = await intake.evaluate(async () => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return null;
+    const res = await fetch(link.href);
+    return res.ok ? res.json() : null;
+  });
+  ok(!!intakeManifest?.name?.includes('问需'), '采集端带可装机的 manifest（手机版）');
+  const intakeSw = await intake.request.get(`${BASE}app/sw.js`);
+  ok(intakeSw.ok(), '采集端 service worker 可下载（装到主屏幕后断网也能打开）');
   ok(intakeErrors.length === 0, '采集端控制台无错误' + (intakeErrors.length ? '：' + intakeErrors.join(' | ') : ''));
   await intake.screenshot({ path: path.join(SHOT, 'pages-01-采集端.png') });
   await intake.close();

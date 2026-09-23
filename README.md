@@ -15,7 +15,7 @@
 
 ```
 landing/              入口页（作品集首页：讲清问需与关键设计点，再分发三个入口）
-app/                  采集端（Taro：weapp + h5）
+app/                  采集端（Taro：weapp + h5；pwa/ 是手机版资产，只复制进 H5 产物）
 services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
 studio/               解读端 · 桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
 onsite/               现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录
@@ -65,6 +65,8 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 ```
 
 小程序端用微信开发者工具打开 `app/`（`project.config.json` 的 `miniprogramRoot` 指向 `dist/weapp/`）。
+`appid` 目前是 `touristappid`（测试号）：要在微信里真正发布，得换成自己的小程序 appid 并走提审。
+不装小程序也能用——H5 产物的窄屏形态就是手机版，在手机浏览器里打开可添加到主屏幕（`app/pwa/` 的 manifest 与 service worker）。
 
 ## 上线
 
@@ -73,7 +75,7 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 | 入口 | Cloudflare Pages（主） | GitHub Pages（备份，同一份产物） |
 | --- | --- | --- |
 | 入口页 | <https://demand-studio.pages.dev/> | <https://xinhao021121-web.github.io/zhuangxiu-demand/> |
-| 采集端（房主填需求单） | …`/app/` | …`/app/` |
+| 采集端（房主填需求单，手机可装机） | …`/app/` | …`/app/` |
 | 解读端 · 桌面工作台（设计师出门前用） | …`/studio/` | …`/studio/` |
 | 现场端 PWA（现场照着问） | …`/onsite/` | …`/onsite/` |
 

@@ -329,6 +329,36 @@ function watch(page) {
   await context.close();
 }
 
+/* ==================== 手机版：可装到主屏幕 ==================== */
+{
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const errors = watch(page);
+  await page.goto(BASE);
+  await page.waitForSelector('.sec-card', { timeout: 15000 });
+
+  const manifest = await page.evaluate(async () => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return null;
+    const res = await fetch(link.href);
+    return res.ok ? res.json() : null;
+  });
+  ok(!!manifest && manifest.display === 'standalone', '给出可装到手机主屏幕的 manifest');
+  ok((manifest?.icons ?? []).length >= 2, 'manifest 带图标');
+  ok(!!manifest?.name?.includes('问需'), 'manifest 用问需的产品名');
+
+  let registrations = -1;
+  for (let i = 0; i < 20 && registrations < 1; i += 1) {
+    registrations = await page.evaluate(async () =>
+      'serviceWorker' in navigator ? (await navigator.serviceWorker.getRegistrations()).length : -1,
+    );
+    if (registrations < 1) await page.waitForTimeout(150);
+  }
+  ok(registrations >= 1, `已注册 service worker（${registrations} 个），装到主屏幕后断网也能打开`);
+
+  ok(errors.length === 0, '手机版控制台无错误' + (errors.length ? '：' + errors.join(' | ') : ''));
+  await page.close();
+}
+
 await browser.close();
 server.close();
 console.log(fails.length ? `\n${fails.length} 项未通过` : '\n全部通过');

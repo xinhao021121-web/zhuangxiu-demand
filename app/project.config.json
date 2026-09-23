@@ -1,7 +1,7 @@
 {
   "miniprogramRoot": "dist/weapp/",
-  "projectname": "装修需求发现助手",
-  "description": "房主端需求采集与需求发现（微信小程序）",
+  "projectname": "问需 · 采集",
+  "description": "房主端需求采集与需求发现（问需 · 采集；微信小程序）",
   "appid": "touristappid",
   "setting": {
     "urlCheck": false,

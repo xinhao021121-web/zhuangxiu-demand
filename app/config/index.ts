@@ -8,6 +8,9 @@ import type { UserConfigExport } from '@tarojs/cli';
  */
 const domain = (name: string) => path.resolve(__dirname, '..', '..', 'packages', name, 'src', 'index.ts');
 
+/** 本次构建的目标端，Taro 构建时会注入（见 app/package.json 的 build:weapp / build:h5）。 */
+const taroEnv = process.env.TARO_ENV ?? 'h5';
+
 export default defineConfig<'webpack5'>(async (merge) => {
   const baseConfig: UserConfigExport<'webpack5'> = {
     projectName: 'zhuangxiu-demand-app',
@@ -16,10 +19,22 @@ export default defineConfig<'webpack5'>(async (merge) => {
     designWidth: 750,
     deviceRatio: { 640: 2.34 / 2, 750: 1, 828: 1.81 / 2 },
     sourceRoot: 'src',
-    outputRoot: `dist/${process.env.TARO_ENV}`,
+    outputRoot: `dist/${taroEnv}`,
     plugins: [],
     defineConstants: {},
-    copy: { patterns: [], options: {} },
+    // 手机版（PWA）：装到主屏幕需要的那四个文件，只跟 H5 产物走，小程序端不需要
+    copy: {
+      patterns:
+        taroEnv === 'h5'
+          ? [
+              { from: 'pwa/manifest.webmanifest', to: 'dist/h5/manifest.webmanifest' },
+              { from: 'pwa/sw.js', to: 'dist/h5/sw.js' },
+              { from: 'pwa/icon-192.png', to: 'dist/h5/icon-192.png' },
+              { from: 'pwa/icon-512.png', to: 'dist/h5/icon-512.png' },
+            ]
+          : [],
+      options: {},
+    },
     framework: 'react',
     compiler: { type: 'webpack5', prebundle: { enable: false } },
     cache: { enable: false },

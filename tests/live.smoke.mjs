@@ -60,6 +60,11 @@ if (intake.error) {
   const jsAsset = assetPaths.find((p) => p.endsWith('.js'));
   const jsRes = await fetch(new URL(jsAsset, APP_URL).href, { headers: { 'User-Agent': 'codex-live-check' } });
   ok(jsRes.status === 200, '采集端 JS 产物可以从线上地址加载');
+  const manifestRes = await fetch(new URL('manifest.webmanifest', APP_URL).href);
+  const manifest = manifestRes.ok ? await manifestRes.json() : null;
+  ok(!!manifest?.name?.includes('问需'), '采集端带可装机的 manifest（手机版）');
+  const swRes = await fetch(new URL('sw.js', APP_URL).href);
+  ok(swRes.status === 200, '采集端 service worker 可以从线上地址加载');
 }
 
 const browser = await launchBrowser();

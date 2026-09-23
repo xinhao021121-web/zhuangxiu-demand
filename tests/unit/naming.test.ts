@@ -162,3 +162,30 @@ describe('文档一致性', () => {
     expect(doc).toContain('DemandSheetImport');
   });
 });
+
+describe('手机版（PWA）', () => {
+  it('采集端带 manifest 与 service worker，并用问需的产品名', () => {
+    const manifest = JSON.parse(read('app/pwa/manifest.webmanifest'));
+    expect(manifest.name).toContain('问需');
+    expect(manifest.short_name).toBe('问需采集');
+    expect(manifest.display).toBe('standalone');
+    expect(manifest.icons.length).toBeGreaterThanOrEqual(2);
+    manifest.icons.forEach((icon: { src: string }) =>
+      expect(fs.existsSync(path.join(ROOT, 'app', 'pwa', icon.src.replace('./', ''))), icon.src).toBe(true),
+    );
+    expect(read('app/pwa/sw.js')).toContain('zx-intake');
+    expect(read('app/src/index.html')).toContain('rel="manifest"');
+  });
+
+  it('现场端的 manifest 也统一到问需体系', () => {
+    const manifest = JSON.parse(read('onsite/public/manifest.webmanifest'));
+    expect(manifest.name).toContain('问需');
+    expect(manifest.short_name).toBe('问需现场');
+  });
+
+  it('小程序的工程名与描述用问需体系', () => {
+    const project = JSON.parse(read('app/project.config.json'));
+    expect(project.projectname).toContain('问需');
+    expect(project.description).toContain('问需');
+  });
+});
