@@ -13,7 +13,7 @@ import {
   readEnv,
   seedDatabase,
 } from '../../services/api/src/index';
-import type { ModelProvider } from '../../services/api/src/model/provider';
+import type { ModelProvider } from '@zx/service';
 import seedSheets from '../../services/api/seed/demand-sheets.json';
 
 const DESIGNER = '13800000002';

@@ -4,8 +4,8 @@
  * 用 JSON Output，不解析自由文本（技术方案 4.7 第 1 条）；超时、重试与可中断由调用方管。
  */
 
-import { SURVEY_OBJECTS_HINT, UNDERSTAND_TASK } from './provider';
-import type { ModelProvider, UnderstandRequest } from './provider';
+import { SURVEY_OBJECTS_HINT, UNDERSTAND_TASK } from '@zx/service';
+import type { ModelProvider, UnderstandRequest } from '@zx/service';
 
 const SYSTEM_PROMPT = `${UNDERSTAND_TASK}
 

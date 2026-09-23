@@ -19,7 +19,8 @@
       "@zx/summary": ["../packages/summary/src/index.ts"],
       "@zx/checklist": ["../packages/checklist/src/index.ts"],
       "@zx/redact": ["../packages/redact/src/index.ts"],
-      "@zx/contracts": ["../packages/contracts/src/index.ts"]
+      "@zx/contracts": ["../packages/contracts/src/index.ts"],
+      "@zx/service": ["../packages/service/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]

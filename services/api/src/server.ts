@@ -8,7 +8,7 @@ import { seedDatabase } from './seed';
 import { createFakeProvider } from './model/fake';
 import { createDeepSeekProvider } from './model/deepseek';
 import { readEnv } from './env';
-import type { ModelProvider } from './model/provider';
+import type { ModelProvider } from '@zx/service';
 
 const env = readEnv();
 const db = openDatabase(env.dbPath);

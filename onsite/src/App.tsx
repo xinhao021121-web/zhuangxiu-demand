@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildSiteRecordMarkdown, siteStats } from '@zx/checklist';
 import type { SiteRecord } from '@zx/checklist';
 import type { User } from '@zx/contracts';
-import { api, ApiError, getToken, setToken } from './lib/api';
+import { api, ApiError, DEMO_MODE, getToken, setToken } from './lib/api';
 import * as store from './lib/store';
 import type { CachedChecklist, LocalRecord } from './lib/store';
 
@@ -379,7 +379,7 @@ export function App() {
         <div className="bar">
           <div className="tt">
             <b>现场量房</b>
-            <span>选今天要去的这一家</span>
+            <span>{DEMO_MODE ? '演示数据 · 在浏览器里跑，未接服务端' : '选今天要去的这一家'}</span>
           </div>
           <div className="right">{netButton}</div>
         </div>

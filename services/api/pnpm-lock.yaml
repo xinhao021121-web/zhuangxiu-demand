@@ -26,6 +26,9 @@ importers:
       '@zx/rules':
         specifier: link:../../packages/rules
         version: link:../../packages/rules
+      '@zx/service':
+        specifier: link:../../packages/service
+        version: link:../../packages/service
       '@zx/summary':
         specifier: link:../../packages/summary
         version: link:../../packages/summary

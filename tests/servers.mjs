@@ -61,9 +61,8 @@ export async function startStudio() {
 
 /** 构建产物不在就先构建一次：next start 需要 .next。 */
 export function ensureStudioBuild() {
-  const buildId = path.join(ROOT, 'studio', '.next', 'BUILD_ID');
-  if (fs.existsSync(buildId)) return;
-  const result = spawnSync(NEXT, ['build'], { cwd: path.join(ROOT, 'studio'), stdio: 'inherit' });
+  if (process.env.SKIP_BUILD === '1' && fs.existsSync(path.join(ROOT, 'studio', '.next', 'BUILD_ID'))) return;
+  const result = spawnSync(process.execPath, [NEXT, 'build'], { cwd: path.join(ROOT, 'studio'), stdio: 'inherit' });
   if (result.status !== 0) throw new Error('next build 失败');
 }
 
@@ -88,12 +87,12 @@ export async function startOnsite() {
 
 /** 现场端同样要有构建产物：vite preview 只认 dist。 */
 export function ensureOnsiteBuild() {
-  const index = path.join(ROOT, 'onsite', 'dist', 'index.html');
-  if (fs.existsSync(index)) return;
-  const result = spawnSync(path.join(ROOT, 'onsite', 'node_modules', 'vite', 'bin', 'vite.js'), ['build'], {
-    cwd: path.join(ROOT, 'onsite'),
-    stdio: 'inherit',
-  });
+  if (process.env.SKIP_BUILD === '1' && fs.existsSync(path.join(ROOT, 'onsite', 'dist', 'index.html'))) return;
+  const result = spawnSync(
+    process.execPath,
+    [path.join(ROOT, 'onsite', 'node_modules', 'vite', 'bin', 'vite.js'), 'build'],
+    { cwd: path.join(ROOT, 'onsite'), stdio: 'inherit' },
+  );
   if (result.status !== 0) throw new Error('vite build 失败');
 }
 

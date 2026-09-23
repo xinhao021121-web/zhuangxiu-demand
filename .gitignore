@@ -35,3 +35,4 @@ build/
 # Next.js 构建产物
 .next/
 *.tsbuildinfo
+.next-export/

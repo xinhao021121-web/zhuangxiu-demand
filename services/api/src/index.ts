@@ -3,7 +3,7 @@ export type { AppDeps } from './app';
 export { openDatabase } from './db/sqlite';
 export { createRepo } from './repo';
 export { seedDatabase, SEED_USERS } from './seed';
-export { generateChecklist, RULE_VERSION } from './pipeline';
+export { generateChecklist, RULE_VERSION } from '@zx/service';
 export { createFakeProvider } from './model/fake';
 export { createDeepSeekProvider } from './model/deepseek';
 export { readEnv } from './env';

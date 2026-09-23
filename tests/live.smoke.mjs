@@ -65,6 +65,35 @@ fs.mkdirSync(SHOT, { recursive: true });
 await page.screenshot({ path: path.join(SHOT, '06-线上站点.png') });
 ok(errors.length === 0, errors.length ? `线上页面控制台无错误：${errors.join(' | ')}` : '线上页面控制台无错误');
 
+/**
+ * 另外两个入口：桌面工作台与现场端 PWA。
+ * 它们在没有 API 服务时走演示模式（浏览器内跑同一套领域包），所以线上也应该能点开。
+ */
+async function checkApp(label, url, selector, extra) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'codex-live-check' } }).catch((e) => ({ error: e }));
+  if (!res || res.error) {
+    ok(false, `${label}可访问（${res?.error?.message ?? '请求失败'}）`);
+    return;
+  }
+  ok(res.status === 200, `${label}返回 200（实际 ${res.status}）`);
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.login', { timeout: 30000 });
+  await page.locator('.login button[type="submit"]').click();
+  await page.waitForSelector(selector, { timeout: 30000 });
+  ok(await extra(), `${label}的演示动线跑得通`);
+}
+
+await checkApp('桌面工作台', new URL('studio/', URL_TO_CHECK).href, '.dcard', async () => {
+  const cards = await page.locator('.dcard').count();
+  const hasChecklist = (await page.locator('.dcard.on').innerText()).includes('已解读');
+  return cards === 3 && hasChecklist;
+});
+
+await checkApp('现场端', new URL('onsite/', URL_TO_CHECK).href, '.dc', async () => {
+  return (await page.locator('.dc').count()) === 3;
+});
+
 await browser.close();
 console.log(fails.length ? `\n${fails.length} 项未通过` : '\n全部通过');
 process.exit(fails.length ? 1 : 0);
+

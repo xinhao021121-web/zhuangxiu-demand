@@ -2,9 +2,10 @@
  * 一次生成是一条完整流水线（技术方案 4.4 / 4.5）：取数 → 脱敏 → 写外发记录 → 调模型 → 校验 → 落库。
  *
  * 失败时不落半成品清单：模型两道红线没过就降级为纯规则清单，并在该需求单上标明「模型部分未生成」。
+ * 这里只认 ServiceStore 与 ModelProvider 两个最小接口：真实服务传 SQLite 仓储与 DeepSeek，
+ * 线上展示版传内存仓储与种子里的固定输出，跑的是同一条流水线。
  */
 
-import { randomUUID } from 'node:crypto';
 import { FIELD_SPEC } from '@zx/field-spec';
 import { buildChecklist } from '@zx/checklist';
 import type { Checklist, DerivedItem } from '@zx/checklist';
@@ -12,10 +13,10 @@ import { DEFAULT_POLICY, buildOutbound } from '@zx/redact';
 import type { RedactionPolicy } from '@zx/redact';
 import { parseUnderstanding } from '@zx/contracts';
 import type { UnderstandingIssues } from '@zx/contracts';
-import { UNDERSTAND_TASK } from './model/provider';
-import type { ModelProvider } from './model/provider';
-import { fieldKeysOf } from './repo';
-import type { Repo } from './repo';
+import { UNDERSTAND_TASK } from './model';
+import type { ModelProvider } from './model';
+import { fieldKeysOf } from './fields';
+import type { ServiceStore } from './types';
 
 /** 判据与规则这一版的口径，落库便于事后还原。 */
 export const RULE_VERSION = 'rules-v1';
@@ -39,17 +40,12 @@ export interface GenerateResult {
   outboundRecordId: string;
 }
 
-export interface PipelineDeps {
-  repo: Repo;
-  provider: ModelProvider;
-}
-
 export async function generateChecklist(
-  deps: PipelineDeps,
+  store: ServiceStore,
+  provider: ModelProvider,
   input: GenerateInput,
 ): Promise<GenerateResult> {
-  const { repo, provider } = deps;
-  const sheet = repo.getDemandSheet(input.demandSheetId);
+  const sheet = store.getDemandSheet(input.demandSheetId);
   if (!sheet) throw new Error(`需求单不存在：${input.demandSheetId}`);
 
   const policy = input.policy ?? DEFAULT_POLICY;
@@ -66,8 +62,8 @@ export async function generateChecklist(
   });
 
   // 二、外发留档：谁、什么时候、发了哪些字段、命中过什么、用的哪版策略
-  const outboundRecordId = randomUUID();
-  repo.createOutboundRecord({
+  const outboundRecordId = crypto.randomUUID();
+  store.createOutboundRecord({
     id: outboundRecordId,
     demandSheetId: input.demandSheetId,
     policyName: outbound.payload.policyName,
@@ -120,7 +116,7 @@ export async function generateChecklist(
   // 四、判据筛选、合并、排序全部在领域包里，服务端只做编排
   const checklist = buildChecklist({ model, derived });
 
-  const stored = repo.createChecklist({
+  const stored = store.createChecklist({
     demandSheetId: input.demandSheetId,
     checklist,
     model: degraded ? `${provider.name}(降级)` : provider.name,

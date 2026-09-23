@@ -20,6 +20,7 @@
       "@zx/checklist": ["packages/checklist/src/index.ts"],
       "@zx/redact": ["packages/redact/src/index.ts"],
       "@zx/contracts": ["packages/contracts/src/index.ts"],
+      "@zx/service": ["packages/service/src/index.ts"],
       "vitest": ["packages/devtools/node_modules/vitest"]
     }
   },

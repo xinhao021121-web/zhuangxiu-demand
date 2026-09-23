@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')!).render(
 /** 装到手机主屏幕之后，断网也能打开应用外壳（技术方案 2.3）。 */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {
       // 装机失败不影响现场记录：记录本来就先存本机
     });
   });

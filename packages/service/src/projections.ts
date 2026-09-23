@@ -1,4 +1,9 @@
-/** 接口的读模型投影：把仓储里的行拼成界面直接能用的形状。 */
+/**
+ * 接口的读模型投影：把仓储里的行拼成界面直接能用的形状。
+ *
+ * 纯函数，认的是 SheetStore 这个最小读接口——HTTP 路由与线上展示版的内存实现共用它，
+ * 所以「桌面上看到的」和「演示里看到的」是同一份拼装逻辑。
+ */
 
 import { getValue, labelOf, recommendStats, splitKey } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
@@ -6,9 +11,8 @@ import { buildSiteRecordMarkdown, openQuestions, siteStats } from '@zx/checklist
 import type { Checklist, ChecklistGroup, OpenQuestion, SiteRecord } from '@zx/checklist';
 import { suggestionsOf } from '@zx/rules';
 import { buildOverview } from '@zx/summary';
-import { DEFAULT_POLICY, previewOutbound } from '@zx/redact';
+import { DEFAULT_POLICY, previewOutbound, show } from '@zx/redact';
 import type { Understanding } from '@zx/contracts';
-import { show } from '@zx/redact';
 import type {
   ChecklistSummaryView,
   ChecklistView,
@@ -17,11 +21,11 @@ import type {
   FieldValues,
   UnderstandingView,
 } from '@zx/contracts';
-import type { DemandSheetRow, Repo, StoredChecklist } from './repo';
+import type { ChecklistRecord, SheetRecord, SheetStore } from './types';
 
 const EMPTY_UNDERSTANDING: Understanding = { profile: [], demands: [], conflicts: [], derivedItems: [] };
 
-function understandingOf(stored: StoredChecklist | undefined): Understanding {
+function understandingOf(stored: ChecklistRecord | undefined): Understanding {
   const value = stored?.understanding as Partial<Understanding> | undefined;
   if (!value || typeof value !== 'object') return EMPTY_UNDERSTANDING;
   return {
@@ -33,7 +37,7 @@ function understandingOf(stored: StoredChecklist | undefined): Understanding {
 }
 
 /** 说明白的矛盾与风险 = 模型给的矛盾 + 规则算出来的风险（技术方案 4.4）。 */
-function risksOf(model: FormModel, stored: StoredChecklist | undefined): { label: string; text: string }[] {
+function risksOf(model: FormModel, stored: ChecklistRecord | undefined): { label: string; text: string }[] {
   const fromModel = understandingOf(stored).conflicts.map((c) => ({ label: c.label, text: c.text }));
   const fromRules = suggestionsOf(model)
     .filter((s) => s.kind === 'risk')
@@ -41,10 +45,7 @@ function risksOf(model: FormModel, stored: StoredChecklist | undefined): { label
   return [...fromModel, ...fromRules];
 }
 
-export function toUnderstandingView(
-  model: FormModel,
-  stored: StoredChecklist | undefined,
-): UnderstandingView {
+export function toUnderstandingView(model: FormModel, stored: ChecklistRecord | undefined): UnderstandingView {
   const value = understandingOf(stored);
   return {
     profile: value.profile,
@@ -61,7 +62,7 @@ export function toUnderstandingView(
 }
 
 /** 从库里的条目重建清单：条目按写入顺序（即分组顺序）取出，按空间切开即可。 */
-export function toDomainChecklist(stored: StoredChecklist): Checklist {
+export function toDomainChecklist(stored: ChecklistRecord): Checklist {
   const groups: ChecklistGroup[] = [];
   stored.items.forEach((item) => {
     let group = groups.find((g) => g.space === item.space);
@@ -92,7 +93,7 @@ export function toDomainChecklist(stored: StoredChecklist): Checklist {
   };
 }
 
-export function toChecklistView(stored: StoredChecklist): ChecklistView {
+export function toChecklistView(stored: ChecklistRecord): ChecklistView {
   const domain = toDomainChecklist(stored);
   return {
     ...domain,
@@ -106,8 +107,8 @@ export function toChecklistView(stored: StoredChecklist): ChecklistView {
   };
 }
 
-export function toSummary(repo: Repo, sheet: DemandSheetRow): DemandSheetSummary {
-  const stored = repo.latestChecklist(sheet.id);
+export function toSummary(store: SheetStore, sheet: SheetRecord): DemandSheetSummary {
+  const stored = store.latestChecklist(sheet.id);
   return {
     id: sheet.id,
     demandName: sheet.demandName,
@@ -120,8 +121,8 @@ export function toSummary(repo: Repo, sheet: DemandSheetRow): DemandSheetSummary
   };
 }
 
-export function toDetail(repo: Repo, sheet: DemandSheetRow): DemandSheetDetail {
-  const stored = repo.latestChecklist(sheet.id);
+export function toDetail(store: SheetStore, sheet: SheetRecord): DemandSheetDetail {
+  const stored = store.latestChecklist(sheet.id);
   return {
     sheet: {
       id: sheet.id,
@@ -153,10 +154,10 @@ export function toFieldValues(model: FormModel, checklist: Checklist): FieldValu
 }
 
 /** 现场端的首页与量房记录：清单 + 统计 + 速记，一次给全。 */
-export function toChecklistSummary(repo: Repo, stored: StoredChecklist): ChecklistSummaryView {
-  const sheet = repo.getDemandSheet(stored.demandSheetId)!;
+export function toChecklistSummary(store: SheetStore, stored: ChecklistRecord): ChecklistSummaryView {
+  const sheet = store.getDemandSheet(stored.demandSheetId)!;
   const domain = toDomainChecklist(stored);
-  const records = repo.listSiteRecords(stored.id) as SiteRecord[];
+  const records = store.listSiteRecords(stored.id) as SiteRecord[];
   const heading = {
     name: sheet.demandName,
     overview: buildOverview(sheet.payload, []),

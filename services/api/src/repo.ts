@@ -7,6 +7,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Checklist, ChecklistItem, DerivedItem } from '@zx/checklist';
 import type { FormModel, InstanceState, FieldValue } from '@zx/field-spec';
+import type { TextKind } from '@zx/redact';
 import type { Db } from './db/sqlite';
 
 export interface UserRow {
@@ -49,7 +50,7 @@ export interface OutboundRecordRow {
   policyName: string;
   policyVersion: string;
   fieldKeys: string[];
-  redactions: { fieldKey: string; label: string; kinds: string[]; count: number }[];
+  redactions: { fieldKey: string; label: string; kinds: TextKind[]; count: number }[];
   unselectedFreeText: number;
   at: string;
   operator: string;
@@ -370,14 +371,6 @@ function mapSheet(row: Record<string, unknown>): DemandSheetRow {
   };
 }
 
-/** 表单模型里的全部字段键：固定字段是 id，实例字段是「实例键.id」。 */
-export function fieldKeysOf(model: FormModel): string[] {
-  const keys = Object.keys(model.values);
-  Object.values<InstanceState[]>(model.instances).forEach((list) => {
-    list.forEach((inst) => Object.keys(inst.values).forEach((id) => keys.push(`${inst.key}.${id}`)));
-  });
-  return keys;
-}
 
 export function firstInstanceKey(model: FormModel, section: string): string | undefined {
   return model.instances[section]?.[0]?.key;

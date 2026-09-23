@@ -19,12 +19,17 @@ import {
 } from '@zx/contracts';
 import type { User } from '@zx/contracts';
 import { can, signToken, verifyToken } from './auth';
-import { generateChecklist } from './pipeline';
-import type { GenerateInput } from './pipeline';
-import type { ModelProvider } from './model/provider';
+import {
+  generateChecklist,
+  toChecklistSummary,
+  toChecklistView,
+  toDetail,
+  toDomainChecklist,
+  toSummary,
+} from '@zx/service';
+import type { GenerateInput, ModelProvider } from '@zx/service';
 import type { ApiEnv } from './env';
 import type { Repo } from './repo';
-import { toChecklistSummary, toChecklistView, toDetail, toDomainChecklist, toSummary } from './views';
 
 type Env = { Variables: { user: User } };
 
@@ -133,7 +138,7 @@ export function createApp(deps: AppDeps) {
       at: now(),
       selected: body.selected,
     };
-    const result = await generateChecklist({ repo, provider }, input);
+    const result = await generateChecklist(repo, provider, input);
     const stored = repo.getChecklist(result.checklistId);
     return c.json(toChecklistView(stored!), 201);
   });

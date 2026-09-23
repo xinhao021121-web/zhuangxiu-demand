@@ -9,7 +9,7 @@ import type {
   OutboundRecordContract,
   User,
 } from '@zx/contracts';
-import { api, ApiError, getToken, setToken } from '../lib/api';
+import { api, ApiError, DEMO_MODE, getToken, setToken } from '../lib/api';
 import { ChecklistPanel } from './ChecklistPanel';
 import { ExportDialog, OutboundDialog } from './Dialogs';
 import { FormView } from './FormView';
@@ -182,7 +182,11 @@ export function Workbench() {
       <header className="top">
         <h1>设计需求解读台</h1>
         <span className="sub">桌面工作台</span>
-        <span className="pill">公司内部 · 数据不出自有服务端</span>
+        {DEMO_MODE ? (
+          <span className="pill" id="demo-pill">演示数据 · 在浏览器里跑，未接服务端</span>
+        ) : (
+          <span className="pill">公司内部 · 数据不出自有服务端</span>
+        )}
         <div className="spacer" />
         <span className="pill">
           {user.name} · {user.role === 'admin' ? '管理员' : '设计师'}

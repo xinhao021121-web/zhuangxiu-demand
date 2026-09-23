@@ -65,10 +65,17 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 小程序端用微信开发者工具打开 `app/`（`project.config.json` 的 `miniprogramRoot` 指向 `dist/weapp/`）。
 
-## 上线（Web 端 / 展示版）
+## 上线
 
-- 线上地址（GitHub Pages）：<https://xinhao021121-web.github.io/zhuangxiu-demand/>
+- 采集端（房主填需求单）：<https://xinhao021121-web.github.io/zhuangxiu-demand/>
+- 桌面工作台（设计师出门前用）：<https://xinhao021121-web.github.io/zhuangxiu-demand/studio/>
+- 现场端 PWA（现场照着问）：<https://xinhao021121-web.github.io/zhuangxiu-demand/onsite/>
 - 仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
+
+**API 服务跑不在静态托管上**：两个端在没有 API 时走演示模式，判据、脱敏、合并、排序仍是
+`packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现；接回真服务时把
+`NEXT_PUBLIC_API_BASE` / `VITE_API_BASE` 指到自己的域名即可。API 本身用
+`docker compose -f deploy/api.compose.yaml up -d` 起（见 `deploy/README.md`）。
 
 ```bash
 pnpm run build:h5          # 产物：app/dist/h5
@@ -87,6 +94,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
 | 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、宽窄屏布局 |
+| 上线产物 | `pnpm run test:pages` | 按 gh-pages 的目录结构组装一次，用静态服务器按 /<repo>/ 前缀托管，逐个验证三个入口（含演示模式动线与 PWA manifest） |
 | 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |

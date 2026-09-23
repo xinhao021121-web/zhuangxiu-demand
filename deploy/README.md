@@ -1,10 +1,38 @@
-# Web 端上线
+# 上线
 
 当前线上地址：<https://xinhao021121-web.github.io/zhuangxiu-demand/>（仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>）
 
 Web 端与展示版是同一份 H5 产物（`app/dist/h5`）：宽屏是 Web 端，窄屏是展示版。
 产物是纯静态站点，形态上只有一个要求——**必须挂在某个目录下用 HTTP 访问**，
 不要用 `file://` 直接打开（相对路径与模块加载在部分浏览器下会受限）。
+
+## 零、线上有哪三个入口
+
+| 地址 | 是什么 | 产物 |
+| --- | --- | --- |
+| `/` | 采集端 H5（房主填需求单） | `app/dist/h5` |
+| `/studio/` | 桌面工作台（设计师出门前用） | `studio/.next-export` |
+| `/onsite/` | 现场端 PWA（现场照着问） | `onsite/dist` |
+
+三个入口由 `node tools/deploy-github-pages.mjs` 一次组装发布（会自己构建）；加 `--dry-run`
+可以只组装不推送，看看产物对不对。
+
+**API 服务跑不在静态托管上。** 两个端在没有 API 时走演示模式：判据、脱敏、合并、排序仍是
+`packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现，所以线上地址点得开、演示得完整。
+接回真服务时，用 `NEXT_PUBLIC_API_BASE`（桌面端）与 `VITE_API_BASE`（现场端）指向自己的域名，
+并把这几个地址加进服务的 CORS 白名单。
+
+## 〇之一、API 服务怎么起
+
+```bash
+docker compose -f deploy/api.compose.yaml up -d     # 需要一台能跑 Docker 的机器
+```
+
+默认用容器内的 SQLite（`/data/api.sqlite`，挂在卷上）；技术方案选的持久化是境内托管 Postgres，
+换的是 `services/api/src/repo.ts` 这一层，路由与流水线不动。模型默认 `MODEL_PROVIDER=fake`，
+接真实模型时设 `MODEL_PROVIDER=deepseek` 与 `DEEPSEEK_API_KEY`（密钥只从环境变量进，不进仓库）。
+
+现场端走公网访问时按技术方案 7.2：需要域名与 ICP 备案；只在公司内网用则换成导出纸质清单。
 
 ## 一、本机 / 局域网先跑起来
 
@@ -33,10 +61,10 @@ GitHub Pages 方式不需要 Actions：脚本把产物作为孤立提交推到 `
 ## 三、发版流程
 
 ```bash
-pnpm run test:unit && pnpm run test:app    # 先过测试
+pnpm run test               # 先过全部测试（含上线产物那套）
 pnpm run build:h5                          # 再构建
  node tools/deploy-github-pages.mjs         # 发布（会自动重新构建）
- node tests/live.smoke.mjs                  # 发布后验证线上地址
+ node tests/live.smoke.mjs   # 发布后验证线上地址
 ```
 
 同一份产物不需要为 Web 与展示版分别构建；域名、HTTPS、CDN 由托管平台或你自己的

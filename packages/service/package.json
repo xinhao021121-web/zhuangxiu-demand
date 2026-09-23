@@ -1,0 +1,20 @@
+{
+  "name": "@zx/service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "服务端的纯逻辑：读模型投影、生成流水线，以及一个不依赖数据库的内存实现（测试与线上展示版用）",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@zx/checklist": "workspace:*",
+    "@zx/contracts": "workspace:*",
+    "@zx/field-spec": "workspace:*",
+    "@zx/redact": "workspace:*",
+    "@zx/rules": "workspace:*",
+    "@zx/summary": "workspace:*"
+  }
+}

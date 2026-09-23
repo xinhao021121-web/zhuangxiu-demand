@@ -17,6 +17,7 @@
     "@zx/rules": "link:../../packages/rules",
     "@zx/summary": "link:../../packages/summary",
     "@zx/redact": "link:../../packages/redact",
+    "@zx/service": "link:../../packages/service",
     "hono": "^4.9.7",
     "zod": "^4.1.11"
   },

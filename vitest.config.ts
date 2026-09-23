@@ -19,6 +19,7 @@ export default {
       '@zx/checklist': at('packages', 'checklist', 'src', 'index.ts'),
       '@zx/redact': at('packages', 'redact', 'src', 'index.ts'),
       '@zx/contracts': at('packages', 'contracts', 'src', 'index.ts'),
+      '@zx/service': at('packages', 'service', 'src', 'index.ts'),
     },
   },
   test: {

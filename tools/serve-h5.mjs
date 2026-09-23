@@ -40,23 +40,25 @@ const TEXT_LIKE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.map', '.tx
 const HASHED = /\.[0-9a-f]{8,}\.(js|css)$/;
 
 function parseArgs(argv) {
-  const args = { port: 4173, host: '127.0.0.1', root: path.join(PROJECT_ROOT, 'app', 'dist', 'h5') };
+  const args = { port: 4173, host: '127.0.0.1', root: path.join(PROJECT_ROOT, 'app', 'dist', 'h5'), prefix: '' };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
     if (key === '--port' && value) args.port = Number(value);
     else if (key === '--host' && value) args.host = value;
     else if (key === '--root' && value) args.root = path.resolve(PROJECT_ROOT, value);
+    else if (key === '--prefix' && value) args.prefix = value.replace(/\/+$/, '');
   }
   return args;
 }
 
-const { port, host, root } = parseArgs(process.argv.slice(2));
+const { port, host, root, prefix } = parseArgs(process.argv.slice(2));
 const ROOT_WITH_SEP = root.endsWith(path.sep) ? root : root + path.sep;
 
-/** 解析请求路径，越界（../）直接拒绝。 */
-function resolveInside(urlPath) {
-  const rel = decodeURIComponent(urlPath).replace(/^[/\\]+/, '');
+/** 解析请求路径，越界（../）直接拒绝。prefix 用于模拟「部署在 /<repo>/ 这种子路径下」。 */
+function resolveInside(urlPath, urlPrefix = '') {
+  if (urlPrefix && urlPath !== urlPrefix && !urlPath.startsWith(urlPrefix + '/')) return null;
+  const rel = decodeURIComponent(urlPrefix ? urlPath.slice(urlPrefix.length) : urlPath).replace(/^[/\\]+/, '');
   const full = path.resolve(root, rel || 'index.html');
   if (full !== root && !full.startsWith(ROOT_WITH_SEP)) return null;
   return full;
@@ -68,8 +70,8 @@ async function isFile(file) {
 }
 
 /** 命中文件返回文件；目录取 index.html；页面类请求找不到时回退到 index.html（深链接兼容）。 */
-async function pickFile(urlPath) {
-  const full = resolveInside(urlPath);
+async function pickFile(urlPath, urlPrefix = '') {
+  const full = resolveInside(urlPath, urlPrefix);
   if (!full) return { error: 400 };
   const stat = await fsp.stat(full).catch(() => null);
   if (stat?.isDirectory()) {
@@ -104,7 +106,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Method Not Allowed');
     return;
   }
-  const picked = await pickFile((req.url || '/').split('?')[0]);
+  const picked = await pickFile((req.url || '/').split('?')[0], prefix);
   if (picked.error) {
     res.writeHead(picked.error, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(picked.error === 400 ? '非法路径' : 'Not Found');
