@@ -161,6 +161,19 @@ describe('文档一致性', () => {
     expect(doc).toContain('采集通道与内部通道分离');
     expect(doc).toContain('DemandSheetImport');
   });
+
+  it('文档版本号在表头、引用与入口页之间一致', () => {
+    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.1');
+    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.1');
+    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.1');
+    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.1');
+    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.1');
+  });
+
+  it('两份文档都带变更记录', () => {
+    expect(read(PRODUCT_DOC)).toContain('附录 B：变更记录');
+    expect(read(TECH_DOC)).toContain('十三、变更记录');
+  });
 });
 
 describe('手机版（PWA）', () => {
