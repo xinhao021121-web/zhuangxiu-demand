@@ -19,8 +19,9 @@
       "@zx/data": ["packages/data/src/index.ts"],
       "@zx/checklist": ["packages/checklist/src/index.ts"],
       "@zx/redact": ["packages/redact/src/index.ts"],
+      "@zx/contracts": ["packages/contracts/src/index.ts"],
       "vitest": ["packages/devtools/node_modules/vitest"]
     }
   },
-  "include": ["packages/**/*.ts", "tests/unit/**/*.ts", "vitest.config.ts"]
+  "include": [ "packages/**/*.ts", "services/**/*.ts", "tests/unit/**/*.ts", "tests/api/**/*.ts", "vitest.config.ts" ]
 }

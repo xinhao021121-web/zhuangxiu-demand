@@ -1,0 +1,26 @@
+{
+  "name": "@zx/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "设计需求解读台 API 服务：鉴权与角色、需求单与清单资源、脱敏 → 模型调用 → 外发审计",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "seed": "tsx src/seed-cli.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@zx/checklist": "link:../../packages/checklist",
+    "@zx/contracts": "link:../../packages/contracts",
+    "@zx/field-spec": "link:../../packages/field-spec",
+    "@zx/rules": "link:../../packages/rules",
+    "@zx/summary": "link:../../packages/summary",
+    "@zx/redact": "link:../../packages/redact",
+    "hono": "^4.9.7",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  }
+}

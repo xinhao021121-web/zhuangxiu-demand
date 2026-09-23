@@ -17,8 +17,8 @@ export interface SiteRecord {
   /** 已问时是一句话结论，没问上时是一句原因 */
   note: string;
   at: string;
-  /** 离线时先存在本机，回到有网的地方再同步 */
-  synced: boolean;
+  /** 离线时先存在本机、标成待同步；从服务端读回来的记录缺省即视为已同步 */
+  synced?: boolean;
 }
 
 export interface SiteStats {

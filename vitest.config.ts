@@ -18,10 +18,11 @@ export default {
       '@zx/data': at('packages', 'data', 'src', 'index.ts'),
       '@zx/checklist': at('packages', 'checklist', 'src', 'index.ts'),
       '@zx/redact': at('packages', 'redact', 'src', 'index.ts'),
+      '@zx/contracts': at('packages', 'contracts', 'src', 'index.ts'),
     },
   },
   test: {
-    include: ['tests/unit/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/api/**/*.test.ts'],
     environment: 'node',
   },
 };

@@ -28,3 +28,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+# 本地数据（API 服务开发时的 SQLite 文件）
+.data/

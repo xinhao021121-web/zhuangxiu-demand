@@ -4,7 +4,7 @@
 
 - 产品设计文档：`docs/装修需求发现助手_产品设计文档_V1.md`
 - 技术方案：`docs/装修需求发现助手_技术方案_V1.md`
-- 设计需求解读台（规划中）：`docs/设计需求解读台_产品设计文档_V1.md`
+- 设计需求解读台（实现中）：`docs/设计需求解读台_产品设计文档_V1.md`
 - 设计需求解读台 · 技术方案：`docs/设计需求解读台_技术方案_V1.md`
 - Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
 - 手机端 Demo（现场量房）：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
@@ -15,6 +15,7 @@
 
 ```
 app/                  Taro 应用（weapp + h5）
+services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
 packages/
   field-spec/         字段规格（由字段清单 Excel 导出）、表单模型与校验
   rules/              规则引擎：命中、排序、去重、静默状态机、写回动作
@@ -22,6 +23,7 @@ packages/
   data/               草稿读写、版本迁移、提交与埋点
   checklist/          量房沟通清单：四类来源、判据筛选、合并去重、排序计数、导出
   redact/             外发脱敏：字段级三级策略、自由文本替换、外发 payload 与审计记录
+  contracts/          API 契约与共享类型（zod → 类型 + OpenAPI）
   devtools/           单测与类型检查用的开发依赖
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 产品文档与技术方案
@@ -51,6 +53,8 @@ pnpm run build:h5        # H5 产物 → app/dist/h5（宽屏即 Web 端）
 pnpm run test:app        # H5 产物端到端（Playwright，宽屏 + 窄屏）
 pnpm run build:weapp     # 微信小程序产物 → app/dist/weapp
 pnpm run test:demo       # 早期 Demo 的冒烟测试（回归用）
+pnpm run api:dev        # 起 API 服务（默认 http://127.0.0.1:8787，种子数据自动灌入）
+pnpm run test:api       # 只跑 API 层测试
 pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 ```
 
@@ -77,7 +81,8 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
-| 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发 |
+| API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
+| 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
 | H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |

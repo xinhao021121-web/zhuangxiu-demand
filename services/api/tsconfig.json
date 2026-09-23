@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "baseUrl": "../..",
+    "paths": {
+      "@zx/field-spec": ["packages/field-spec/src/index.ts"],
+      "@zx/rules": ["packages/rules/src/index.ts"],
+      "@zx/checklist": ["packages/checklist/src/index.ts"],
+      "@zx/redact": ["packages/redact/src/index.ts"],
+      "@zx/contracts": ["packages/contracts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "../../tests/api/**/*.ts"]
+}
