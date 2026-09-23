@@ -19,14 +19,13 @@ if (unknown.length) {
   process.exit(1);
 }
 
-/* 现场记录的 key 是「空间|核实对象」，空间必须能落到字段清单的大类上 */
-const SPACES = new Set(['全屋', ...new Set(SPEC.map((f) => f.section))]);
-const badKeys = onsite.filter((r) => !SPACES.has(String(r.key).split('|')[0]));
-if (badKeys.length) {
-  console.error('现场记录里的空间不存在：', badKeys.map((r) => r.key).join(', '));
+/* 现场记录的 key 是「核实对象」，与分组无关；能不能对上清单条目由冒烟测试兜住 */
+const badRows = onsite.filter((r) => !r.demand || !r.key);
+const dupRows = onsite.filter((r, i) => onsite.findIndex((x) => x.demand === r.demand && x.key === r.key) !== i);
+if (badRows.length || dupRows.length) {
+  console.error('现场记录缺 demand/key 或重复：', [...badRows, ...dupRows].map((r) => r.demand + ':' + r.key).join(', '));
   process.exit(1);
 }
-
 const tplPath = path.join(ROOT, 'tools', '_onsite_template.html');
 const outPath = path.join(ROOT, 'designer', '现场量房_Demo_V0.1.html');
 let html = fs.readFileSync(tplPath, 'utf8');

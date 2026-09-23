@@ -189,27 +189,27 @@ const isFreeText = f => f && (f.type === '文本' || f.type === '长文本');
 
 /* ===================== 清单规则（模拟模型输出的推导项） ===================== */
 const RULES = [
+  { space:'基本信息', obj:'层高吊顶', tier:'must', when:{ light_pref:['无主灯'], dev_ac:['中央空调'] },
+    q:'层高能不能同时满足无主灯吊顶与中央空调',
+    why:'房主填了「照明方式偏好：无主灯」和「空调需求：中央空调」',
+    verify:['各房间净高与梁位'], fields:['light_pref','dev_ac'] },
+  { space:'基本信息', obj:'柜体收纳', tier:'must', when:{ cabinets_type:['全屋定制'], br_storage:['是'] },
+    q:'全屋定制 + 强化收纳，现有柜体体积够不够',
+    why:'房主填了「柜体制作方式：全屋定制」和「需强化收纳：是」',
+    verify:['柜体能否做到顶'], fields:['cabinets_type','br_storage'] },
+  { space:'基本信息', obj:'旧房隐蔽', tier:'must', when:{ base_house_state:['旧房翻新'] },
+    q:'旧房管线、防水与墙体状况要核到什么范围',
+    why:'房主填了「房屋现状：旧房翻新」',
+    verify:['旧管线年限'], fields:['base_house_state'] },
   { space:'厨房', obj:'排烟', tier:'must', when:{ kt_form:['开放式'], kt_freq:['经常'] },
     q:'厨房是否接受开放式？油烟与燃气条件能不能满足',
     why:'房主填了「厨房形式：开放式」和「下厨频率：经常」',
     verify:['烟道位置与排烟条件','燃气备案要求'], fields:['kt_form','kt_freq'] },
-  { space:'全屋', obj:'层高吊顶', tier:'must', when:{ light_pref:['无主灯'], dev_ac:['中央空调'] },
-    q:'层高能不能同时满足无主灯吊顶与中央空调',
-    why:'房主填了「照明方式偏好：无主灯」和「空调需求：中央空调」',
-    verify:['各房间净高与梁位'], fields:['light_pref','dev_ac'] },
-  { space:'全屋', obj:'柜体收纳', tier:'must', when:{ cabinets_type:['全屋定制'], br_storage:['是'] },
-    q:'全屋定制 + 强化收纳，现有柜体体积够不够',
-    why:'房主填了「柜体制作方式：全屋定制」和「需强化收纳：是」',
-    verify:['柜体能否做到顶'], fields:['cabinets_type','br_storage'] },
-  { space:'全屋', obj:'旧房隐蔽', tier:'must', when:{ base_house_state:['旧房翻新'] },
-    q:'旧房管线、防水与墙体状况要核到什么范围',
-    why:'房主填了「房屋现状：旧房翻新」',
-    verify:['旧管线年限'], fields:['base_house_state'] },
   { space:'阳台', obj:'家政封窗', tier:'must', when:{ bl_washer:['是'], bl_dryer:['是'], bl_window:['是'] },
     q:'阳台能不能同时放洗衣机、烘干机和猫窝',
     why:'房主填了「洗衣机：是」「烘干机：是」「宠物洗澡或猫窝：需要」「是否封窗：是」',
     verify:['封窗方案'], fields:['bl_washer','bl_dryer','bl_pet','bl_window'] },
-  { space:'卫生间', obj:'马桶移位', tier:'suggest', whenInst:{ wc_toilet:['智能马桶'] },
+  { space:'主卫', obj:'马桶移位', tier:'suggest', whenInst:{ wc_toilet:['智能马桶'] },
     q:'两个卫生间的马桶位置能不能调整',
     why:'主卫选了「马桶类型：智能马桶」',
     verify:['排污管位置'], fields:['wc_toilet'] },
@@ -231,27 +231,29 @@ const RULES = [
     verify:['插座与进水位置'], fields:['kt_fridge','kt_dishwasher'] },
 ];
 
-/* 16 项通用清单的归属空间与档位 */
+/* 通用清单的分区归属与档位：跟着需求清单的分区走 */
 const SURVEY_MAP = {
-  1:{ space:'全屋', obj:'层高吊顶', tier:'must' },
-  2:{ space:'全屋', obj:'结构', tier:'must' },
-  3:{ space:'全屋', obj:'上下水', tier:'must' },
-  4:{ space:'卫生间', obj:'马桶移位', tier:'suggest' },
+  1:{ space:'基本信息', obj:'层高吊顶', tier:'must' },
+  2:{ space:'基本信息', obj:'结构', tier:'must' },
+  3:{ space:'设备与系统', obj:'上下水', tier:'must' },
+  4:{ space:'主卫', obj:'马桶移位', tier:'suggest' },
   5:{ space:'厨房', obj:'排烟', tier:'must' },
-  6:{ space:'全屋', obj:'配电', tier:'must' },
-  7:{ space:'全屋', obj:'空调外机', tier:'suggest' },
-  8:{ space:'全屋', obj:'采暖', tier:'suggest' },
+  6:{ space:'设备与系统', obj:'配电', tier:'must' },
+  7:{ space:'设备与系统', obj:'空调外机', tier:'suggest' },
+  8:{ space:'设备与系统', obj:'采暖', tier:'suggest' },
   9:{ space:'阳台', obj:'家政封窗', tier:'must' },
-  10:{ space:'全屋', obj:'墙体', tier:'must' },
-  11:{ space:'全屋', obj:'旧房隐蔽', tier:'must' },
+  10:{ space:'基本信息', obj:'墙体', tier:'must' },
+  11:{ space:'基本信息', obj:'旧房隐蔽', tier:'must' },
   12:{ space:'主卧', obj:'采光噪音', tier:'suggest' },
-  13:{ space:'全屋', obj:'柜体收纳', tier:'suggest' },
-  14:{ space:'全屋', obj:'地面完成面', tier:'suggest' },
+  13:{ space:'基本信息', obj:'柜体收纳', tier:'suggest' },
+  14:{ space:'设备与系统', obj:'地面完成面', tier:'suggest' },
   15:{ space:'厨房', obj:'大件电器', tier:'suggest' },
-  16:{ space:'全屋', obj:'门窗', tier:'suggest' },
+  16:{ space:'基本信息', obj:'门窗', tier:'suggest' },
 };
-const SPACE_ORDER = ['全屋', ...SECTIONS];
 
+/* 分组顺序：基本信息在最前，其余沿用采集端大类顺序；卫生间再按实例拆成主卫 / 次卫 */
+const SPACE_ORDER = SECTIONS.map(s => s === '认识你家' ? '基本信息' : s)
+  .flatMap(s => s === '卫生间' ? ['卫生间', '主卫', '次卫'] : [s]);
 /* 表格理解（模拟模型输出） */
 const MOCK = {
   d1: {
@@ -324,7 +326,7 @@ function buildItems(d) {
   });
   return items;
 }
-const keyOf = it => it.space + '|' + it.obj;
+const keyOf = it => it.obj;
 const TIER_NAME = { must: '必问', suggest: '建议问' };
 const SRC_NAME = { rule: '需求推导', survey: '通用核实', both: '需求推导 + 通用核实' };
 

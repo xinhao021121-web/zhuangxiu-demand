@@ -65,7 +65,7 @@ export function buildDemoData(spec) {
       instances: {
         卫生间: [
           { key: 'wc1', type: '主卫', values: pick({ wc_type: '主卫', wc_drywet: '是', wc_toilet: '智能马桶', wc_bath: '浴缸加淋浴', wc_shower: '淋浴房玻璃', wc_sink: '双盆', wc_towel: '需要', wc_heater: '需要', wc_mirror_cab: '需要' }) },
-          { key: 'wc2', type: '客卫', values: pick({ wc_type: '客卫', wc_drywet: '是', wc_toilet: '普通马桶', wc_shower: '淋浴房玻璃', wc_sink: '单盆', wc_laundry: '需要' }) },
+          { key: 'wc2', type: '次卫', values: pick({ wc_type: '次卫', wc_drywet: '是', wc_toilet: '普通马桶', wc_shower: '淋浴房玻璃', wc_sink: '单盆', wc_laundry: '需要' }) },
         ],
         其他卧室: [
           { key: 'room1', type: '儿童房', values: pick({ room_type: '儿童房', ch_gender_age: '女儿 6 岁', ch_activity: '需要', ch_read: '需要', room_bed: '1.2m', room_desk: '可升降书桌', room_storage: ['衣柜', '玩具柜'] }) },
@@ -85,15 +85,15 @@ export function buildDemoData(spec) {
     },
   ];
 
-  /* 现场记录种子：演示「已经走了一半」的状态。key 是「空间|核实对象」，与清单条目的去重键一致。 */
+  /* 现场记录种子：演示「已经走了一半」的状态。
+     key 是「核实对象」，不带分组——分组会调整，记录不能因此失联。 */
   const onsite = [
-    { demand: 'd1', key: '全屋|结构', status: 'asked', at: '14:08', note: '承重墙在客厅东侧，主卧与客厅之间是轻质隔墙，可拆改' },
-    { demand: 'd1', key: '全屋|层高吊顶', status: 'asked', at: '14:12', note: '层高 2.75m，厨房上方有梁 2.5m，中央空调要降板' },
-    { demand: 'd1', key: '全屋|上下水', status: 'asked', at: '14:16', note: '厨房排水立管在西南角，卫生间是下层排水，马桶移位空间有限' },
-    { demand: 'd1', key: '全屋|配电', status: 'asked', at: '14:19', note: '配电箱 12 路，扩容有限；弱电箱在玄关' },
-    { demand: 'd1', key: '全屋|旧房隐蔽', status: 'skip', at: '14:22', note: '物业说 2005 年换过管线，要回去查原始资料' },
-    { demand: 'd1', key: '厨房|排烟', status: 'asked', at: '14:26', note: '烟道在窗侧，可做开放式但要加排烟止逆阀，燃气公司要报备' },
+    { demand: 'd1', key: '结构', status: 'asked', at: '14:08', note: '承重墙在客厅东侧，主卧与客厅之间是轻质隔墙，可拆改' },
+    { demand: 'd1', key: '层高吊顶', status: 'asked', at: '14:12', note: '层高 2.75m，厨房上方有梁 2.5m，中央空调要降板' },
+    { demand: 'd1', key: '上下水', status: 'asked', at: '14:16', note: '厨房排水立管在西南角，卫生间是下层排水，马桶移位空间有限' },
+    { demand: 'd1', key: '配电', status: 'asked', at: '14:19', note: '配电箱 12 路，扩容有限；弱电箱在玄关' },
+    { demand: 'd1', key: '旧房隐蔽', status: 'skip', at: '14:22', note: '物业说 2005 年换过管线，要回去查原始资料' },
+    { demand: 'd1', key: '排烟', status: 'asked', at: '14:26', note: '烟道在窗侧，可做开放式但要加排烟止逆阀，燃气公司要报备' },
   ];
-
   return { demands, onsite, unknown };
 }

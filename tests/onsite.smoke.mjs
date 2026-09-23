@@ -53,10 +53,10 @@ await page.screenshot({ path: path.join(SHOT, 'm02-出门前.png') });
 await page.locator('#go').click();
 await page.waitForTimeout(250);
 ok(await count(page, '.sp') === 0, '不用横向滑动的空间胶囊（改由底部按钮与抽屉切换）');
-ok((await text(page, '.pname')).includes('全屋'), '默认从「全屋」开始');
-ok((await text(page, '.pidx')).includes('1 / 6'), '共 6 个空间');
+ok((await text(page, '.pname')).includes('基本信息'), '默认从「基本信息」开始');
+ok((await text(page, '.pidx')).includes('1 / 8'), '共 8 个空间');
 ok((await text(page, '.pmust')).includes('必问 已问 5 / 9'), '顶部显示必问进度');
-ok(await count(page, '.task') === 11, '全屋 11 条');
+ok(await count(page, '.task') === 6, '基本信息 6 条');
 ok((await text(page, '.task')).includes('必问'), '条目带必问档位徽标');
 ok((await text(page, '.task')).includes('需求推导 + 通用核实'), '条目带来源徽标（推导与通用已合并）');
 await page.screenshot({ path: path.join(SHOT, 'm03-逐条走.png') });
@@ -69,7 +69,7 @@ await page.evaluate(() => {
   el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(120, 424)] }));
 });
 await page.waitForTimeout(250);
-ok((await text(page, '.pname')).includes('客厅'), '左滑切到下一个空间');
+ok((await text(page, '.pname')).includes('设备与系统'), '左滑切到下一个空间');
 await page.evaluate(() => {
   const el = document.querySelector('.body');
   const t = (x, y) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
@@ -77,7 +77,7 @@ await page.evaluate(() => {
   el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(320, 424)] }));
 });
 await page.waitForTimeout(250);
-ok((await text(page, '.pname')).includes('全屋'), '右滑切回上一个空间');
+ok((await text(page, '.pname')).includes('基本信息'), '右滑切回上一个空间');
 
 // 展开依据：整块卡片可点
 ok(await count(page, '.det') === 0, '依据默认收起（现场先看问题）');
@@ -114,8 +114,8 @@ await page.screenshot({ path: path.join(SHOT, 'm04-记一笔.png') });
 // 换空间抽屉
 await page.locator('#spaces').click();
 await page.waitForTimeout(200);
-ok(await count(page, '.rowbtn') === 6, '换空间抽屉列出 6 个空间');
-ok((await text(page, '.rowbtn.on')).includes('全屋'), '标注当前所在空间');
+ok(await count(page, '.rowbtn') === 8, '换空间抽屉列出 8 个空间');
+ok((await text(page, '.rowbtn.on')).includes('基本信息'), '标注当前所在空间');
 await page.screenshot({ path: path.join(SHOT, 'm05-换空间.png') });
 await page.locator('.rowbtn', { hasText: '厨房' }).click();
 await page.waitForTimeout(250);
