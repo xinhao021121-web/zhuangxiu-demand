@@ -87,6 +87,7 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;text-a
 .det b{color:#4a5462;font-weight:500}
 .det .row + .row{margin-top:6px}
 .note{margin-top:9px;background:var(--green-weak);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.6;color:#255f42}
+.note.skip{background:var(--amber-weak);color:#8a6216}
 .acts{display:flex;gap:7px;margin-top:11px}
 .act{min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:13.5px;flex:1;text-align:center}
 .act.main{flex:1.5;background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;font-size:15px}
@@ -392,9 +393,9 @@ function boot(){
         '<div class="row"><b>现场要核实　</b>' + esc(i.verify.join('；')) + '</div>' +
         (ctx ? '<div class="row"><b>房主填的　</b>' + ctx + '</div>' : '') + '</div>'
         : '<div class="hint">点一下看依据 ▾</div>') +
-      (r && r.note ? '<div class="note">' + esc(r.note) + '</div>' : '') +
+      (r && r.note ? '<div class="note' + (r.status === 'skip' ? ' skip' : '') + '">' + esc(r.note) + '</div>' : '') +
       '<div class="acts">' +
-        (r ? '<button class="act undo" data-a="undo">撤销</button><button class="act" data-a="note">改结论</button>'
+        (r ? '<button class="act undo" data-a="undo">撤销</button><button class="act" data-a="note">' + (r.status === 'skip' ? '改原因' : '改结论') + '</button>'
            : '<button class="act" data-a="skip">没问上</button><button class="act" data-a="note">记一笔</button>' +
              '<button class="act main" data-a="asked">已问</button>') +
       '</div></div>';
@@ -452,7 +453,7 @@ function boot(){
         const r = rec[keyOf(i)];
         const tag = r ? (r.status === 'asked' ? '已问' : '没问上') : '还没问到';
         out += '\n- [' + tag + '] ' + i.q + '\n';
-        if (r && r.note) out += '  结论：' + r.note + '\n';
+        if (r && r.note) out += (r.status === 'asked' ? '  结论：' : '  原因：') + r.note + '\n';
       });
     });
     return out;
@@ -461,23 +462,26 @@ function boot(){
   /* ===================== 底部抽屉 ===================== */
   function overlayHtml() {
     const o = state.overlay;
-    if (o.kind === 'note') return noteSheet(o.item);
+    if (o.kind === 'note') return noteSheet(o.item, o.status);
     if (o.kind === 'spaces') return spacesSheet();
     return endSheet();
   }
 
-  function noteSheet(item) {
+  function noteSheet(item, status) {
     const d = demand();
+    const skip = status === 'skip';
     const ctx = item.fields.filter(f => !isEmpty(d.values[f]))
       .map(f => '<b>' + esc((F[f] || {}).label || f) + '</b>　' + esc(show(d.values[f]))).join('<br>');
-    const quick = ['房主确认可以', '现场条件不允许', '要回去核尺寸', '房主改了想法', '要加预算'];
-    return '<div class="sheet on" id="sheet"><h4>记一笔 · 保存后标成已问</h4>' +
+    const quick = skip
+      ? ['房主不在现场', '现场条件不允许', '时间不够，回头再问', '要等物业或图纸']
+      : ['房主确认可以', '现场条件不允许', '要回去核尺寸', '房主改了想法', '要加预算'];
+    return '<div class="sheet on" id="sheet"><h4>' + (skip ? '记一句原因 · 保存后标成没问上' : '记一笔 · 保存后标成已问') + '</h4>' +
       '<div class="sq">' + esc(item.q) + '</div>' +
       (ctx ? '<div class="ctx"><b>房主填的</b><br>' + ctx + '</div>' : '') +
       '<div class="chips">' + quick.map(t => '<button class="chip" data-chip="' + esc(t) + '">' + esc(t) + '</button>').join('') + '</div>' +
-      '<textarea data-draft placeholder="一句话结论，回公司照着这条定方案">' + esc(state.overlay.text || '') + '</textarea>' +
+      '<textarea data-draft placeholder="' + (skip ? '为什么没问上，回公司好判断要不要补问' : '一句话结论，回公司照着这条定方案') + '">' + esc(state.overlay.text || '') + '</textarea>' +
       '<div class="sf"><button class="btn" id="sh-cancel">取消</button>' +
-      '<button class="btn primary" id="sh-save">保存并标记已问</button></div></div>';
+      '<button class="btn primary" id="sh-save">' + (skip ? '保存并标记没问上' : '保存并标记已问') + '</button></div></div>';
   }
 
   function spacesSheet() {
@@ -542,8 +546,8 @@ function boot(){
     if (open.length) { state.overlay = { kind:'end' }; state.scroll = 0; render(); }
     else { state.screen = 'summary'; state.scroll = 0; render(); }
   }
-  function openNote(item) {
-    state.overlay = { kind:'note', item, text:(recOf(state.cur)[keyOf(item)] || {}).note || '' };
+  function openNote(item, status) {
+    state.overlay = { kind:'note', item, status:status || 'asked', text:(recOf(state.cur)[keyOf(item)] || {}).note || '' };
     render();
     const ta = app.querySelector('textarea[data-draft]'); if (ta) ta.focus();
   }
@@ -575,12 +579,14 @@ function boot(){
     if (t.id === 'sh-cancel') { state.overlay = null; render(); return; }
     if (t.id === 'sh-end') { state.overlay = null; state.screen = 'summary'; state.scroll = 0; render(); return; }
     if (t.id === 'sh-save') {
-      const item = state.overlay.item; const text = (state.overlay.text || '').trim();
-      const key = keyOf(item);
+      const o = state.overlay;
+      const key = keyOf(o.item);
+      const status = o.status || 'asked';
+      const text = (o.text || '').trim();
       state.overlay = null;
-      if (text) recOf(state.cur)[key] = { status:'asked', note:text, at:nowHM(), synced:state.online };
+      recOf(state.cur)[key] = { status, note:text, at:nowHM(), synced:state.online };
       render();
-      toast('已记录，回来照着这条定方案');
+      toast(status === 'asked' ? '已记录，回来照着这条定方案' : '已记下原因，回公司判断要不要补问');
       return;
     }
     const chip = t.closest('[data-chip]');
@@ -598,11 +604,15 @@ function boot(){
       const card = act.closest('[data-key]'); const k = card.dataset.key;
       const a = act.dataset.a;
       if (a === 'asked') { setStatus(k, 'asked'); toast('已记录：' + state.space); return; }
-      if (a === 'skip') { setStatus(k, 'skip'); toast('记下了，回来再补'); return; }
+      if (a === 'skip') {
+        const it = itemsOf(demand()).find(x => keyOf(x) === k);
+        if (it) openNote(it, 'skip');
+        return;
+      }
       if (a === 'undo') { delete recOf(state.cur)[k]; render(); return; }
       if (a === 'note') {
         const item = itemsOf(demand()).find(x => keyOf(x) === k);
-        if (item) openNote(item);
+        if (item) openNote(item, (recOf(state.cur)[k] || {}).status || 'asked');
         return;
       }
     }

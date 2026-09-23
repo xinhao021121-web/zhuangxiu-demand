@@ -162,8 +162,14 @@ await page.waitForTimeout(180);
 await page.locator('.rowbtn', { hasText: '主卧' }).click();
 await page.waitForTimeout(220);
 await task(page, '主卧的朝向、噪音与采光实际情况').locator('[data-a="skip"]').click();
-await page.waitForTimeout(220);
-ok((await task(page, '主卧的朝向、噪音与采光实际情况').innerText()).includes('没问上'), '没问上的条目会被记下来');
+await page.waitForTimeout(250);
+ok(await page.locator('#sheet').isVisible(), '「没问上」同样开一次抽屉');
+ok((await text(page, '#sheet')).includes('记一句原因'), '抽屉换成为「没问上」记原因');
+await page.locator('.chip', { hasText: '房主不在现场' }).click();
+await page.locator('#sh-save').click();
+await page.waitForTimeout(250);
+ok((await task(page, '主卧的朝向、噪音与采光实际情况').innerText()).includes('没问上'), '保存后标成没问上');
+ok((await task(page, '主卧的朝向、噪音与采光实际情况').innerText()).includes('房主不在现场'), '原因留在条目上');
 
 // 五、结束量房前拦住未落的必问
 await page.locator('#end').click();
