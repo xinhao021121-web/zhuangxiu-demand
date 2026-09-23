@@ -20,7 +20,8 @@ Web 端与展示版是同一份 H5 产物（`app/dist/h5`）：宽屏是 Web 端
 
 | 地址 | 是什么 | 产物 |
 | --- | --- | --- |
-| `/` | 采集端 H5（房主填需求单） | `app/dist/h5` |
+| `/` | 入口页（作品集首页，投递用这个） | `landing/` |
+| `/app/` | 采集端 H5（房主填需求单） | `app/dist/h5` |
 | `/studio/` | 桌面工作台（设计师出门前用） | `studio/.next-export` |
 | `/onsite/` | 现场端 PWA（现场照着问） | `onsite/dist` |
 

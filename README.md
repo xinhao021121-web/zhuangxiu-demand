@@ -14,6 +14,7 @@
 ## 仓库结构
 
 ```
+landing/              入口页（作品集首页：讲清产品与关键设计点，再分发三个入口）
 app/                  Taro 应用（weapp + h5）
 services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
 studio/               桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
@@ -67,10 +68,15 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 ## 上线
 
-- 采集端（房主填需求单）：<https://xinhao021121-web.github.io/zhuangxiu-demand/>
-- 桌面工作台（设计师出门前用）：<https://xinhao021121-web.github.io/zhuangxiu-demand/studio/>
-- 现场端 PWA（现场照着问）：<https://xinhao021121-web.github.io/zhuangxiu-demand/onsite/>
-- 同一份产物的备份地址（Cloudflare Pages）：<https://demand-studio.pages.dev/studio/>
+**入口页（投递给招聘方就用这个）**：<https://demand-studio.pages.dev/>
+
+| 入口 | Cloudflare Pages（主） | GitHub Pages（备份，同一份产物） |
+| --- | --- | --- |
+| 入口页 | <https://demand-studio.pages.dev/> | <https://xinhao021121-web.github.io/zhuangxiu-demand/> |
+| 采集端（房主填需求单） | …`/app/` | …`/app/` |
+| 桌面工作台（设计师出门前用） | …`/studio/` | …`/studio/` |
+| 现场端 PWA（现场照着问） | …`/onsite/` | …`/onsite/` |
+
 - 仓库：<https://github.com/xinhao021121-web/zhuangxiu-demand>
 
 两条发布命令：`pnpm run deploy:pages`（GitHub Pages）与 `pnpm run deploy:cf-pages`（Cloudflare Pages）。

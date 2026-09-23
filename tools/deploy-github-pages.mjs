@@ -14,8 +14,9 @@
  *
  *   node tools/deploy-github-pages.mjs --target pages    # 发到 Cloudflare Pages（wrangler）
  *
- * 目录结构（页面上就是这三个地址）：
- *   /                采集端 H5（app/dist/h5，宽屏 Web / 窄屏展示版）
+ * 目录结构（页面上就是这四个地址）：
+ *   /                入口页（landing/，投递给招聘方的那个链接）
+ *   /app/            采集端 H5（app/dist/h5，宽屏 Web / 窄屏展示版）
  *   /studio/         桌面工作台（Next 静态导出，演示模式）
  *   /onsite/         现场端 PWA（Vite 产物，演示模式）
  *
@@ -34,7 +35,8 @@ const STUDIO_EXPORT = path.join(PROJECT_ROOT, 'studio', '.next-export');
 
 /** 三个产物各自从哪来、放到页面上的哪个位置。 */
 const TARGETS = [
-  { name: '采集端 H5', from: path.join(PROJECT_ROOT, 'app', 'dist', 'h5'), to: '' },
+  { name: '入口页', from: path.join(PROJECT_ROOT, 'landing'), to: '' },
+  { name: '采集端 H5', from: path.join(PROJECT_ROOT, 'app', 'dist', 'h5'), to: 'app' },
   { name: '桌面工作台', from: STUDIO_EXPORT, to: 'studio' },
   { name: '现场端 PWA', from: path.join(PROJECT_ROOT, 'onsite', 'dist'), to: 'onsite' },
 ];

@@ -62,14 +62,43 @@ const text = (page, sel) => page.locator(sel).first().innerText();
 try {
   fs.mkdirSync(SHOT, { recursive: true });
 
-  // 三、采集端 H5（宽屏）
+  // 三、入口页（投递给招聘方的那个链接）
+  const landing = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const landingErrors = [];
+  landing.on('pageerror', (e) => landingErrors.push('pageerror: ' + e.message));
+  landing.on('console', (m) => {
+    if (m.type() === 'error') landingErrors.push('console: ' + m.text());
+  });
+  await landing.goto(BASE);
+  await landing.waitForSelector('.hero h1');
+  ok((await landing.title()).includes('作品集'), '入口页打得开');
+  ok((await landing.locator('a.btn').count()) >= 3, '入口页给出三个体验入口');
+  ok((await landing.locator('a.btn.primary').getAttribute('href')) === './studio/', '主入口指向桌面工作台');
+  ok((await landing.locator('img').count()) >= 3, '入口页带界面截图');
+  const imagesOk = await landing.evaluate(() =>
+    [...document.querySelectorAll('img')].every((img) => img.complete && img.naturalWidth > 0),
+  );
+  ok(imagesOk, '入口页三张截图都真的加载出来了');
+  await landing.setViewportSize({ width: 390, height: 844 });
+  await landing.waitForTimeout(300);
+  const landingNarrow = await landing.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(landingNarrow <= 0, `入口页窄屏无横向溢出（${landingNarrow}px）`);
+  await landing.setViewportSize({ width: 1280, height: 900 });
+  await landing.waitForTimeout(200);
+  await landing.screenshot({ path: path.join(SHOT, 'pages-00-入口页.png'), fullPage: true });
+  ok(landingErrors.length === 0, '入口页控制台无错误' + (landingErrors.length ? '：' + landingErrors.join(' | ') : ''));
+  await landing.close();
+
+  // 四、采集端 H5（宽屏，挂在 /app/ 下）
   const intake = await browser.newPage({ viewport: { width: 1280, height: 860 } });
   const intakeErrors = [];
   intake.on('pageerror', (e) => intakeErrors.push('pageerror: ' + e.message));
   intake.on('console', (m) => {
     if (m.type() === 'error') intakeErrors.push('console: ' + m.text());
   });
-  await intake.goto(BASE);
+  await intake.goto(`${BASE}app/`);
   await intake.waitForTimeout(1200);
   ok((await intake.title()).includes('装修需求采集'), '采集端 H5 打得开');
   ok((await intake.locator('#app').count()) === 1, '采集端挂载点存在');
