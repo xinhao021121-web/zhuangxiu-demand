@@ -7,6 +7,7 @@
 - 设计需求解读台（规划中）：`docs/设计需求解读台_产品设计文档_V1.md`
 - 设计需求解读台 · 技术方案：`docs/设计需求解读台_技术方案_V1.md`
 - Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
+- 手机端 Demo（现场量房）：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
 - 正式实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
 - 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储，零框架依赖）
 
@@ -23,7 +24,7 @@ packages/
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 产品文档与技术方案
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
-designer/            设计需求解读台 Demo（设计师端，数据模拟）
+designer/            设计需求解读台 Demo + 现场量房手机端 Demo（数据模拟）
 tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）
 ```
 
@@ -80,6 +81,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |
 | 设计需求解读台 Demo | `pnpm run test:designer` | 需求单列表、原始表格、外发前确认（含脱敏）、表格理解、清单删减与撤销、导出 |
+| 现场量房（手机端）Demo | `pnpm run test:onsite` | 现场选单、逐空间问、记一笔、离线记录与同步、量房记录、手机布局指标 |
 
 小程序端没有稳定的自动验证手段（需要开发者工具），因此规则、排序、去重、静默、摘要、草稿迁移
 全部放在零框架依赖的领域包里用 Vitest 覆盖，呈现层只做「读状态、渲染、派发事件」。

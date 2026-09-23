@@ -7,11 +7,12 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "build:spec": "python tools/build_field_spec.py",
-    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo && pnpm run test:designer",
+    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo && pnpm run test:designer && pnpm run test:onsite",
     "test:unit": "pnpm --dir packages/devtools exec vitest run --root ../..",
     "test:app": "node tests/app.e2e.mjs",
     "test:demo": "node tests/demo.smoke.mjs && node tests/mobile.smoke.mjs",
     "test:designer": "node tests/designer.smoke.mjs",
+    "test:onsite": "node tests/onsite.smoke.mjs",
     "typecheck": "pnpm run typecheck:domain && pnpm run typecheck:app",
     "typecheck:domain": "pnpm --dir packages/devtools exec tsc -p ../../tsconfig.json",
     "typecheck:app": "pnpm --dir app exec tsc -p tsconfig.json",

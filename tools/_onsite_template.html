@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>现场量房 · Demo V0.1</title>
+<style>
+:root{
+  --bg:#e9ecf1; --card:#fff; --line:#e5e8ee; --line2:#eef1f5;
+  --ink:#1e2430; --dim:#6b7480; --dim2:#98a1ad;
+  --brand:#2f6fed; --brand-weak:#eaf1ff;
+  --amber:#a9751b; --amber-weak:#fdf5e6;
+  --green:#2c7a54; --green-weak:#e9f5ef;
+  --red:#bd3b3b; --red-weak:#fdeceb;
+  --purple:#6b4fbb; --purple-weak:#f1ecfb;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;text-align:left}
+.stage{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.hint-wide{display:none;font-size:13px;color:#5c6572}
+.phone{width:100%;max-width:430px;flex:1 1 auto;min-height:0;background:#fff;display:flex;flex-direction:column;overflow:hidden;position:relative}
+@media (min-width:600px){
+  .stage{padding:26px}
+  .hint-wide{display:block}
+  .phone{flex:0 0 auto;height:min(880px,90vh);max-width:396px;border-radius:36px;border:9px solid #171a20;box-shadow:0 30px 70px rgba(20,26,40,.34)}
+}
+/* 顶栏：只放返回、当前空间与网络状态，操作都压到底部 */
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(9px + env(safe-area-inset-top)) 13px 9px;border-bottom:1px solid var(--line);background:#fff}
+.bk{width:38px;height:38px;border-radius:11px;background:#f2f4f7;color:var(--dim);display:flex;align-items:center;justify-content:center;font-size:19px;flex:0 0 auto}
+.tt{min-width:0}
+.tt b{display:block;font-size:15.5px;font-weight:600;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt span{display:block;font-size:11.5px;color:var(--dim2);line-height:1.35}
+.right{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.net{font-size:11.5px;padding:7px 10px;border-radius:999px;background:var(--green-weak);color:var(--green);min-height:34px;white-space:nowrap}
+.net.off{background:var(--amber-weak);color:var(--amber)}
+.endbtn{font-size:12.5px;color:var(--brand);min-height:34px;padding:0 2px}
+/* 主体：整页只有一个滚动区 */
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:13px 13px 20px;-webkit-overflow-scrolling:touch}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.card h3{margin:0 0 9px;font-size:14px;display:flex;align-items:center}
+.card h3 .cnt{font-size:12px;color:var(--dim2);font-weight:400;margin-left:8px}
+.dc{display:block;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.dc.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-weak)}
+.dc .r1{display:flex;align-items:center;gap:8px}
+.dc .nm{font-weight:600;font-size:15.5px}
+.dc .st{font-size:11px;padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap}
+.st.wait{background:var(--amber-weak);color:var(--amber)}
+.st.done{background:var(--green-weak);color:var(--green)}
+.dc .ov{font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.55}
+.dc .mt{font-size:11.5px;color:var(--dim2);margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
+.syncbar{font-size:12.5px;padding:10px 12px;border-radius:11px;margin-bottom:10px;line-height:1.55}
+.syncbar.ok{background:var(--green-weak);color:var(--green)}
+.syncbar.off{background:var(--amber-weak);color:var(--amber)}
+.stats{display:flex;gap:9px;margin:0 0 10px}
+.stat{flex:1;background:#f7f9fc;border-radius:12px;padding:11px 6px;text-align:center}
+.stat b{display:block;font-size:21px;line-height:1.25}
+.stat span{font-size:11.5px;color:var(--dim)}
+/* 当前空间与总进度：一行看完，点一下换空间 */
+.prow{display:flex;align-items:center;gap:9px;width:100%;min-height:36px}
+.pname{font-size:15.5px;font-weight:600}
+.pidx{font-size:12px;color:var(--dim2)}
+.pmust{margin-left:auto;font-size:12.5px;color:var(--dim)}
+.pgo{font-size:12.5px;color:var(--brand);min-height:36px;display:flex;align-items:center;gap:3px}
+.pg{height:8px;border-radius:999px;background:#eef1f5;overflow:hidden;margin-top:8px}
+.pg i{display:block;height:100%;background:var(--brand);border-radius:999px}
+/* 清单条目：整块点开依据，底部是拇指区的三个动作 */
+.task{border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:9px;background:#fff}
+.task.asked{border-color:#cfe6da;background:#fbfefc}
+.task.skip{background:#fafbfc}
+.tr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.badge{font-size:10.5px;padding:2px 8px;border-radius:999px;font-weight:500;white-space:nowrap}
+.b-must{background:var(--red-weak);color:var(--red)}
+.b-sug{background:#eef1f5;color:var(--dim)}
+.b-src-rule{background:var(--purple-weak);color:var(--purple)}
+.b-src-survey{background:#eef1f5;color:var(--dim)}
+.b-src-both{background:var(--brand-weak);color:var(--brand)}
+.b-wait{background:var(--amber-weak);color:var(--amber)}
+.mark{margin-left:auto;font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.mark.asked{background:var(--green-weak);color:var(--green)}
+.mark.skip{background:var(--amber-weak);color:var(--amber)}
+.q{font-size:16.5px;font-weight:600;line-height:1.5}
+.hint{font-size:12.5px;color:var(--brand);margin-top:8px;display:flex;align-items:center;gap:5px}
+.det{margin-top:5px;background:#fafbfc;border:1px dashed var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px;color:var(--dim);line-height:1.7}
+.det b{color:#4a5462;font-weight:500}
+.det .row + .row{margin-top:6px}
+.note{margin-top:9px;background:var(--green-weak);border-radius:10px;padding:9px 11px;font-size:13px;line-height:1.6;color:#255f42}
+.acts{display:flex;gap:7px;margin-top:11px}
+.act{min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:13.5px;flex:1;text-align:center}
+.act.main{flex:1.5;background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;font-size:15px}
+.act.undo{flex:1;color:var(--dim)}
+.srow{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line2)}
+.srow:last-child{border-bottom:0}
+.srow .qq{flex:1;min-width:0}
+.srow .qq b{display:block;font-size:14px;font-weight:600;line-height:1.5}
+.srow .qq span{display:block;font-size:12.5px;color:var(--dim);margin-top:3px;line-height:1.55}
+.tagline{display:inline-flex;align-items:center;font-size:11px;padding:2px 8px;border-radius:999px;height:22px;margin-bottom:5px}
+.tagline.asked{background:var(--green-weak);color:var(--green)}
+.tagline.skip{background:var(--amber-weak);color:var(--amber)}
+.grp{font-size:12px;color:var(--dim2);font-weight:600;margin:14px 0 6px;letter-spacing:.03em}
+.empty{text-align:center;color:var(--dim);padding:34px 12px;font-size:13.5px;line-height:1.7}
+/* 底部操作栏：单手拇指可达 */
+.foot{flex:0 0 auto;display:flex;gap:10px;align-items:center;padding:10px 13px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff}
+.btn{min-height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:600;background:#f2f4f7;color:var(--ink);flex:1;text-align:center}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.side{flex:0 0 118px;background:#fff;border:1px solid var(--line);color:var(--dim);font-weight:500;font-size:14.5px}
+/* 底部抽屉 */
+.mask{position:absolute;inset:0;background:rgba(24,30,40,.42);display:none;z-index:30}
+.mask.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:40;background:#fff;border-radius:20px 20px 0 0;
+  padding:16px 15px calc(14px + env(safe-area-inset-bottom));display:none;max-height:90%;overflow-y:auto}
+.sheet.on{display:block;animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(16px);opacity:.7}to{transform:none;opacity:1}}
+.sheet h4{margin:0 0 8px;font-size:12.5px;color:var(--dim2);font-weight:600;letter-spacing:.03em}
+.sheet .sq{font-size:16px;font-weight:600;line-height:1.5}
+.ctx{margin-top:10px;background:#f7f9fc;border-radius:11px;padding:10px 12px;font-size:12.5px;color:var(--dim);line-height:1.8}
+.ctx b{color:#4a5462;font-weight:500}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 10px}
+.chip{font-size:12.5px;padding:9px 12px;border-radius:999px;background:#f2f4f7;color:#414b59;min-height:38px;display:flex;align-items:center}
+.sheet textarea{width:100%;min-height:88px;border:1px solid var(--line);border-radius:12px;padding:11px;font:16px/1.6 inherit;color:var(--ink);resize:vertical}
+.sf{display:flex;gap:9px;margin-top:12px}
+.rowbtn{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:0 13px;border-radius:12px;background:#f7f9fc;margin-bottom:8px}
+.rowbtn.on{background:var(--brand-weak)}
+.rn{font-size:15px;font-weight:600}
+.rs{font-size:12.5px;color:var(--dim);margin-left:auto}
+.rc{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--brand);color:#fff}
+.toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:60;
+  background:rgba(30,36,48,.92);color:#fff;font-size:13px;padding:10px 16px;border-radius:999px;
+  opacity:0;transition:opacity .2s;pointer-events:none;max-width:88%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast.on{opacity:1}
+pre.md{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:11px;margin:0;
+  font-size:12.5px;line-height:1.75;white-space:pre-wrap;word-break:break-word;max-height:42vh;overflow:auto}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="hint-wide">手机端 Demo · 建议用手机打开，或在浏览器里按 F12 切到设备模式（390 × 844）</div>
+  <div class="phone" id="app"></div>
+</div>
+<script>
+const SPEC = /*__FIELD_SPEC__*/[];
+const SURVEY = /*__SURVEY__*/[];
+const DEMANDS = /*__DEMANDS__*/[];
+const ONSITE = /*__ONSITE__*/[];
+
+const app = document.getElementById('app');
+
+if (!SPEC.length || !DEMANDS.length) {
+  app.innerHTML = '<div class="empty" style="padding:80px 26px">模板还没有注入数据。<br><br>' +
+    '请先运行 <b>node tools/build_onsite_demo.mjs</b>，再打开 designer/现场量房_Demo_V0.1.html。</div>';
+} else {
+  boot();
+}
+
+function boot(){
+  /* ===================== 基础 ===================== */
+  const SECTIONS = [...new Set(SPEC.map(f => f.section))];
+  const F = {}; SPEC.forEach(f => { F[f.id] = f; });
+  const SPACE_ORDER = ['全屋', ...SECTIONS];
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const show = v => Array.isArray(v) ? v.join('、') : (v == null ? '' : String(v));
+  const isEmpty = v => v == null || v === '' || (Array.isArray(v) && !v.length);
+  const TIER_NAME = { must: '必问', suggest: '建议问' };
+  const SRC_NAME = { rule: '需求推导', survey: '通用核实', both: '需求推导 + 通用核实' };
+  const keyOf = it => it.space + '|' + it.obj;
+
+  /* ===================== 清单规则（与解读台 Demo 同一套，模拟模型输出的推导项） ===================== */
+  const RULES = [
+    { space:'厨房', obj:'排烟', tier:'must', when:{ kt_form:['开放式'], kt_freq:['经常'] },
+      q:'厨房是否接受开放式？油烟与燃气条件能不能满足',
+      why:'房主填了「厨房形式：开放式」和「下厨频率：经常」',
+      verify:['烟道位置与排烟条件','燃气备案要求'], fields:['kt_form','kt_freq'] },
+    { space:'全屋', obj:'层高吊顶', tier:'must', when:{ light_pref:['无主灯'], dev_ac:['中央空调'] },
+      q:'层高能不能同时满足无主灯吊顶与中央空调',
+      why:'房主填了「照明方式偏好：无主灯」和「空调需求：中央空调」',
+      verify:['各房间净高与梁位'], fields:['light_pref','dev_ac'] },
+    { space:'全屋', obj:'柜体收纳', tier:'must', when:{ cabinets_type:['全屋定制'], br_storage:['是'] },
+      q:'全屋定制 + 强化收纳，现有柜体体积够不够',
+      why:'房主填了「柜体制作方式：全屋定制」和「需强化收纳：是」',
+      verify:['柜体能否做到顶'], fields:['cabinets_type','br_storage'] },
+    { space:'全屋', obj:'旧房隐蔽', tier:'must', when:{ base_house_state:['旧房翻新'] },
+      q:'旧房管线、防水与墙体状况要核到什么范围',
+      why:'房主填了「房屋现状：旧房翻新」',
+      verify:['旧管线年限'], fields:['base_house_state'] },
+    { space:'阳台', obj:'家政封窗', tier:'must', when:{ bl_washer:['是'], bl_dryer:['是'], bl_window:['是'] },
+      q:'阳台能不能同时放洗衣机、烘干机和猫窝',
+      why:'房主填了「洗衣机：是」「烘干机：是」「宠物洗澡或猫窝：需要」「是否封窗：是」',
+      verify:['封窗方案'], fields:['bl_washer','bl_dryer','bl_pet','bl_window'] },
+    { space:'卫生间', obj:'马桶移位', tier:'suggest', whenInst:{ wc_toilet:['智能马桶'] },
+      q:'两个卫生间的马桶位置能不能调整',
+      why:'主卫选了「马桶类型：智能马桶」',
+      verify:['排污管位置'], fields:['wc_toilet'] },
+    { space:'卫生间', obj:'猫砂盆位置', tier:'suggest', when:{ live_pet:['猫'] },
+      q:'猫砂盆放哪个卫生间？排水与通风怎么处理',
+      why:'房主填了「是否养宠物：猫」',
+      verify:['卫生间排水点位与通风条件'], fields:['live_pet'] },
+    { space:'主卧', obj:'采光噪音', tier:'suggest', when:{ br_quiet:['需要'], br_curtain:['全遮光'] },
+      q:'主卧的朝向、噪音与采光实际情况',
+      why:'房主填了「是否需要隔音：需要」「窗帘需求：全遮光」',
+      verify:['窗洞尺寸'], fields:['br_quiet','br_curtain'] },
+    { space:'客厅', obj:'亲子阅读', tier:'suggest', when:{ lv_bookshelf:['需要'], lv_play:['需要'] },
+      q:'客厅的阅读区与亲子活动区怎么划分',
+      why:'房主填了「书墙或大长桌：需要」「儿童活动或手工区：需要」',
+      verify:['客厅实际净尺寸'], fields:['lv_bookshelf','lv_play'] },
+    { space:'厨房', obj:'大件电器', tier:'suggest', when:{ kt_fridge:['内嵌'], kt_dishwasher:['前开式'] },
+      q:'内嵌冰箱与洗碗机的尺寸、电源与进水位置',
+      why:'房主填了「冰箱形式：内嵌」「洗碗机：前开式」',
+      verify:['插座与进水位置'], fields:['kt_fridge','kt_dishwasher'] },
+  ];
+
+  /* 16 项通用清单的归属空间与档位 */
+  const SURVEY_MAP = {
+    1:{ space:'全屋', obj:'层高吊顶', tier:'must' },
+    2:{ space:'全屋', obj:'结构', tier:'must' },
+    3:{ space:'全屋', obj:'上下水', tier:'must' },
+    4:{ space:'卫生间', obj:'马桶移位', tier:'suggest' },
+    5:{ space:'厨房', obj:'排烟', tier:'must' },
+    6:{ space:'全屋', obj:'配电', tier:'must' },
+    7:{ space:'全屋', obj:'空调外机', tier:'suggest' },
+    8:{ space:'全屋', obj:'采暖', tier:'suggest' },
+    9:{ space:'阳台', obj:'家政封窗', tier:'must' },
+    10:{ space:'全屋', obj:'墙体', tier:'must' },
+    11:{ space:'全屋', obj:'旧房隐蔽', tier:'must' },
+    12:{ space:'主卧', obj:'采光噪音', tier:'suggest' },
+    13:{ space:'全屋', obj:'柜体收纳', tier:'suggest' },
+    14:{ space:'全屋', obj:'地面完成面', tier:'suggest' },
+    15:{ space:'厨房', obj:'大件电器', tier:'suggest' },
+    16:{ space:'全屋', obj:'门窗', tier:'suggest' },
+  };
+
+  function hit(d, when) { return Object.entries(when || {}).every(([k, vs]) => vs.some(v => show(d.values[k]).includes(v))); }
+  function hitInst(d, whenInst) {
+    return Object.entries(whenInst || {}).every(([k, vs]) =>
+      Object.values(d.instances || {}).some(list => list.some(i => vs.some(v => show(i.values[k]).includes(v)))));
+  }
+  function buildItems(d) {
+    const items = [];
+    RULES.forEach(r => {
+      if (hit(d, r.when) || hitInst(d, r.whenInst)) {
+        items.push({ space:r.space, obj:r.obj, tier:r.tier, q:r.q, why:r.why, verify:r.verify.slice(), fields:r.fields.slice(), src:'rule' });
+      }
+    });
+    SURVEY.forEach(s => {
+      const m = SURVEY_MAP[s.no]; if (!m) return;
+      const ex = items.find(i => i.space === m.space && i.obj === m.obj);
+      if (ex) { ex.verify = [...new Set([...ex.verify, s.item])]; ex.src = 'both'; }
+      else items.push({ space:m.space, obj:m.obj, tier:m.tier, q:s.item, why:'通用量房核实项：' + s.goal, verify:[s.item], fields:[], src:'survey' });
+    });
+    return items;
+  }
+  const ready = d => d.status === 'done';
+  const demand = () => DEMANDS.find(d => d.id === state.cur) || DEMANDS[0];
+  const itemsOf = d => buildItems(d);
+  const spacesOf = d => SPACE_ORDER.filter(s => itemsOf(d).some(i => i.space === s));
+  const recOf = id => (state.rec[id] = state.rec[id] || {});
+
+  /* ===================== 状态 ===================== */
+  function seedRecords() {
+    const rec = {};
+    ONSITE.forEach(r => { (rec[r.demand] = rec[r.demand] || {})[r.key] = { status:r.status, note:r.note || '', at:r.at || '', synced:true }; });
+    return rec;
+  }
+  const state = { screen:'list', cur:'d1', space:'全屋', open:{}, rec:seedRecords(), online:true, overlay:null, toast:'', scroll:0 };
+  const pendingSync = () => Object.values(state.rec).reduce((n, m) => n + Object.values(m).filter(r => !r.synced).length, 0);
+  function quota(d) {
+    const its = itemsOf(d), rec = state.rec[d.id] || {};
+    const asked = its.filter(i => (rec[keyOf(i)] || {}).status === 'asked').length;
+    return { total:its.length, asked, must:its.filter(i => i.tier === 'must').length };
+  }
+
+  /* ===================== 渲染 ===================== */
+  function render() {
+    const b = app.querySelector('.body');
+    if (b) state.scroll = b.scrollTop;
+    app.innerHTML = barHtml() + '<div class="body" id="body">' + bodyHtml() + '</div>' + footHtml();
+    if (state.overlay) app.insertAdjacentHTML('beforeend', '<div class="mask on" id="mask"></div>' + overlayHtml());
+    app.insertAdjacentHTML('beforeend', '<div class="toast' + (state.toast ? ' on' : '') + '" id="toast">' + esc(state.toast) + '</div>');
+    const nb = app.querySelector('.body');
+    if (nb) nb.scrollTop = state.scroll || 0;
+  }
+  const netHtml = () => '<button class="net' + (state.online ? '' : ' off') + '" id="net">' + (state.online ? '● 在线' : '● 离线') + '</button>';
+
+  function barHtml() {
+    if (state.screen === 'list') {
+      return '<div class="bar"><div class="tt"><b>现场量房</b><span>选今天要去的这一家</span></div>' +
+        '<div class="right">' + netHtml() + '</div></div>';
+    }
+    const d = demand();
+    const back = state.screen === 'field' ? 'intro' : 'list';
+    const title = state.screen === 'field' ? state.space : (state.screen === 'summary' ? '量房记录' : d.name);
+    const sub = state.screen === 'field' ? ('共 ' + itemsOf(d).length + ' 条 · 按空间走')
+      : (state.screen === 'summary' ? (esc(d.name) + ' · 今天现场') : '出门前看一眼');
+    return '<div class="bar"><button class="bk" data-nav="' + back + '">‹</button>' +
+      '<div class="tt"><b>' + esc(title) + '</b><span>' + sub + '</span></div>' +
+      '<div class="right">' + netHtml() + (state.screen === 'field' ? '<button class="endbtn" id="end">结束</button>' : '') + '</div></div>';
+  }
+
+  function bodyHtml() {
+    if (state.screen === 'list') return viewList();
+    if (state.screen === 'intro') return viewIntro();
+    if (state.screen === 'summary') return viewSummary();
+    return viewField();
+  }
+
+  function footHtml() {
+    if (state.screen === 'list' || state.screen === 'summary') return '';
+    if (state.screen === 'intro') {
+      const q = quota(demand());
+      return '<div class="foot"><button class="btn primary" id="go">' + (q.asked ? '继续量房' : '开始量房') + '</button></div>';
+    }
+    const spaces = spacesOf(demand());
+    const last = spaces[spaces.length - 1] === state.space;
+    return '<div class="foot"><button class="btn side" id="prev">‹ 上一个</button>' +
+      '<button class="btn primary" id="next">' + (last ? '完成量房' : '下一个空间 ›') + '</button></div>';
+  }
+
+  /* 一、现场选单 */
+  function viewList() {
+    return '<div class="syncbar ' + (state.online ? 'ok' : 'off') + '">' +
+      (state.online ? '在线：现场记录会直接同步回公司' : '离线：记录先存在这台手机上，回到有网的地方再同步') + '</div>' +
+      DEMANDS.map(d => {
+        const ok = ready(d); const q = quota(d);
+        return '<button class="dc' + (d.id === state.cur ? ' on' : '') + '" data-d="' + d.id + '">' +
+          '<div class="r1"><span class="nm">' + esc(d.name) + '</span>' +
+          '<span class="st ' + (ok ? 'done' : 'wait') + '">' + (ok ? '清单已生成' : '待解读') + '</span></div>' +
+          '<div class="ov">' + esc(d.overview) + '</div>' +
+          '<div class="mt"><span>提交 ' + esc(d.submitted) + '</span>' +
+          (ok ? '<span>已问 ' + q.asked + ' / 共 ' + q.total + ' 条</span>' : '<span>先在电脑上生成清单</span>') + '</div></button>';
+      }).join('') +
+      '<div class="empty" style="padding:12px 0 0"><button class="hint" id="reset" style="justify-content:center;width:100%">重置现场记录</button></div>';
+  }
+
+  /* 二、出门前 */
+  function viewIntro() {
+    const d = demand(); const its = itemsOf(d); const q = quota(d);
+    const top = its.filter(i => i.tier === 'must' && !(recOf(d.id)[keyOf(i)] || {}).status).slice(0, 3);
+    return '<div class="card"><div style="font-size:17.5px;font-weight:600">' + esc(d.name) + '</div>' +
+        '<div style="font-size:12.5px;color:var(--dim);margin-top:5px">' + esc(d.overview) + '</div>' +
+        '<div style="font-size:12px;color:var(--dim2);margin-top:4px">提交 ' + esc(d.submitted) + '</div></div>' +
+      '<div class="stats"><div class="stat"><b>' + q.must + '</b><span>必问</span></div>' +
+        '<div class="stat"><b>' + (q.total - q.must) + '</b><span>建议问</span></div>' +
+        '<div class="stat"><b>' + q.total + '</b><span>共</span></div></div>' +
+      '<div class="card"><h3>现场进度<span class="cnt">已问 ' + q.asked + ' / ' + q.total + '</span></h3>' +
+        '<div class="pg"><i style="width:' + Math.round(q.asked / q.total * 100) + '%"></i></div>' +
+        '<div style="font-size:12.5px;color:var(--dim);margin-top:9px;line-height:1.7">' +
+        '按现场动线走：先进门核结构与尺寸，再一个空间一个空间问。每条问完点「已问」，没问上的记一句，回来再补。</div></div>' +
+      (top.length ? '<div class="card"><h3>出门前先记这几条</h3>' +
+        top.map(i => '<div class="srow"><div class="qq"><b>' + esc(i.q) + '</b><span>' + esc(i.space) + ' · 还没问到</span></div></div>').join('') +
+        '</div>' : '');
+  }
+
+  /* 三、现场逐条走 */
+  function viewField() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    const spaces = spacesOf(d);
+    if (!spaces.includes(state.space)) state.space = spaces[0];
+    const here = its.filter(i => i.space === state.space);
+    const must = its.filter(i => i.tier === 'must');
+    const mustAsked = must.filter(i => (rec[keyOf(i)] || {}).status === 'asked').length;
+    const idx = spaces.indexOf(state.space) + 1;
+    const pend = pendingSync();
+    return '<div class="card" style="padding:12px 13px">' +
+        '<button class="prow" id="spaces"><span class="pname">' + esc(state.space) + '</span>' +
+        '<span class="pidx">' + idx + ' / ' + spaces.length + '</span>' +
+        '<span class="pmust">必问 已问 ' + mustAsked + ' / ' + must.length + '</span>' +
+        '<span class="pgo">换空间 ▾</span></button>' +
+        '<div class="pg"><i style="width:' + Math.round(mustAsked / must.length * 100) + '%"></i></div></div>' +
+      (pend ? '<div class="syncbar off">离线中：' + pend + ' 条记录还没同步</div>' : '') +
+      here.map(taskHtml).join('');
+  }
+
+  function taskHtml(i) {
+    const d = demand(); const k = keyOf(i); const r = recOf(d.id)[k];
+    const cls = r ? (r.status === 'asked' ? ' asked' : ' skip') : '';
+    const open = !!state.open[k];
+    const srcCls = i.src === 'both' ? 'b-src-both' : i.src === 'rule' ? 'b-src-rule' : 'b-src-survey';
+    const ctx = i.fields.filter(f => !isEmpty(d.values[f]))
+      .map(f => esc((F[f] || {}).label || f) + '：' + esc(show(d.values[f]))).join('　');
+    return '<div class="task' + cls + '" data-key="' + esc(k) + '">' +
+      '<div class="tr"><span class="badge ' + (i.tier === 'must' ? 'b-must' : 'b-sug') + '">' + TIER_NAME[i.tier] + '</span>' +
+      '<span class="badge ' + srcCls + '">' + SRC_NAME[i.src] + '</span>' +
+      (r && !r.synced ? '<span class="badge b-wait">待同步</span>' : '') +
+      (r ? '<span class="mark ' + (r.status === 'asked' ? 'asked' : 'skip') + '">' + (r.status === 'asked' ? '已问' : '没问上') + '</span>' : '') +
+      '</div>' +
+      '<div class="q">' + esc(i.q) + '</div>' +
+      (open ? '<div class="det">' +
+        '<div class="row"><b>为什么问　</b>' + esc(i.why) + '</div>' +
+        '<div class="row"><b>现场要核实　</b>' + esc(i.verify.join('；')) + '</div>' +
+        (ctx ? '<div class="row"><b>房主填的　</b>' + ctx + '</div>' : '') + '</div>'
+        : '<div class="hint">点一下看依据 ▾</div>') +
+      (r && r.note ? '<div class="note">' + esc(r.note) + '</div>' : '') +
+      '<div class="acts">' +
+        (r ? '<button class="act undo" data-a="undo">撤销</button><button class="act" data-a="note">改结论</button>'
+           : '<button class="act" data-a="skip">没问上</button><button class="act" data-a="note">记一笔</button>' +
+             '<button class="act main" data-a="asked">已问</button>') +
+      '</div></div>';
+  }
+
+  /* 四、量房记录 */
+  function viewSummary() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    const asked = its.filter(i => (rec[keyOf(i)] || {}).status === 'asked');
+    const skip = its.filter(i => (rec[keyOf(i)] || {}).status === 'skip');
+    const left = its.filter(i => !(rec[keyOf(i)] || {}).status);
+    const mustOpen = its.filter(i => i.tier === 'must' && (rec[keyOf(i)] || {}).status !== 'asked');
+    const pend = pendingSync();
+    const groups = {};
+    its.forEach(i => { (groups[i.space] = groups[i.space] || []).push(i); });
+    return '<div class="stats"><div class="stat"><b>' + asked.length + '</b><span>已问</span></div>' +
+        '<div class="stat"><b>' + skip.length + '</b><span>没问上</span></div>' +
+        '<div class="stat"><b>' + left.length + '</b><span>还没问到</span></div></div>' +
+      (pend ? '<div class="syncbar off">' + pend + ' 条记录还存在这台手机上，联网后自动同步</div>'
+            : '<div class="syncbar ok">记录已同步回公司</div>') +
+      (mustOpen.length ? '<div class="card"><h3>必问里还有 ' + mustOpen.length + ' 条没落</h3>' +
+        mustOpen.map(i => '<div class="srow"><div class="qq"><b>' + esc(i.q) + '</b><span>' + esc(i.space) +
+          ((rec[keyOf(i)] || {}).status === 'skip' ? ' · 没问上' : ' · 还没问到') + '</span></div></div>').join('') +
+        '</div>' : '<div class="card"><h3>必问都问到了</h3>' +
+        '<div style="font-size:12.5px;color:var(--dim)">可以回去定方案方向了。</div></div>') +
+      SPACE_ORDER.filter(s => groups[s]).map(s => {
+        const list = groups[s].filter(i => (rec[keyOf(i)] || {}).status);
+        if (!list.length) return '';
+        return '<div class="grp">' + esc(s) + '　' + list.length + ' 条有记录</div>' +
+          list.map(i => {
+            const r = rec[keyOf(i)];
+            return '<div class="card" style="padding:11px 13px;margin-bottom:8px">' +
+              '<span class="tagline ' + (r.status === 'asked' ? 'asked' : 'skip') + '">' +
+                (r.status === 'asked' ? '已问' : '没问上') + '</span>' +
+              '<div class="q" style="font-size:14.5px">' + esc(i.q) + '</div>' +
+              '<div style="font-size:13px;color:var(--dim);margin-top:5px;line-height:1.6">' +
+                esc(r.note || '只标了状态，没记内容') + '</div></div>';
+          }).join('');
+      }).join('') +
+      '<div class="card" style="margin-top:12px"><h3>带回公司的速记</h3>' +
+        '<pre class="md">' + esc(exportText()) + '</pre>' +
+        '<div class="sf"><button class="btn" id="copy">复制速记</button>' +
+        '<button class="btn primary" data-nav="list">回到列表</button></div></div>';
+  }
+
+  function exportText() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    const asked = its.filter(i => (rec[keyOf(i)] || {}).status === 'asked').length;
+    const skip = its.filter(i => (rec[keyOf(i)] || {}).status === 'skip').length;
+    let out = '# 量房记录 · ' + d.name + '\n\n' + d.overview + '\n' +
+      '已问 ' + asked + ' 条 · 没问上 ' + skip + ' 条 · 还没问到 ' + (its.length - asked - skip) + ' 条\n';
+    SPACE_ORDER.filter(s => its.some(i => i.space === s)).forEach(s => {
+      out += '\n## ' + s + '\n';
+      its.filter(i => i.space === s).forEach(i => {
+        const r = rec[keyOf(i)];
+        const tag = r ? (r.status === 'asked' ? '已问' : '没问上') : '还没问到';
+        out += '\n- [' + tag + '] ' + i.q + '\n';
+        if (r && r.note) out += '  结论：' + r.note + '\n';
+      });
+    });
+    return out;
+  }
+
+  /* ===================== 底部抽屉 ===================== */
+  function overlayHtml() {
+    const o = state.overlay;
+    if (o.kind === 'note') return noteSheet(o.item);
+    if (o.kind === 'spaces') return spacesSheet();
+    return endSheet();
+  }
+
+  function noteSheet(item) {
+    const d = demand();
+    const ctx = item.fields.filter(f => !isEmpty(d.values[f]))
+      .map(f => '<b>' + esc((F[f] || {}).label || f) + '</b>　' + esc(show(d.values[f]))).join('<br>');
+    const quick = ['房主确认可以', '现场条件不允许', '要回去核尺寸', '房主改了想法', '要加预算'];
+    return '<div class="sheet on" id="sheet"><h4>记一笔 · 保存后标成已问</h4>' +
+      '<div class="sq">' + esc(item.q) + '</div>' +
+      (ctx ? '<div class="ctx"><b>房主填的</b><br>' + ctx + '</div>' : '') +
+      '<div class="chips">' + quick.map(t => '<button class="chip" data-chip="' + esc(t) + '">' + esc(t) + '</button>').join('') + '</div>' +
+      '<textarea data-draft placeholder="一句话结论，回公司照着这条定方案">' + esc(state.overlay.text || '') + '</textarea>' +
+      '<div class="sf"><button class="btn" id="sh-cancel">取消</button>' +
+      '<button class="btn primary" id="sh-save">保存并标记已问</button></div></div>';
+  }
+
+  function spacesSheet() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    return '<div class="sheet on" id="sheet"><h4>换一个空间</h4>' +
+      spacesOf(d).map(s => {
+        const list = its.filter(i => i.space === s);
+        const a = list.filter(i => (rec[keyOf(i)] || {}).status === 'asked').length;
+        const m = list.filter(i => i.tier === 'must');
+        const ma = m.filter(i => (rec[keyOf(i)] || {}).status === 'asked').length;
+        const tail = (m.length && ma < m.length) ? ('必问还剩 ' + (m.length - ma) + ' 条') : ('已问 ' + a + ' / ' + list.length);
+        return '<button class="rowbtn' + (s === state.space ? ' on' : '') + '" data-s="' + esc(s) + '">' +
+          '<span class="rn">' + esc(s) + '</span><span class="rs">' + tail + '</span>' +
+          (s === state.space ? '<span class="rc">当前</span>' : '') + '</button>';
+      }).join('') +
+      '<div class="sf"><button class="btn" id="sh-cancel">关闭</button></div></div>';
+  }
+
+  function endSheet() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    const open = its.filter(i => i.tier === 'must' && (rec[keyOf(i)] || {}).status !== 'asked');
+    return '<div class="sheet on" id="sheet"><h4>结束量房</h4>' +
+      '<div class="sq">必问里还有 ' + open.length + ' 条没落</div>' +
+      '<div class="ctx">' + open.map(i => '· ' + esc(i.q) +
+        '<span style="color:var(--dim2)">（' + esc(i.space) +
+        ((rec[keyOf(i)] || {}).status === 'skip' ? ' · 没问上' : '') + '）</span>').join('<br>') + '</div>' +
+      '<div class="sf"><button class="btn" id="sh-cancel">继续问</button>' +
+      '<button class="btn primary" id="sh-end">结束并看记录</button></div></div>';
+  }
+
+  /* ===================== 交互 ===================== */
+  function toast(msg) {
+    state.toast = msg; render();
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => { state.toast = ''; render(); }, 1700);
+  }
+  const nowHM = () => new Date().toTimeString().slice(0, 5);
+  function put(key, r) { recOf(state.cur)[key] = r; render(); }
+  function setStatus(key, status) {
+    const old = recOf(state.cur)[key] || {};
+    put(key, { status, note:old.note || '', at:nowHM(), synced:state.online });
+  }
+  function toggleNet() {
+    state.online = !state.online;
+    if (state.online) {
+      let n = 0;
+      Object.values(state.rec).forEach(m => Object.values(m).forEach(r => { if (!r.synced) { r.synced = true; n++; } }));
+      toast(n ? '已同步 ' + n + ' 条记录' : '已回到在线');
+    } else {
+      toast('已切到离线：记录只存在这台手机上');
+    }
+  }
+  function moveSpace(dir) {
+    const spaces = spacesOf(demand()); const i = spaces.indexOf(state.space); const j = i + dir;
+    if (j < 0) { toast('已经是第一个空间'); return; }
+    if (j >= spaces.length) { askEnd(); return; }
+    state.space = spaces[j]; state.scroll = 0; render();
+  }
+  function askEnd() {
+    const d = demand(); const its = itemsOf(d); const rec = recOf(d.id);
+    const open = its.filter(i => i.tier === 'must' && (rec[keyOf(i)] || {}).status !== 'asked');
+    if (open.length) { state.overlay = { kind:'end' }; state.scroll = 0; render(); }
+    else { state.screen = 'summary'; state.scroll = 0; render(); }
+  }
+  function openNote(item) {
+    state.overlay = { kind:'note', item, text:(recOf(state.cur)[keyOf(item)] || {}).note || '' };
+    render();
+    const ta = app.querySelector('textarea[data-draft]'); if (ta) ta.focus();
+  }
+
+  app.addEventListener('input', e => {
+    if (e.target.matches('textarea[data-draft]') && state.overlay) state.overlay.text = e.target.value;
+  });
+
+  /* 左右滑动换空间：现场单手持机时比找按钮快 */
+  let touch0 = null;
+  app.addEventListener('touchstart', e => {
+    if (state.screen !== 'field' || state.overlay) { touch0 = null; return; }
+    touch0 = { x:e.touches[0].clientX, y:e.touches[0].clientY };
+  }, { passive:true });
+  app.addEventListener('touchend', e => {
+    if (!touch0) return;
+    const dx = e.changedTouches[0].clientX - touch0.x;
+    const dy = e.changedTouches[0].clientY - touch0.y;
+    touch0 = null;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    moveSpace(dx < 0 ? 1 : -1);
+  }, { passive:true });
+
+  app.addEventListener('click', e => {
+    const t = e.target;
+    if (t.closest('#net')) { toggleNet(); return; }
+    if (t.id === 'reset') { state.rec = seedRecords(); state.overlay = null; toast('现场记录已重置'); return; }
+    if (t.id === 'mask') { state.overlay = null; render(); return; }
+    if (t.id === 'sh-cancel') { state.overlay = null; render(); return; }
+    if (t.id === 'sh-end') { state.overlay = null; state.screen = 'summary'; state.scroll = 0; render(); return; }
+    if (t.id === 'sh-save') {
+      const item = state.overlay.item; const text = (state.overlay.text || '').trim();
+      const key = keyOf(item);
+      state.overlay = null;
+      if (text) recOf(state.cur)[key] = { status:'asked', note:text, at:nowHM(), synced:state.online };
+      render();
+      toast('已记录，回来照着这条定方案');
+      return;
+    }
+    const chip = t.closest('[data-chip]');
+    if (chip && state.overlay) {
+      const ta = app.querySelector('textarea[data-draft]');
+      if (ta) {
+        const v = ta.value.replace(/[；;]\s*$/, '');
+        ta.value = (v ? v + '；' : '') + chip.dataset.chip;
+        state.overlay.text = ta.value; ta.focus();
+      }
+      return;
+    }
+    const act = t.closest('[data-a]');
+    if (act) {
+      const card = act.closest('[data-key]'); const k = card.dataset.key;
+      const a = act.dataset.a;
+      if (a === 'asked') { setStatus(k, 'asked'); toast('已记录：' + state.space); return; }
+      if (a === 'skip') { setStatus(k, 'skip'); toast('记下了，回来再补'); return; }
+      if (a === 'undo') { delete recOf(state.cur)[k]; render(); return; }
+      if (a === 'note') {
+        const item = itemsOf(demand()).find(x => keyOf(x) === k);
+        if (item) openNote(item);
+        return;
+      }
+    }
+    const nav = t.closest('[data-nav]');
+    if (nav) { state.screen = nav.dataset.nav; state.overlay = null; state.scroll = 0; render(); return; }
+    const sp = t.closest('[data-s]');
+    if (sp) { state.space = sp.dataset.s; state.overlay = null; state.scroll = 0; render(); return; }
+    const card2 = t.closest('[data-key]');
+    if (card2) { const k = card2.dataset.key; state.open[k] = !state.open[k]; render(); return; }
+    const dc = t.closest('[data-d]');
+    if (dc) {
+      const d = DEMANDS.find(x => x.id === dc.dataset.d);
+      if (!ready(d)) { toast(d.name + ' 的清单还在电脑上，先解读再来现场'); return; }
+      state.cur = d.id; state.space = spacesOf(d)[0]; state.screen = 'intro'; state.scroll = 0; render(); return;
+    }
+    if (t.id === 'spaces') { state.overlay = { kind:'spaces' }; render(); return; }
+    if (t.id === 'go') { state.screen = 'field'; state.scroll = 0; render(); return; }
+    if (t.id === 'end') { askEnd(); return; }
+    if (t.id === 'prev') { moveSpace(-1); return; }
+    if (t.id === 'next') { moveSpace(1); return; }
+    if (t.id === 'copy') {
+      const done = () => toast('速记已复制');
+      if (navigator.clipboard) navigator.clipboard.writeText(exportText()).then(done, done); else done();
+    }
+  });
+
+  render();
+}
+</script>
+</body>
+</html>
