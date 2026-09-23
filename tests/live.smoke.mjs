@@ -78,8 +78,17 @@ async function checkApp(label, url, selector, extra) {
   ok(res.status === 200, `${label}返回 200（实际 ${res.status}）`);
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.login', { timeout: 30000 });
-  await page.locator('.login button[type="submit"]').click();
-  await page.waitForSelector(selector, { timeout: 30000 });
+  await page.waitForTimeout(800); // 等 React 水合：水合前点击会触发原生表单提交
+  let entered = false;
+  for (let attempt = 0; attempt < 6 && !entered; attempt += 1) {
+    await page.locator('.login button[type="submit"]').click().catch(() => {});
+    entered = await page
+      .waitForSelector(selector, { timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
+  }
+  ok(entered, `${label}登录后进得去`);
+  if (!entered) return;
   ok(await extra(), `${label}的演示动线跑得通`);
 }
 
@@ -90,7 +99,15 @@ await checkApp('桌面工作台', new URL('studio/', URL_TO_CHECK).href, '.dcard
 });
 
 await checkApp('现场端', new URL('onsite/', URL_TO_CHECK).href, '.dc', async () => {
-  return (await page.locator('.dc').count()) === 3;
+  const cards = await page.locator('.dc').count();
+  // 可装到手机主屏幕：service worker 注册上了，manifest 也在
+  const ready = await page.evaluate(async () => {
+    const sw = 'serviceWorker' in navigator ? (await navigator.serviceWorker.getRegistrations()).length > 0 : false;
+    const link = document.querySelector('link[rel="manifest"]');
+    const manifest = link ? await fetch(link.href).then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
+    return sw && !!manifest && manifest.start_url === './';
+  });
+  return cards === 3 && ready;
 });
 
 await browser.close();
