@@ -64,6 +64,8 @@ const totalItems = await count(page, '.item');
 ok(totalItems >= 15, '清单条目数 ' + totalItems + ' 条（不设条数上限）');
 ok((await text(page, '.grp')).startsWith('基本信息'), '「基本信息」排在第一个分组');
 ok((await page.locator('.grp').allInnerTexts()).some((t) => t.startsWith('主卫')), '卫生间按实例拆出「主卫」分组');
+const groups = await page.locator('.grp').allInnerTexts();
+ok(groups.findIndex((t) => t.startsWith('卫生间')) < groups.findIndex((t) => t.startsWith('主卫')), '「卫生间」公共条件组排在「主卫」之前');
 ok((await text(page, '.card h3')).includes('必问'), '顶部给出必问计数');
 ok((await page.locator('.badge.b-src-both').count()) >= 3, '推导项与通用项已合并（存在「需求推导 + 通用核实」标记）');
 ok((await page.locator('.item').first().innerText()).includes('为什么问'), '每条含「为什么问」');

@@ -115,6 +115,8 @@ await page.screenshot({ path: path.join(SHOT, 'm04-记一笔.png') });
 await page.locator('#spaces').click();
 await page.waitForTimeout(200);
 ok(await count(page, '.rowbtn') === 8, '换空间抽屉列出 8 个空间');
+const rows = await page.locator('.rowbtn').allInnerTexts();
+ok(rows.findIndex((t) => t.startsWith('卫生间')) < rows.findIndex((t) => t.startsWith('主卫')), '卫生间的公共条件组排在「主卫」之前');
 ok((await text(page, '.rowbtn.on')).includes('基本信息'), '标注当前所在空间');
 await page.screenshot({ path: path.join(SHOT, 'm05-换空间.png') });
 await page.locator('.rowbtn', { hasText: '厨房' }).click();
