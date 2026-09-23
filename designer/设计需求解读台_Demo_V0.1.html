@@ -449,6 +449,10 @@ function viewList(d) {
 }
 
 /* ===================== 外发前确认 ===================== */
+/* 本次生效的外发策略：策略是可配置的数据，公司按合规口径调整（对应产品文档 7.7） */
+const POLICY = { name: '默认合规策略', version: 'v1' };
+const policyNote = () => '<div class="note">本次生效：' + POLICY.name + ' ' + POLICY.version +
+  ' · 不外发 / 泛化后外发 / 原样外发三级策略 · 自由文本默认不勾选 · 可按公司合规要求调整</div>';
 function openSend() {
   const d = demand();
   const noSend = [], gen = [], free = [], raw = [];
@@ -460,7 +464,7 @@ function openSend() {
     if (isFreeText(f)) { const r = redact(show(v)); free.push([f.id, f.label, r.text, r.hits]); return; }
     raw.push([f.label, show(v)]);
   });
-  const blocks =
+  const blocks = policyNote() +
     grp('不外发｜留在本机', '这些内容不进入任何请求', noSend.map(([k, v]) => line(k, v)).join('')) +
     grp('泛化后外发', '本地先转成粗粒度描述', gen.map(([k, v]) => line(k, v)).join('')) +
     grp('自由文本｜默认不勾选', '唯一可能夹带姓名的类别，需要你主动判断', free.map(([id, k, t, hits]) =>

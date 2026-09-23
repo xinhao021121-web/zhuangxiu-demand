@@ -96,6 +96,7 @@ await page.locator('#btn-replay').click();
 await page.waitForTimeout(300);
 ok(await page.locator('#modal').evaluate((el) => el.classList.contains('on')), '重新解读同样先弹外发确认');
 const modal1 = await text(page, '#modal');
+ok(modal1.includes('默认合规策略'), '确认界面标出本次生效的外发策略');
 ok(modal1.includes('不外发'), '确认界面标出「不外发」分组');
 ok(modal1.includes('泛化后外发'), '确认界面标出「泛化后外发」分组');
 ok(modal1.includes('自由文本｜默认不勾选'), '确认界面标出自由文本分组');
