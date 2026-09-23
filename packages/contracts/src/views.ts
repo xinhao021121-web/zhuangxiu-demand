@@ -90,6 +90,32 @@ export const DemandSheetDetailSchema = z.object({
   checklist: ChecklistViewSchema.nullable(),
 });
 
+/** 现场端要对照「房主原来填的」：按字段键给出标签与取值。 */
+export const FieldValuesSchema = z.record(
+  z.string(),
+  z.object({ label: z.string(), value: z.string() }),
+);
+
+export const ChecklistSummarySchema = z.object({
+  checklist: ChecklistViewSchema,
+  demandSheetId: z.string(),
+  demandName: z.string(),
+  overview: z.string(),
+  submittedAt: z.string(),
+  fieldValues: FieldValuesSchema,
+  stats: z.object({
+    total: z.number().int().nonnegative(),
+    asked: z.number().int().nonnegative(),
+    skip: z.number().int().nonnegative(),
+    left: z.number().int().nonnegative(),
+    must: z.number().int().nonnegative(),
+    mustAsked: z.number().int().nonnegative(),
+  }),
+  recordMarkdown: z.string(),
+});
+
+export type FieldValues = z.infer<typeof FieldValuesSchema>;
+export type ChecklistSummaryView = z.infer<typeof ChecklistSummarySchema>;
 export type Progress = z.infer<typeof ProgressSchema>;
 export type DemandSheetSummary = z.infer<typeof DemandSheetSummarySchema>;
 export type UnderstandingView = z.infer<typeof UnderstandingViewSchema>;

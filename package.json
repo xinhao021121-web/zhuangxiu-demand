@@ -7,7 +7,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "build:spec": "python tools/build_field_spec.py",
-    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo && pnpm run test:designer && pnpm run test:studio && pnpm run test:onsite",
+    "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo && pnpm run test:designer && pnpm run test:studio && pnpm run test:onsite && pnpm run test:onsite-app",
     "test:unit": "pnpm --dir packages/devtools exec vitest run --root ../..",
     "test:api": "pnpm --dir packages/devtools exec vitest run --root ../.. tests/api",
     "api:dev": "pnpm --dir services/api exec tsx src/server.ts",
@@ -15,6 +15,9 @@
     "studio:build": "pnpm --dir studio run build",
     "test:app": "node tests/app.e2e.mjs",
     "test:studio": "node tests/studio.e2e.mjs",
+    "test:onsite-app": "node tests/onsite.e2e.mjs",
+    "onsite:dev": "pnpm --dir onsite run dev",
+    "onsite:build": "pnpm --dir onsite run build",
     "test:demo": "node tests/demo.smoke.mjs && node tests/mobile.smoke.mjs",
     "test:designer": "node tests/designer.smoke.mjs",
     "test:onsite": "node tests/onsite.smoke.mjs",

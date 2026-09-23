@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@zx/field-spec": ["../packages/field-spec/src/index.ts"],
+      "@zx/rules": ["../packages/rules/src/index.ts"],
+      "@zx/summary": ["../packages/summary/src/index.ts"],
+      "@zx/checklist": ["../packages/checklist/src/index.ts"],
+      "@zx/redact": ["../packages/redact/src/index.ts"],
+      "@zx/contracts": ["../packages/contracts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+}

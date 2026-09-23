@@ -24,7 +24,7 @@ import type { GenerateInput } from './pipeline';
 import type { ModelProvider } from './model/provider';
 import type { ApiEnv } from './env';
 import type { Repo } from './repo';
-import { toChecklistView, toDetail, toDomainChecklist, toSummary } from './views';
+import { toChecklistSummary, toChecklistView, toDetail, toDomainChecklist, toSummary } from './views';
 
 type Env = { Variables: { user: User } };
 
@@ -226,19 +226,7 @@ export function createApp(deps: AppDeps) {
   app.get('/checklists/:id/summary', (c) => {
     const stored = repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
-    const sheet = repo.getDemandSheet(stored.demandSheetId)!;
-    const records = repo.listSiteRecords(stored.id);
-    return c.json({
-      checklist: toChecklistView(stored),
-      demandName: sheet.demandName,
-      overview: buildOverview(sheet.payload, []),
-      stats: siteStats(toDomainChecklist(stored), records),
-      recordMarkdown: buildSiteRecordMarkdown(toDomainChecklist(stored), records, {
-        name: sheet.demandName,
-        overview: buildOverview(sheet.payload, []),
-        submitted: sheet.submittedAt,
-      }),
-    });
+    return c.json(toChecklistSummary(repo, stored));
   });
 
   app.get('/checklists/:id/preview-outbound', (c) => {

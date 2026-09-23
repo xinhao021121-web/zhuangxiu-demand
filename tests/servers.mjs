@@ -15,8 +15,10 @@ const NEXT = path.join(ROOT, 'studio', 'node_modules', 'next', 'dist', 'bin', 'n
 
 export const API_PORT = process.env.API_PORT ?? '8787';
 export const STUDIO_PORT = process.env.STUDIO_PORT ?? '3000';
+const ONSITE_PORT = process.env.ONSITE_PORT ?? '4200';
 export const API_BASE = `http://127.0.0.1:${API_PORT}`;
 export const STUDIO_BASE = `http://127.0.0.1:${STUDIO_PORT}`;
+export const ONSITE_BASE = `http://127.0.0.1:${ONSITE_PORT}`;
 
 function spawnNode(args, options = {}) {
   return spawn(process.execPath, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], ...options });
@@ -73,3 +75,40 @@ export function stop(child) {
     // 已经退出了
   }
 }
+
+export async function startOnsite() {
+  const child = spawnNode([path.join(ROOT, 'onsite', 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', ONSITE_PORT, '--host', '127.0.0.1'], {
+    cwd: path.join(ROOT, 'onsite'),
+  });
+  child.stdout.on('data', () => {});
+  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
+  await waitFor(ONSITE_BASE);
+  return child;
+}
+
+/** 现场端同样要有构建产物：vite preview 只认 dist。 */
+export function ensureOnsiteBuild() {
+  const index = path.join(ROOT, 'onsite', 'dist', 'index.html');
+  if (fs.existsSync(index)) return;
+  const result = spawnSync(path.join(ROOT, 'onsite', 'node_modules', 'vite', 'bin', 'vite.js'), ['build'], {
+    cwd: path.join(ROOT, 'onsite'),
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) throw new Error('vite build 失败');
+}
+
+/** 直接用 API 造一份清单：现场端只消费清单，生成在桌面端做。 */
+export async function generateChecklistFor(demandSheetId) {
+  const login = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ phone: '13800000002', code: '000000' }),
+  }).then((r) => r.json());
+  const created = await fetch(`${API_BASE}/demand-sheets/${demandSheetId}/checklist`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${login.token}` },
+    body: JSON.stringify({}),
+  }).then((r) => r.json());
+  return created;
+}
+

@@ -1,14 +1,22 @@
 /** 接口的读模型投影：把仓储里的行拼成界面直接能用的形状。 */
 
-import { recommendStats } from '@zx/field-spec';
+import { getValue, labelOf, recommendStats, splitKey } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
-import { openQuestions } from '@zx/checklist';
-import type { Checklist, ChecklistGroup, OpenQuestion } from '@zx/checklist';
+import { buildSiteRecordMarkdown, openQuestions, siteStats } from '@zx/checklist';
+import type { Checklist, ChecklistGroup, OpenQuestion, SiteRecord } from '@zx/checklist';
 import { suggestionsOf } from '@zx/rules';
 import { buildOverview } from '@zx/summary';
 import { DEFAULT_POLICY, previewOutbound } from '@zx/redact';
 import type { Understanding } from '@zx/contracts';
-import type { ChecklistView, DemandSheetDetail, DemandSheetSummary, UnderstandingView } from '@zx/contracts';
+import { show } from '@zx/redact';
+import type {
+  ChecklistSummaryView,
+  ChecklistView,
+  DemandSheetDetail,
+  DemandSheetSummary,
+  FieldValues,
+  UnderstandingView,
+} from '@zx/contracts';
 import type { DemandSheetRow, Repo, StoredChecklist } from './repo';
 
 const EMPTY_UNDERSTANDING: Understanding = { profile: [], demands: [], conflicts: [], derivedItems: [] };
@@ -128,5 +136,40 @@ export function toDetail(repo: Repo, sheet: DemandSheetRow): DemandSheetDetail {
     understanding: toUnderstandingView(sheet.payload, stored),
     outboundPreview: previewOutbound(sheet.payload, DEFAULT_POLICY),
     checklist: stored ? toChecklistView(stored) : null,
+  };
+}
+
+/** 现场端要对照房主原填：把清单引用到的字段拉成一张「字段键 → 标签与取值」的表。 */
+export function toFieldValues(model: FormModel, checklist: Checklist): FieldValues {
+  const out: FieldValues = {};
+  checklist.items.forEach((item) => {
+    item.relatedFields.forEach((fieldKey) => {
+      if (out[fieldKey]) return;
+      const [, id] = splitKey(fieldKey);
+      out[fieldKey] = { label: labelOf(id), value: show(getValue(model, fieldKey)) };
+    });
+  });
+  return out;
+}
+
+/** 现场端的首页与量房记录：清单 + 统计 + 速记，一次给全。 */
+export function toChecklistSummary(repo: Repo, stored: StoredChecklist): ChecklistSummaryView {
+  const sheet = repo.getDemandSheet(stored.demandSheetId)!;
+  const domain = toDomainChecklist(stored);
+  const records = repo.listSiteRecords(stored.id) as SiteRecord[];
+  const heading = {
+    name: sheet.demandName,
+    overview: buildOverview(sheet.payload, []),
+    submitted: sheet.submittedAt,
+  };
+  return {
+    checklist: toChecklistView(stored),
+    demandSheetId: sheet.id,
+    demandName: sheet.demandName,
+    overview: heading.overview,
+    submittedAt: sheet.submittedAt,
+    fieldValues: toFieldValues(sheet.payload, domain),
+    stats: siteStats(domain, records),
+    recordMarkdown: buildSiteRecordMarkdown(domain, records, heading),
   };
 }

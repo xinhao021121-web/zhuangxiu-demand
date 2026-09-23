@@ -17,6 +17,7 @@
 app/                  Taro 应用（weapp + h5）
 services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
 studio/               桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
+onsite/               现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录
 packages/
   field-spec/         字段规格（由字段清单 Excel 导出）、表单模型与校验
   rules/              规则引擎：命中、排序、去重、静默状态机、写回动作
@@ -56,6 +57,7 @@ pnpm run build:weapp     # 微信小程序产物 → app/dist/weapp
 pnpm run test:demo       # 早期 Demo 的冒烟测试（回归用）
 pnpm run api:dev        # 起 API 服务（默认 http://127.0.0.1:8787，种子数据自动灌入）
  pnpm run studio:dev     # 起桌面工作台（默认 http://127.0.0.1:3000，需要 API 一起跑）
+ pnpm run onsite:dev     # 起现场端（默认 http://127.0.0.1:5174，需要 API 一起跑）
 pnpm run test:api       # 只跑 API 层测试
 pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 ```
@@ -84,6 +86,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
 | 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、宽窄屏布局 |
+| 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
 | H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
