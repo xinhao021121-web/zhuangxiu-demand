@@ -22,11 +22,31 @@ export interface FieldSpec {
   applies: string;
 }
 
+/** 清单档位：必问 = 影响可行性或方向；建议问 = 影响成本或工期。 */
+export type SurveyTier = 'must' | 'suggest';
+
+/**
+ * 量房确认清单的一项（field-spec 的静态资产，16 项）。
+ *
+ * relatedFields / object / space / section 是给解读台用的机器可读映射：
+ * 合并去重按「space + object」，触发判断与分区归属按 relatedFields，
+ * 换 postgres 或换前端都不改这份资产。
+ */
 export interface SurveyItem {
   no: number;
   item: string;
   goal: string;
+  /** 人读的来源备注，保留原样 */
   source: string;
+  /** 机器可读的来源字段 ID；空数组表示结构类，业主无法判断 */
+  relatedFields: string[];
+  /** 核实对象：与推导项合并去重的键之一 */
+  object: string;
+  /** 归属分区：带实例的分区写具体实例名 */
+  space: string;
+  /** 分区名：space 对应的实例在当前需求单里不存在时，退回到这一组 */
+  section: string;
+  tier: SurveyTier;
 }
 
 export interface FieldGroup {

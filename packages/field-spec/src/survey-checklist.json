@@ -3,96 +3,176 @@
   "no": 1,
   "item": "各房间实际净尺寸与层高",
   "goal": "定家具尺寸、吊顶与中央空调可行性",
-  "source": "层高（原 base_height）"
+  "source": "层高（原 base_height）",
+  "relatedFields": ["base_height"],
+  "object": "层高吊顶",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "must"
  },
  {
   "no": 2,
   "item": "承重墙、梁位与门窗洞口位置",
   "goal": "判断可拆改范围，避免违规",
-  "source": "结构类，业主无法判断"
+  "source": "结构类，业主无法判断",
+  "relatedFields": [],
+  "object": "结构",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "must"
  },
  {
   "no": 3,
   "item": "上下水点位、排水立管与管井",
   "goal": "厨卫布局与设备落位",
-  "source": "排水点位（原 dev_drain）"
+  "source": "排水点位（原 dev_drain）",
+  "relatedFields": ["dev_drain"],
+  "object": "上下水",
+  "space": "设备与系统",
+  "section": "设备与系统",
+  "tier": "must"
  },
  {
   "no": 4,
   "item": "同层排水与马桶移位条件",
   "goal": "决定马桶位置能否调整",
-  "source": "马桶类型（原 wc_toilet）"
+  "source": "马桶类型（原 wc_toilet）",
+  "relatedFields": ["wc_toilet"],
+  "object": "马桶移位",
+  "space": "主卫",
+  "section": "卫生间",
+  "tier": "suggest"
  },
  {
   "no": 5,
   "item": "燃气表位置与排烟条件",
   "goal": "开放式厨房的合规与油烟方案",
-  "source": "厨房形式（原 kt_form）"
+  "source": "厨房形式（原 kt_form）",
+  "relatedFields": ["kt_form"],
+  "object": "排烟",
+  "space": "厨房",
+  "section": "厨房",
+  "tier": "must"
  },
  {
   "no": 6,
   "item": "配电箱回路容量、弱电箱与入户网络",
   "goal": "决定电路改造与网络方案",
-  "source": "电路细节、网络需求"
+  "source": "电路细节、网络需求",
+  "relatedFields": ["dev_circuit", "dev_smart"],
+  "object": "配电",
+  "space": "设备与系统",
+  "section": "设备与系统",
+  "tier": "must"
  },
  {
   "no": 7,
   "item": "空调外机位与冷凝水排放",
   "goal": "确认中央空调或分体机可行性",
-  "source": "空调类型（原 dev_ac）"
+  "source": "空调类型（原 dev_ac）",
+  "relatedFields": ["dev_ac"],
+  "object": "空调外机",
+  "space": "设备与系统",
+  "section": "设备与系统",
+  "tier": "suggest"
  },
  {
   "no": 8,
   "item": "采暖分水器与暖气片位置",
   "goal": "地暖或暖气片的施工条件",
-  "source": "取暖方式（原 dev_heat）"
+  "source": "取暖方式（原 dev_heat）",
+  "relatedFields": ["dev_heat"],
+  "object": "采暖",
+  "space": "设备与系统",
+  "section": "设备与系统",
+  "tier": "suggest"
  },
  {
   "no": 9,
   "item": "阳台承重、封窗与排水条件",
   "goal": "封窗方案与洗衣机、拖把池落位",
-  "source": "是否封窗、阳台功能"
+  "source": "是否封窗、阳台功能",
+  "relatedFields": ["bl_window"],
+  "object": "家政封窗",
+  "space": "阳台",
+  "section": "阳台",
+  "tier": "must"
  },
  {
   "no": 10,
   "item": "墙体材质与可开槽条件",
   "goal": "决定开槽与墙面处理方式",
-  "source": "结构类，业主无法判断"
+  "source": "结构类，业主无法判断",
+  "relatedFields": [],
+  "object": "墙体",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "must"
  },
  {
   "no": 11,
   "item": "旧房管线年限、防水与墙体状况",
   "goal": "翻新项目的隐蔽工程范围",
-  "source": "房屋现状（原 base_house_state）"
+  "source": "房屋现状（原 base_house_state）",
+  "relatedFields": ["base_house_state"],
+  "object": "旧房隐蔽",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "must"
  },
  {
   "no": 12,
   "item": "采光朝向与噪音源",
   "goal": "窗帘、隔音与灯光方案",
-  "source": "是否需要隔音（原 br_quiet）"
+  "source": "是否需要隔音（原 br_quiet）",
+  "relatedFields": ["br_quiet"],
+  "object": "采光噪音",
+  "space": "主卧",
+  "section": "主卧",
+  "tier": "suggest"
  },
  {
   "no": 13,
   "item": "定制柜安装深度与墙面垂直度",
   "goal": "柜体能否做到顶、是否需补板",
-  "source": "柜体制作方式"
+  "source": "柜体制作方式",
+  "relatedFields": ["cabinets_type"],
+  "object": "柜体收纳",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "suggest"
  },
  {
   "no": 14,
   "item": "地面完成面高度衔接",
   "goal": "地暖、地板的完成面与门槛关系",
-  "source": "取暖方式（原 dev_heat）"
+  "source": "取暖方式（原 dev_heat）",
+  "relatedFields": ["dev_heat"],
+  "object": "地面完成面",
+  "space": "设备与系统",
+  "section": "设备与系统",
+  "tier": "suggest"
  },
  {
   "no": 15,
   "item": "大件电器型号与尺寸确认",
   "goal": "冰箱、洗碗机、热水器的预留条件",
-  "source": "冰箱与洗碗机需求"
+  "source": "冰箱与洗碗机需求",
+  "relatedFields": ["kt_fridge", "kt_dishwasher"],
+  "object": "大件电器",
+  "space": "厨房",
+  "section": "厨房",
+  "tier": "suggest"
  },
  {
   "no": 16,
   "item": "入户门与窗户是否更换及尺寸",
   "goal": "更换周期与施工顺序",
-  "source": "门窗相关需求"
+  "source": "门窗相关需求",
+  "relatedFields": [],
+  "object": "门窗",
+  "space": "基本信息",
+  "section": "认识你家",
+  "tier": "suggest"
  }
 ]

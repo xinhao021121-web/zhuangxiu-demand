@@ -1,0 +1,15 @@
+{
+  "name": "@zx/redact",
+  "version": "0.1.0",
+  "private": true,
+  "description": "外发脱敏：字段级三级策略、自由文本识别与替换、外发 payload 与审计记录，零框架依赖",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@zx/field-spec": "workspace:*"
+  }
+}

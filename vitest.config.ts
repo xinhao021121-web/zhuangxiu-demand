@@ -16,6 +16,8 @@ export default {
       '@zx/rules': at('packages', 'rules', 'src', 'index.ts'),
       '@zx/summary': at('packages', 'summary', 'src', 'index.ts'),
       '@zx/data': at('packages', 'data', 'src', 'index.ts'),
+      '@zx/checklist': at('packages', 'checklist', 'src', 'index.ts'),
+      '@zx/redact': at('packages', 'redact', 'src', 'index.ts'),
     },
   },
   test: {

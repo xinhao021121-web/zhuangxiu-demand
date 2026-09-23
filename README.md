@@ -9,7 +9,7 @@
 - Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
 - 手机端 Demo（现场量房）：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
 - 正式实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
-- 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储，零框架依赖）
+- 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储、清单判据、脱敏与外发，零框架依赖）
 
 ## 仓库结构
 
@@ -20,6 +20,8 @@ packages/
   rules/              规则引擎：命中、排序、去重、静默状态机、写回动作
   summary/            需求摘要与量房确认清单文本
   data/               草稿读写、版本迁移、提交与埋点
+  checklist/          量房沟通清单：四类来源、判据筛选、合并去重、排序计数、导出
+  redact/             外发脱敏：字段级三级策略、自由文本替换、外发 payload 与审计记录
   devtools/           单测与类型检查用的开发依赖
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 产品文档与技术方案
@@ -75,7 +77,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
-| 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移 |
+| 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发 |
 | H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
