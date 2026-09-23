@@ -40,6 +40,8 @@ export interface DeepSeekOptions {
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
+  /** 输出上限：默认 4096 会把长需求单的 JSON 截断，这里给到模型支持的上限 */
+  maxTokens?: number;
   fetchImpl?: typeof fetch;
 }
 
@@ -47,6 +49,7 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
   const baseUrl = options.baseUrl ?? 'https://api.deepseek.com';
   const model = options.model ?? 'deepseek-chat';
   const timeoutMs = options.timeoutMs ?? 120_000;
+  const maxTokens = options.maxTokens ?? 8192;
   const doFetch = options.fetchImpl ?? fetch;
 
   return {
@@ -64,6 +67,7 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
           signal: controller.signal,
           body: JSON.stringify({
             model,
+            max_tokens: maxTokens,
             response_format: { type: 'json_object' },
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
@@ -80,9 +84,15 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
         if (!response.ok) {
           throw new Error(`DeepSeek 返回 ${response.status}`);
         }
-        const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-        const content = body.choices?.[0]?.message?.content;
+        const body = (await response.json()) as {
+          choices?: { message?: { content?: string }; finish_reason?: string }[];
+        };
+        const choice = body.choices?.[0];
+        const content = choice?.message?.content;
         if (!content) throw new Error('DeepSeek 返回里没有内容');
+        if (choice?.finish_reason === 'length') {
+          throw new Error('DeepSeek 输出被截断（finish_reason=length），调大 max_tokens 或减少一次外发的字段');
+        }
         try {
           return JSON.parse(stripFence(content)) as unknown;
         } catch {

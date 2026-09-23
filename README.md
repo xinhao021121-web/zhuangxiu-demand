@@ -59,6 +59,7 @@ pnpm run api:dev        # 起 API 服务（默认 http://127.0.0.1:8787，种子
  pnpm run studio:dev     # 起桌面工作台（默认 http://127.0.0.1:3000，需要 API 一起跑）
  pnpm run onsite:dev     # 起现场端（默认 http://127.0.0.1:5174，需要 API 一起跑）
 pnpm run test:api       # 只跑 API 层测试
+pnpm run measure:model  # 真实模型实测（三个种子场景各跑一次，出耗时/降级/合并口径；需要 DEEPSEEK_API_KEY）
 pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 ```
 
