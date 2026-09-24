@@ -76,11 +76,11 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 ## 上线
 
-**入口页（投递给招聘方就用这个）**：<https://demand-studio.pages.dev/>
+**入口页（投递给招聘方就用这个）**：<https://wenxu.xinhao02.ccwu.cc/>
 
-| 入口 | Cloudflare Pages（主） | GitHub Pages（备份，同一份产物） |
+| 入口 | 自有域名（主） | Cloudflare Pages / GitHub Pages（备份，同一份产物） |
 | --- | --- | --- |
-| 入口页 | <https://demand-studio.pages.dev/> | <https://xinhao021121-web.github.io/zhuangxiu-demand/> |
+| 入口页 | <https://wenxu.xinhao02.ccwu.cc/> | <https://demand-studio.pages.dev/> · <https://xinhao021121-web.github.io/zhuangxiu-demand/> |
 | 采集端（房主填需求单，手机可装机） | …`/app/` | …`/app/` |
 | 解读端 · 桌面工作台（设计师出门前用） | …`/studio/` | …`/studio/` |
 | 现场端 PWA（现场照着问） | …`/onsite/` | …`/onsite/` |

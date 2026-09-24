@@ -58,5 +58,65 @@
     "item": "要不要做回水管实现即开即热，热水器放哪",
     "goal": "影响热水器位置与回水管预留，做错要返工",
     "onsiteChecks": ["热水器位置与排烟条件", "回水管能否预留"]
+  },
+  {
+    "fieldId": "br_secondhand",
+    "object": "次净衣区",
+    "space": "主卧",
+    "section": "主卧",
+    "tier": "suggest",
+    "item": "穿过的衣服挂哪：要不要在主卧留一个临时挂衣区",
+    "goal": "影响衣柜分区与挂衣/叠放的比例",
+    "onsiteChecks": ["主卧可用的挂衣长度与转角位置", "是否与衣柜共用同一面墙"]
+  },
+  {
+    "fieldId": "sc_housekeeping",
+    "object": "家政柜",
+    "space": "收纳与家政",
+    "section": "收纳与家政",
+    "tier": "suggest",
+    "item": "吸尘器、拖把、梯子这些放哪：要不要留一个家政柜",
+    "goal": "影响家政柜位置、尺寸与柜内电源",
+    "onsiteChecks": ["家政柜落位与就近的水电条件", "柜内是否需要插座（吸尘器、洗地机充电）"]
+  },
+  {
+    "fieldId": "sc_valuable",
+    "object": "贵重物品存放",
+    "space": "收纳与家政",
+    "section": "收纳与家政",
+    "tier": "suggest",
+    "item": "贵重物品要不要单独存放：保险箱还是柜内暗格",
+    "goal": "影响柜体加固、暗格做法与电源预留",
+    "onsiteChecks": ["柜体承重与固定条件", "是否需要在柜内预留电源与检修口"]
+  },
+  {
+    "fieldId": "wc_basin",
+    "object": "台盆形式",
+    "space": "卫生间",
+    "section": "卫生间",
+    "tier": "suggest",
+    "item": "台盆做台下盆还是台上盆：台面怎么收口、要不要加固",
+    "goal": "影响台面开孔、加固方式与柜内净深",
+    "onsiteChecks": ["台面宽度与台下盆加固条件", "下水位置与柜内净深是否够"]
+  },
+  {
+    "fieldId": "bl_hanger",
+    "object": "晾晒方式",
+    "space": "阳台",
+    "section": "阳台",
+    "tier": "must",
+    "item": "晾衣服怎么晒：电动晾衣架、手摇还是主要靠烘干",
+    "goal": "影响吊顶空间、顶上电源与排水预留，做错要返工",
+    "onsiteChecks": ["顶上净高与吊顶可占用空间", "晾衣架的电源与顶面承重条件"]
+  },
+  {
+    "fieldId": "kt_hood",
+    "object": "油烟机形式",
+    "space": "厨房",
+    "section": "厨房",
+    "tier": "must",
+    "item": "油烟机用侧吸、顶吸还是集成灶：排烟管怎么走",
+    "goal": "影响橱柜尺寸、烟道开孔与吊柜布局，做错要返工",
+    "onsiteChecks": ["烟道位置与排烟管走向", "吊柜与油烟机的尺寸联动"]
   }
 ]

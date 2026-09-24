@@ -4,7 +4,8 @@
 
 | 托管 | 地址 | 发布命令 |
 | --- | --- | --- |
-| Cloudflare Pages | <https://demand-studio.pages.dev/> | `pnpm run deploy:cf-pages` |
+| 自有域名（Cloudflare Pages 项目 `demand-studio` 的自定义域名） | <https://wenxu.xinhao02.ccwu.cc/> | `pnpm run deploy:cf-pages`（发到 Pages 项目，自定义域名自动跟随） |
+| Cloudflare Pages（默认域名） | <https://demand-studio.pages.dev/> | 同上 |
 | GitHub Pages | <https://xinhao021121-web.github.io/zhuangxiu-demand/> | `pnpm run deploy:pages` |
 
 两家的路径前缀不同（Pages 挂在根、GitHub Pages 的仓库页挂在 `/<repo>/` 下），所以前缀是构建参数：

@@ -6,6 +6,7 @@ import {
   SECTIONS,
   SURVEY_CHECKLIST,
   UNCLEAR_CHECKLIST,
+  UNCLEAR_NUMBER_LABEL,
   addInstance,
   createModel,
   instanceName,
@@ -57,9 +58,10 @@ describe('字段规格', () => {
     const withOption = FIELD_SPEC.filter((f) => f.options.some((o) => UNCLEAR.test(o)));
     const mapped = new Set(SURVEY_CHECKLIST.flatMap((s) => s.relatedFields));
 
-    // 采集端目前在这 9 个专业判断字段上给了该选项；字段清单变了要回来重新决定
-    expect(withOption).toHaveLength(9);
-    expect(UNCLEAR_CHECKLIST).toHaveLength(6);
+    // 采集端现在在这 17 个字段上给了该选项（原有 9 个专业判断字段 + 自测记录列的 8 个术语字段）；
+    // 字段清单变了要回来重新决定这两条数
+    expect(withOption).toHaveLength(17);
+    expect(UNCLEAR_CHECKLIST).toHaveLength(12);
 
     const missing = withOption.filter((f) => !mapped.has(f.id) && !UNCLEAR_CHECKLIST.some((u) => u.fieldId === f.id));
     expect(missing.map((f) => f.id), '这些字段答「不清楚」时没有可问的条目').toEqual([]);
@@ -74,6 +76,14 @@ describe('字段规格', () => {
   it('待定项资产与通用清单不撞核实对象，否则会互相并掉', () => {
     const surveyObjects = new Set(SURVEY_CHECKLIST.map((s) => s.object));
     expect(UNCLEAR_CHECKLIST.filter((u) => surveyObjects.has(u.object)).map((u) => u.object)).toEqual([]);
+  });
+
+  it('数字字段的兜底文案必须能被清单侧认出来，否则房主说了等于没说', () => {
+    const UNCLEAR = /不清楚|不确定|听设计师建议|还没想好|说不好/;
+    expect(UNCLEAR.test(UNCLEAR_NUMBER_LABEL), `「${UNCLEAR_NUMBER_LABEL}」没被 UNCLEAR 正则识别`).toBe(true);
+    // 层高是这条兜底的典型：通用清单第 1 项「各房间实际净尺寸与层高」引用它，答不清楚能并进清单
+    expect(FIELD_SPEC.find((f) => f.id === 'base_height')?.type).toBe('数字');
+    expect(SURVEY_CHECKLIST.some((s) => s.relatedFields.includes('base_height'))).toBe(true);
   });
 
   it('空间实例：卫生间默认两个，次卧上限 4 个', () => {

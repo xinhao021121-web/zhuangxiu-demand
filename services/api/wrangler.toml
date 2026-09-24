@@ -20,8 +20,8 @@ enabled = true
 [vars]
 # 模型：演示环境用桩数据；换真模型时设 MODEL_PROVIDER=deepseek 并配 DEEPSEEK_API_KEY 这个 secret
 MODEL_PROVIDER = "fake"
-# CORS 白名单：只有这两个静态托管的来源能跨域调它（技术方案 5.3 的上线前置）
-CORS_ALLOWED_ORIGINS = "https://demand-studio.pages.dev,https://xinhao021121-web.github.io"
+# CORS 白名单：只有站点自己的来源能跨域调它（技术方案 5.3 的上线前置）
+CORS_ALLOWED_ORIGINS = "https://wenxu.xinhao02.ccwu.cc,https://demand-studio.pages.dev,https://xinhao021121-web.github.io"
 # Worker 的请求只能从 Cloudflare 边缘进来，由边缘写 X-Forwarded-For，所以这里开代理信任：
 # 不认客户端的连接地址（边缘运行时拿不到），认边缘写进来的那个头。
 TRUST_PROXY = "1"

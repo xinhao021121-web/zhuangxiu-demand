@@ -1,5 +1,14 @@
 import { Input, Text, Textarea, View } from '@tarojs/components';
-import { INSTANCE_DEF, fieldKey, getValue, instanceName, isEmptyValue, sectionStats, visibleFields } from '@zx/field-spec';
+import {
+  INSTANCE_DEF,
+  UNCLEAR_NUMBER_LABEL,
+  fieldKey,
+  getValue,
+  instanceName,
+  isEmptyValue,
+  sectionStats,
+  visibleFields,
+} from '@zx/field-spec';
 import type { FieldSpec, FormModel, InstanceState, SectionSpec } from '@zx/field-spec';
 import { useAppStore } from '../store';
 
@@ -55,18 +64,32 @@ export function Field({ model, field, inst, flashKey }: FieldProps) {
       />
     );
   } else {
+    /*
+     * 数字字段（层高、数量类）多给一个「不清楚」入口：房主手上没有这个数时说一句就把判断交给设计师，
+     * 比随手编一个数强——编出来的数会被下游当成真的。选中后存的是文案本身，
+     * 清单侧按 UNCLEAR 正则识别成「房主答不清楚的项」（packages/checklist 的 sources.ts）。
+     */
+    const unclear = field.type === '数字' && value === UNCLEAR_NUMBER_LABEL;
     control = (
       <View className="input-row">
         <Input
           className="input"
           type={field.type === '数字' ? 'number' : 'text'}
-          value={value === undefined || value === null ? '' : String(value)}
+          value={value === undefined || value === null || value === UNCLEAR_NUMBER_LABEL ? '' : String(value)}
           placeholder={field.unit || ''}
           onInput={(e) =>
             setField(key, field.type === '数字' ? (e.detail.value === '' ? '' : Number(e.detail.value)) : e.detail.value)
           }
         />
         {field.unit && field.type === '数字' ? <Text className="unit">{field.unit}</Text> : null}
+        {field.type === '数字' ? (
+          <View
+            className={`chip chip-unclear${unclear ? ' on' : ''}`}
+            onClick={() => setField(key, unclear ? '' : UNCLEAR_NUMBER_LABEL)}
+          >
+            <Text>{UNCLEAR_NUMBER_LABEL}</Text>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -215,4 +238,3 @@ export function SectionCard({ section, index, model, expanded, flashKey, onToggl
     </View>
   );
 }
-

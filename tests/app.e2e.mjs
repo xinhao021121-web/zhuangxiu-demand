@@ -122,6 +122,18 @@ function watch(page) {
   const bodyText = await page.locator('body').innerText();
   ok(bodyText.includes('主卫') || bodyText.includes('客卫'), '卫生间规则按实例分别展示');
   ok((await text(page, '#prog-num')).includes('推荐项 0/') === false, '清晰度随填写更新');
+
+  // 数字字段的兜底入口：房主手上没有层高这个数时，说一句把判断交给设计师，而不是随手编一个数
+  // （依据 research/问需_自测记录_路径C.md 2.2：全表只有层高是「答案不在房主手上」）
+  ok((await count(page, '#fi-base_height .chip-unclear')) === 1, '层高旁边有「不清楚，量房时确认」入口');
+  await page.locator('#fi-base_height .chip-unclear').click();
+  await page.waitForTimeout(200);
+  ok((await count(page, '#fi-base_height .chip-unclear.on')) === 1, '点一下就能把层高标成「不清楚」');
+  ok((await page.locator('#fi-base_height input').inputValue()) === '', '标成不清楚后不再要求填数字');
+  await page.locator('#fi-base_height .chip-unclear').click();
+  await page.waitForTimeout(200);
+  ok((await count(page, '#fi-base_height .chip-unclear.on')) === 0, '再点一下可以取消');
+
   ok((await count(page, '#resume')) === 0 || !(await has(page, '还有 0 条')), '有待看时给出断点恢复提示');
   await page.screenshot({ path: path.join(SHOT, '01-宽屏-示例数据.png') });
 

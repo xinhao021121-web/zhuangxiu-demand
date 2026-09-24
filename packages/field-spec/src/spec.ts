@@ -15,6 +15,16 @@ export const UNCLEAR_CHECKLIST = unclearJson as unknown as UnclearItem[];
 
 export const FIELD_BY_ID: Map<string, FieldSpec> = new Map(FIELD_SPEC.map((f) => [f.id, f]));
 
+/**
+ * 数字字段旁边的兜底入口（层高是典型：房主手上没有这个数，要量一次才有）。
+ *
+ * 单选 / 多选字段的兜底是字段自己的一个选项；数字字段没法带选项，所以由渲染层统一给一个：
+ * 文案里必须带「不清楚」——清单侧的 `UNCLEAR` 正则按这几个词识别「房主把判断交给设计师」，
+ * 识别到之后就进表格理解的待确认项，落得到通用清单的还会并进量房清单
+ * （层高就在通用清单第 1 项「各房间实际净尺寸与层高」里）。`tests/unit/field-spec.test.ts` 卡住这条耦合。
+ */
+export const UNCLEAR_NUMBER_LABEL = '不清楚，量房时确认';
+
 /** 空间实例定义：上限、默认实例、决定字段显隐的房型字段。 */
 export const INSTANCE_DEF: Record<string, InstanceDef> = {
   卫生间: { max: 3, defaults: ['主卫', '客卫'], typeField: 'wc_type', namePrefix: '卫生间', other: 'wc_other' },

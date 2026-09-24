@@ -25,21 +25,32 @@ SURVEY_OUT = ROOT / "packages" / "field-spec" / "src" / "survey-checklist.json"
 
 
 def build_survey() -> list[dict]:
+    """量房确认清单 16 项。
+
+    机器可读映射（relatedFields / object / space / section / tier）是后补的资产，Excel 里没有这五列，
+    所以重新生成时按序号从现有产物里保留——否则一跑构建就把这份映射冲掉，清单的合并与分区会静默退化。
+    """
     ws = openpyxl.load_workbook(BOOK)["量房确认清单"]
+    existing: dict[int, dict] = {}
+    if SURVEY_OUT.exists():
+        existing = {int(i["no"]): i for i in json.loads(SURVEY_OUT.read_text(encoding="utf-8"))}
     items = []
     for r in range(5, 40):
         no = ws.cell(r, 1).value
         item = ws.cell(r, 2).value
         if not isinstance(no, int) or not item:
             continue
-        items.append(
-            {
-                "no": no,
-                "item": item.strip(),
-                "goal": (ws.cell(r, 3).value or "").strip(),
-                "source": (ws.cell(r, 4).value or "").strip(),
-            }
-        )
+        row = {
+            "no": no,
+            "item": item.strip(),
+            "goal": (ws.cell(r, 3).value or "").strip(),
+            "source": (ws.cell(r, 4).value or "").strip(),
+        }
+        previous = existing.get(no, {})
+        for key in ("relatedFields", "object", "space", "section", "tier"):
+            if key in previous:
+                row[key] = previous[key]
+        items.append(row)
     return items
 
 
