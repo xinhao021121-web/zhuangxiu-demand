@@ -7,6 +7,15 @@ import type { Checklist, ChecklistItem, DerivedItem } from '@zx/checklist';
 import type { FormModel } from '@zx/field-spec';
 import type { TextKind } from '@zx/redact';
 
+/**
+ * 读/写能力的返回值可以是值，也可以是 Promise。
+ *
+ * 两个实现的实际形态不同：真实服务背后是存储驱动（D1 只有异步 API，所以仓储层是异步的），
+ * 演示模式背后是内存数组（同步就够）。把契约定在「可能是异步」这一侧，两边都满足，
+ * 调用方统一 `await`——同步实现 await 一个已经 resolve 的值不花代价。
+ */
+export type Maybe<T> = T | Promise<T>;
+
 export interface SheetRecord {
   id: string;
   demandName: string;
@@ -74,14 +83,14 @@ export interface EventRecord {
 
 /** 读模型需要的读能力。 */
 export interface SheetStore {
-  getDemandSheet(id: string): SheetRecord | undefined;
-  latestChecklist(demandSheetId: string): ChecklistRecord | undefined;
-  listSiteRecords(checklistId: string): SiteRecordRecord[];
+  getDemandSheet(id: string): Maybe<SheetRecord | undefined>;
+  latestChecklist(demandSheetId: string): Maybe<ChecklistRecord | undefined>;
+  listSiteRecords(checklistId: string): Maybe<SiteRecordRecord[]>;
 }
 
 /** 生成流水线需要的写能力。 */
 export interface ServiceStore extends SheetStore {
-  createOutboundRecord(record: OutboundRecordRecord): OutboundRecordRecord;
+  createOutboundRecord(record: OutboundRecordRecord): Maybe<OutboundRecordRecord>;
   createChecklist(input: {
     demandSheetId: string;
     checklist: Checklist;
@@ -91,5 +100,5 @@ export interface ServiceStore extends SheetStore {
     policyVersion: string;
     degraded: boolean;
     understanding: unknown;
-  }): ChecklistRecord;
+  }): Maybe<ChecklistRecord>;
 }

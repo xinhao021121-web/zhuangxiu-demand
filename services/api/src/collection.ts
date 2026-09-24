@@ -73,11 +73,11 @@ export function createCollectionChannel(deps: CollectionChannelDeps) {
      * 「回执」也不能变成读出别人数据的一个口子。
      */
     const id = input.submissionId ?? randomUUID();
-    if (repo.getDemandSheet(id)) {
+    if (await repo.getDemandSheet(id)) {
       return c.json({ id, submittedAt: input.submittedAt, acceptedEvents: 0, replay: true }, 200);
     }
 
-    const sheet = repo.createDemandSheet({
+    const sheet = await repo.createDemandSheet({
       id,
       demandName: input.demandName,
       schemaVersion: input.schemaVersion,
@@ -92,7 +92,7 @@ export function createCollectionChannel(deps: CollectionChannelDeps) {
 
     // 提交随带的一整批埋点（技术方案 6.11）：采纳率、不感兴趣率、填写时长的分子分母都在这里
     const acceptedEvents = input.telemetry?.events.length
-      ? repo.createEvents({
+      ? await repo.createEvents({
           demandSheetId: sheet.id,
           source: 'client',
           operator: null,

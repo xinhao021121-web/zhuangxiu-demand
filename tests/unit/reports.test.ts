@@ -82,8 +82,8 @@ function source(parts: {
 }
 
 describe('规则健康度', () => {
-  it('按规则归组：分母是展示数，拒绝率算得出来才给数', () => {
-    const reports = buildReports(
+  it('按规则归组：分母是展示数，拒绝率算得出来才给数', async () => {
+    const reports = await buildReports(
       source({
         events: [
           event('shown', { rule: 'pet-cat' }),
@@ -104,22 +104,22 @@ describe('规则健康度', () => {
     expect(budget.rejectRate).toBe(0);
   });
 
-  it('一次都没展示过时，拒绝率是 null 而不是 0', () => {
-    const reports = buildReports(source({ events: [event('ignore', { rule: 'pet-cat' })] }));
+  it('一次都没展示过时，拒绝率是 null 而不是 0', async () => {
+    const reports = await buildReports(source({ events: [event('ignore', { rule: 'pet-cat' })] }));
     expect(reports.rules[0]).toMatchObject({ ruleId: 'pet-cat', shown: 0, rejected: 1 });
     expect(reports.rules[0].rejectRate).toBeNull();
   });
 
-  it('没带规则的事件不进这张表，规则名带回触发条件', () => {
-    const reports = buildReports(source({ events: [event('shown', {}), event('shown', { rule: 'pet-cat' })] }));
+  it('没带规则的事件不进这张表，规则名带回触发条件', async () => {
+    const reports = await buildReports(source({ events: [event('shown', {}), event('shown', { rule: 'pet-cat' })] }));
     expect(reports.rules.map((r) => r.ruleId)).toEqual(['pet-cat']);
     expect(reports.rules[0].trigger).toContain('猫');
   });
 });
 
 describe('判据健康度', () => {
-  it('按「来源 · 档位」归组：条目数、被删数、删减率，推导项排最前', () => {
-    const reports = buildReports(
+  it('按「来源 · 档位」归组：条目数、被删数、删减率，推导项排最前', async () => {
+    const reports = await buildReports(
       source({
         sheets: [sheet('s1', '张先生')],
         checklists: {
@@ -142,8 +142,8 @@ describe('判据健康度', () => {
     expect(reports.criteria[0]).toMatchObject({ items: 2, removed: 1, removalRate: 50 });
   });
 
-  it('只算每份需求单最新那一份清单，删减取当前状态（撤销后不计入被删）', () => {
-    const reports = buildReports(
+  it('只算每份需求单最新那一份清单，删减取当前状态（撤销后不计入被删）', async () => {
+    const reports = await buildReports(
       source({
         sheets: [sheet('s1', '张先生')],
         checklists: { s1: checklist('s1', [item('配电#base_house_state', 'survey', 'must'), item('封窗#base_window', 'survey', 'suggest', true)]) },
@@ -163,8 +163,8 @@ describe('字段健康度', () => {
     sheet('s3', '陈先生', { dev_freshair: '不清楚' }),
   ];
 
-  it('不清楚率 = 答「不清楚」的需求单数 / 有值的需求单数', () => {
-    const reports = buildReports(source({ sheets }));
+  it('不清楚率 = 答「不清楚」的需求单数 / 有值的需求单数', async () => {
+    const reports = await buildReports(source({ sheets }));
     const air = reports.fields.find((f) => f.fieldId === 'dev_freshair')!;
     expect(air).toMatchObject({ answered: 3, unclear: 2 });
     expect(air.unclearRate).toBe(66.7);
@@ -174,8 +174,8 @@ describe('字段健康度', () => {
     expect(area.unclearRate).toBe(0);
   });
 
-  it('没问上率 = 被标「没问上」的清单条目数 / 引用到该字段的条目数', () => {
-    const reports = buildReports(
+  it('没问上率 = 被标「没问上」的清单条目数 / 引用到该字段的条目数', async () => {
+    const reports = await buildReports(
       source({
         sheets: [sheet('s1', '张先生')],
         checklists: {
@@ -223,8 +223,8 @@ describe('字段健康度', () => {
     });
   });
 
-  it('现场修正率没有来源：恒为 null，并在 unavailable 里写清为什么', () => {
-    const reports = buildReports(source({ sheets }));
+  it('现场修正率没有来源：恒为 null，并在 unavailable 里写清为什么', async () => {
+    const reports = await buildReports(source({ sheets }));
     expect(reports.fields.every((f) => f.corrected === null)).toBe(true);
     expect(reports.unavailable.map((u) => u.column)).toContain('现场修正率');
     expect(reports.unavailable[0].reason).toContain('现场记录');
@@ -232,8 +232,8 @@ describe('字段健康度', () => {
 });
 
 describe('遗漏台账', () => {
-  it('按时间倒序，带上是谁家、谁补的；没写归类时落在「说不清」', () => {
-    const reports = buildReports(
+  it('按时间倒序，带上是谁家、谁补的；没写归类时落在「说不清」', async () => {
+    const reports = await buildReports(
       source({
         sheets: [sheet('s1', '张先生')],
         events: [
@@ -247,14 +247,14 @@ describe('遗漏台账', () => {
     expect(reports.omissions[1].note).toContain('晾晒');
   });
 
-  it('没有补录过就是空台账——不是「遗漏率 0」', () => {
-    expect(buildReports(source({ sheets: [sheet('s1', '张先生')] })).omissions).toEqual([]);
+  it('没有补录过就是空台账——不是「遗漏率 0」', async () => {
+    expect((await buildReports(source({ sheets: [sheet('s1', '张先生')] }))).omissions).toEqual([]);
   });
 });
 
 describe('空数据', () => {
-  it('什么都没有时四张表都是空的，也不编出任何 0', () => {
-    const reports = buildReports(source({}));
+  it('什么都没有时四张表都是空的，也不编出任何 0', async () => {
+    const reports = await buildReports(source({}));
     expect(reports.rules).toEqual([]);
     expect(reports.criteria).toEqual([]);
     expect(reports.fields).toEqual([]);

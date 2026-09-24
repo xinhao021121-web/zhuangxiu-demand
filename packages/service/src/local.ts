@@ -129,13 +129,13 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     if (!found) throw new LocalServiceError(404, '清单不存在');
     return found;
   };
-  const requireSheet = (id: string): SheetRecord => {
-    const found = store.getDemandSheet(id);
+  const requireSheet = async (id: string): Promise<SheetRecord> => {
+    const found = await store.getDemandSheet(id);
     if (!found) throw new LocalServiceError(404, '需求单不存在');
     return found;
   };
-  const listOmissions = (sheet: SheetRecord): Omission[] =>
-    omissionLedger(store.listEvents(sheet.id), new Map([[sheet.id, sheet.demandName]]));
+  const listOmissions = async (sheet: SheetRecord): Promise<Omission[]> =>
+    omissionLedger(await store.listEvents(sheet.id), new Map([[sheet.id, sheet.demandName]]));
 
   return {
     /**
@@ -144,8 +144,8 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
      */
     async warmup(ids: string[] = seed.sheets.map((s) => s.id)) {
       for (const id of ids) {
-        if (store.latestChecklist(id)) continue;
-        if (!store.getDemandSheet(id)) continue;
+        if (await store.latestChecklist(id)) continue;
+        if (!(await store.getDemandSheet(id))) continue;
         await generateChecklist(store, provider, { demandSheetId: id, operator: '演示数据', at: now() });
       }
     },
@@ -159,7 +159,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     },
 
     async listSheets() {
-      return sheets.map((s) => toSummary(store, s));
+      return Promise.all(sheets.map((s) => toSummary(store, s)));
     },
 
     /**
@@ -183,22 +183,22 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
       };
       // 刚导入的排最前，方便看一眼；演示模式不按提交时间重排（真实服务按 submitted_at 倒序）
       sheets.unshift(sheet);
-      return toSummary(store, sheet);
+      return await toSummary(store, sheet);
     },
 
     async detail(id: string) {
-      return toDetail(store, requireSheet(id));
+      return await toDetail(store, await requireSheet(id));
     },
 
     async generate(id: string, selected?: Record<string, boolean>) {
-      requireSheet(id);
+      await requireSheet(id);
       await generateChecklist(store, provider, {
         demandSheetId: id,
         operator: current?.name ?? '演示账号',
         at: now(),
         selected,
       });
-      return toChecklistView(store.latestChecklist(id)!);
+      return toChecklistView((await store.latestChecklist(id))!);
     },
 
     async checklist(checklistId: string) {
@@ -214,7 +214,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     },
 
     async outboundRecords(demandSheetId: string) {
-      requireSheet(demandSheetId);
+      await requireSheet(demandSheetId);
       return outbound.filter((r) => r.demandSheetId === demandSheetId).reverse();
     },
 
@@ -222,12 +222,12 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     async renameSheet(id: string, demandName: string): Promise<void> {
       const name = demandName.trim();
       if (!name) throw new LocalServiceError(400, '名字不能为空');
-      requireSheet(id).demandName = name;
+      (await requireSheet(id)).demandName = name;
     },
 
     /** 遗漏补录：与 API 一样落成一条 `omission_log` 事件，台账就是这些事件本身。 */
     async addOmission(id: string, input: { space: string; category: OmissionCategory; note?: string }): Promise<Omission[]> {
-      const sheet = requireSheet(id);
+      const sheet = await requireSheet(id);
       if (!input.space?.trim()) throw new LocalServiceError(400, '补录要选一个分区');
       events.push({
         id: crypto.randomUUID(),
@@ -238,25 +238,25 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
         operator: current?.name ?? '演示账号',
         props: { space: input.space, category: input.category, note: input.note ?? '' },
       });
-      return listOmissions(sheet);
+      return await listOmissions(sheet);
     },
 
     async omissions(id: string): Promise<Omission[]> {
-      return listOmissions(requireSheet(id));
+      return await listOmissions(await requireSheet(id));
     },
 
     /** 四张回流报表：与真实服务同一份聚合（`buildReports`），只是数据在内存里。 */
     async reports(): Promise<Reports> {
-      return buildReports(store);
+      return await buildReports(store);
     },
 
     async summary(checklistId: string) {
-      return toChecklistSummary(store, requireChecklist(checklistId));
+      return await toChecklistSummary(store, requireChecklist(checklistId));
     },
 
     async siteRecords(checklistId: string) {
       const record = requireChecklist(checklistId);
-      const records = store.listSiteRecords(record.id);
+      const records = await store.listSiteRecords(record.id);
       return {
         records,
         stats: siteStats(toDomainChecklist(record), records as SiteRecord[]),
@@ -284,7 +284,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
           operator: current?.name ?? r.operator,
         });
       });
-      const records = store.listSiteRecords(record.id);
+      const records = await store.listSiteRecords(record.id);
       return { records, stats: siteStats(toDomainChecklist(record), records as SiteRecord[]) };
     },
   };

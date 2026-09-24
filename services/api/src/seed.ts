@@ -24,11 +24,11 @@ interface SeedSheet {
 export const SEED_USERS = users as unknown as SeedUser[];
 
 /** 只在空库时灌种子，重复启动不会灌两遍。 */
-export function seedDatabase(repo: Repo): boolean {
-  if (repo.listDemandSheets().length > 0) return false;
-  SEED_USERS.forEach((u) => repo.createUser(u));
-  (sheets as unknown as SeedSheet[]).forEach((s) => {
-    repo.createDemandSheet({
+export async function seedDatabase(repo: Repo): Promise<boolean> {
+  if ((await repo.listDemandSheets()).length > 0) return false;
+  for (const u of SEED_USERS) await repo.createUser(u);
+  for (const s of sheets as unknown as SeedSheet[]) {
+    await repo.createDemandSheet({
       id: s.id,
       demandName: s.demandName,
       schemaVersion: s.schemaVersion,
@@ -38,6 +38,6 @@ export function seedDatabase(repo: Repo): boolean {
       payload: s.form as never,
       aiMarks: s.aiMarks,
     });
-  });
+  }
   return true;
 }

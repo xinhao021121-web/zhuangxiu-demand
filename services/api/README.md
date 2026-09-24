@@ -76,6 +76,35 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 原因是开发与测试环境没有 Postgres；`src/db/schema.sql` 保持两边都能跑，换 Postgres 只需要
 替换 `src/repo.ts` 这一层，路由与流水线不动。
 
+## 部署：两条路线，一份 schema
+
+| 路线 | 起法 | 存储 | 说明 |
+| --- | --- | --- | --- |
+| 容器（自备服务器 / 境内云主机） | `docker compose -f deploy/api.compose.yaml up -d` | 容器卷里的 SQLite（`/data/api.sqlite`） | 要 Postgres 时换 `src/db/` 下的驱动；密钥走环境变量 |
+| Cloudflare Workers | 见下 | Cloudflare D1 | 演示环境；不用服务器，但**数据落在境外** |
+
+换存储换的是 `src/db/driver.ts` 这个异步接口的实现：`repo.ts`、路由与流水线都不动。
+
+### Workers + D1（当前演示环境的部署方式）
+
+```bash
+cd services/api
+npx wrangler d1 create zx-api                     # 产出 database_id，填进 wrangler.toml
+npx wrangler d1 execute zx-api --remote --file=src/db/schema.sql   # 建表：与容器/本机同一份 schema.sql
+npx wrangler secret put TOKEN_SECRET              # 三个密钥都走 secret，不进仓库
+npx wrangler secret put COLLECTION_SECRET
+npx wrangler secret put AUTH_CODE                 # 内部账号登录用的验证码，别用默认的 000000
+npx wrangler deploy
+```
+
+`wrangler.toml` 里的三个变量值得解释：
+
+- `CORS_ALLOWED_ORIGINS`：只有这两个静态托管来源能跨域调它；
+- `TRUST_PROXY=1`：Worker 的请求只能从 Cloudflare 边缘进来，客户端地址只能由边缘写的 `X-Forwarded-For` 给出——边缘运行时拿不到连接地址，不开这个，所有人会共用一个限流额度；
+- `COLLECTION_RATE_LIMIT` / `COLLECTION_RATE_WINDOW_SECONDS`：采集通道的限额。
+
+**上线后的一个实测结论**：`*.workers.dev` 在境内被 DNS 污染（解析到 Facebook 的 IP），从国内网络访问不到。要在国内稳定用，得绑一个自有域名（`wrangler.toml` 里加 `routes`），或改走容器那条路线。演示环境只放合成种子数据（首次请求时自动灌入），不放真实房主信息。
+
 ## 一次生成做了什么
 
 ```

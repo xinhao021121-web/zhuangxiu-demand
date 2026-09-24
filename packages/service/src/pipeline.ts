@@ -46,7 +46,7 @@ export async function generateChecklist(
   provider: ModelProvider,
   input: GenerateInput,
 ): Promise<GenerateResult> {
-  const sheet = store.getDemandSheet(input.demandSheetId);
+  const sheet = await store.getDemandSheet(input.demandSheetId);
   if (!sheet) throw new Error(`需求单不存在：${input.demandSheetId}`);
 
   const policy = input.policy ?? DEFAULT_POLICY;
@@ -64,7 +64,7 @@ export async function generateChecklist(
 
   // 二、外发留档：谁、什么时候、发了哪些字段、命中过什么、用的哪版策略
   const outboundRecordId = crypto.randomUUID();
-  store.createOutboundRecord({
+  await store.createOutboundRecord({
     id: outboundRecordId,
     demandSheetId: input.demandSheetId,
     policyName: outbound.payload.policyName,
@@ -133,7 +133,7 @@ export async function generateChecklist(
     objects: ruleObjectAssets(ruleItems),
   });
 
-  const stored = store.createChecklist({
+  const stored = await store.createChecklist({
     demandSheetId: input.demandSheetId,
     checklist,
     model: degraded ? `${provider.name}(降级)` : provider.name,

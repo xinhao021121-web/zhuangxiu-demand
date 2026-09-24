@@ -14,7 +14,7 @@ const env = readEnv();
 const db = openDatabase(env.dbPath);
 const repo = createRepo(db);
 
-if (seedDatabase(repo)) console.log('已灌入种子数据（3 份需求单、2 个账号）');
+if (await seedDatabase(repo)) console.log('已灌入种子数据（3 份需求单、2 个账号）');
 
 const provider: ModelProvider =
   env.model === 'deepseek'

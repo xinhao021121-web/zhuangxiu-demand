@@ -72,7 +72,7 @@ export function createApp(deps: AppDeps) {
   app.post('/auth/login', async (c) => {
     const parsed = LoginSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '请求体不合法', issues: parsed.error.issues }, 400);
-    const user = repo.findUserByPhone(parsed.data.phone);
+    const user = await repo.findUserByPhone(parsed.data.phone);
     if (!user || parsed.data.code !== env.authCode) return c.json({ error: '手机号或验证码不对' }, 401);
     const token = signToken(
       {
@@ -90,7 +90,7 @@ export function createApp(deps: AppDeps) {
   app.use('*', async (c, next) => {
     const token = (c.req.header('authorization') ?? '').replace(/^Bearer\s+/i, '');
     const payload = token ? verifyToken(token, env.tokenSecret, 'internal') : null;
-    const user = payload?.scope === 'internal' ? repo.findUserById(payload.sub) : undefined;
+    const user = payload?.scope === 'internal' ? await repo.findUserById(payload.sub) : undefined;
     if (!user) return c.json({ error: '未授权' }, 401);
     c.set('user', user);
     await next();
@@ -100,10 +100,10 @@ export function createApp(deps: AppDeps) {
 
   /* ---------------- 账号与角色（管理员） ---------------- */
 
-  app.get('/users', (c) => {
+  app.get('/users', async (c) => {
     const user = c.get('user');
     if (!can(user, 'account:manage')) return c.json({ error: '没有这个权限' }, 403);
-    return c.json(repo.listUsers());
+    return c.json(await repo.listUsers());
   });
 
   app.post('/users', async (c) => {
@@ -111,8 +111,8 @@ export function createApp(deps: AppDeps) {
     if (!can(user, 'account:manage')) return c.json({ error: '没有这个权限' }, 403);
     const parsed = UserCreateSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '账号信息不合法', issues: parsed.error.issues }, 400);
-    if (repo.findUserByPhone(parsed.data.phone)) return c.json({ error: '这个手机号已经存在' }, 409);
-    const created = repo.createUser({
+    if (await repo.findUserByPhone(parsed.data.phone)) return c.json({ error: '这个手机号已经存在' }, 409);
+    const created = await repo.createUser({
       id: parsed.data.id || randomUUID(),
       name: parsed.data.name,
       phone: parsed.data.phone,
@@ -123,7 +123,10 @@ export function createApp(deps: AppDeps) {
   });
   /* ---------------- 需求单 ---------------- */
 
-  app.get('/demand-sheets', (c) => c.json(repo.listDemandSheets().map((s) => toSummary(repo, s))));
+  app.get('/demand-sheets', async (c) => {
+    const sheets = await repo.listDemandSheets();
+    return c.json(await Promise.all(sheets.map((s) => toSummary(repo, s))));
+  });
 
   app.post('/demand-sheets', async (c) => {
     const user = c.get('user');
@@ -131,7 +134,7 @@ export function createApp(deps: AppDeps) {
     const parsed = DemandSheetImportSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '需求单格式不对', issues: parsed.error.issues }, 400);
     const input = parsed.data;
-    const sheet = repo.createDemandSheet({
+    const sheet = await repo.createDemandSheet({
       demandName: input.demandName,
       schemaVersion: input.schemaVersion,
       submittedAt: input.submittedAt,
@@ -144,7 +147,7 @@ export function createApp(deps: AppDeps) {
     });
     // 采集端随提交带出的埋点（技术方案 6.11）：采纳率、不感兴趣率、填写时长的分子分母都在这里
     if (input.telemetry?.events.length) {
-      repo.createEvents({
+      await repo.createEvents({
         demandSheetId: sheet.id,
         source: 'client',
         operator: user.name,
@@ -157,13 +160,13 @@ export function createApp(deps: AppDeps) {
         })),
       });
     }
-    return c.json(toSummary(repo, sheet), 201);
+    return c.json(await toSummary(repo, sheet), 201);
   });
 
-  app.get('/demand-sheets/:id', (c) => {
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+  app.get('/demand-sheets/:id', async (c) => {
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
-    return c.json(toDetail(repo, sheet));
+    return c.json(await toDetail(repo, sheet));
   });
 
   /* 改名：采集端不收集姓名，房主提交的那份落库叫「未命名需求单」，由设计师改成认得出的叫法。 */
@@ -172,9 +175,9 @@ export function createApp(deps: AppDeps) {
     if (!can(user, 'demand-sheet:write')) return c.json({ error: '没有这个权限' }, 403);
     const parsed = DemandSheetRenameSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '名字不合法', issues: parsed.error.issues }, 400);
-    const sheet = repo.renameDemandSheet(c.req.param('id'), parsed.data.demandName);
+    const sheet = await repo.renameDemandSheet(c.req.param('id'), parsed.data.demandName);
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
-    return c.json(toSummary(repo, sheet));
+    return c.json(await toSummary(repo, sheet));
   });
 
   /* ---------------- 清单 ---------------- */
@@ -182,7 +185,7 @@ export function createApp(deps: AppDeps) {
   app.post('/demand-sheets/:id/checklist', async (c) => {
     const user = c.get('user');
     if (!can(user, 'checklist:generate')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     const body = (await c.req.json().catch(() => ({}))) as { selected?: Record<string, boolean> };
     const input: GenerateInput = {
@@ -194,8 +197,8 @@ export function createApp(deps: AppDeps) {
     // 单份解读耗时的口径就是这一次生成的墙钟时间（技术方案 6.11）：没有别的表能承载它
     const startedAt = Date.now();
     const result = await generateChecklist(repo, provider, input);
-    const stored = repo.getChecklist(result.checklistId);
-    repo.createEvents({
+    const stored = await repo.getChecklist(result.checklistId);
+    await repo.createEvents({
       demandSheetId: sheet.id,
       source: 'server',
       operator: user.name,
@@ -218,25 +221,25 @@ export function createApp(deps: AppDeps) {
     return c.json(toChecklistView(stored!), 201);
   });
 
-  app.get('/demand-sheets/:id/checklist', (c) => {
-    const stored = repo.latestChecklist(c.req.param('id'));
+  app.get('/demand-sheets/:id/checklist', async (c) => {
+    const stored = await repo.latestChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '这份需求单还没有生成清单' }, 404);
     return c.json(toChecklistView(stored));
   });
 
-  app.get('/checklists/:id', (c) => {
-    const stored = repo.getChecklist(c.req.param('id'));
+  app.get('/checklists/:id', async (c) => {
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
     return c.json(toChecklistView(stored));
   });
 
   app.patch('/checklists/:id/items/:key', async (c) => {
     const user = c.get('user');
-    const stored = repo.getChecklist(c.req.param('id'));
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
     const body = (await c.req.json().catch(() => ({}))) as { removed?: boolean };
     if (typeof body.removed !== 'boolean') return c.json({ error: '请求体要带 removed 布尔值' }, 400);
-    const item = repo.setItemRemoved({
+    const item = await repo.setItemRemoved({
       checklistId: stored.id,
       itemKey: c.req.param('key'),
       removed: body.removed,
@@ -247,18 +250,18 @@ export function createApp(deps: AppDeps) {
     return c.json(item);
   });
 
-  app.get('/checklists/:id/export', (c) => {
+  app.get('/checklists/:id/export', async (c) => {
     const user = c.get('user');
-    const stored = repo.getChecklist(c.req.param('id'));
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
-    const sheet = repo.getDemandSheet(stored.demandSheetId)!;
+    const sheet = (await repo.getDemandSheet(stored.demandSheetId))!;
     const md = buildChecklistMarkdown(toDomainChecklist(stored), {
       name: sheet.demandName,
       overview: buildOverview(sheet.payload, []),
       submitted: sheet.submittedAt,
     });
     // 导出是流程的终点：生成了却没导出，断点会停在这里（技术方案 6.11）
-    repo.createEvents({
+    await repo.createEvents({
       demandSheetId: sheet.id,
       source: 'server',
       operator: user.name,
@@ -268,12 +271,12 @@ export function createApp(deps: AppDeps) {
     return c.body(md, 200, { 'content-type': 'text/markdown; charset=utf-8' });
   });
 
-  app.get('/demand-sheets/:id/outbound-records', (c) => {
+  app.get('/demand-sheets/:id/outbound-records', async (c) => {
     const user = c.get('user');
     if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
-    return c.json(repo.listOutboundRecords(sheet.id));
+    return c.json(await repo.listOutboundRecords(sheet.id));
   });
 
   /* ---------------- 埋点 ---------------- */
@@ -286,11 +289,11 @@ export function createApp(deps: AppDeps) {
   app.post('/demand-sheets/:id/events', async (c) => {
     const user = c.get('user');
     if (!can(user, 'demand-sheet:write')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     const parsed = EventBatchSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '事件格式不对', issues: parsed.error.issues }, 400);
-    const accepted = repo.createEvents({
+    const accepted = await repo.createEvents({
       demandSheetId: sheet.id,
       source: 'client',
       operator: user.name,
@@ -302,18 +305,18 @@ export function createApp(deps: AppDeps) {
   });
 
   /* 埋点查得到：指标是拿它算的，出问题时也要能顺着看到原始事件。 */
-  app.get('/demand-sheets/:id/events', (c) => {
+  app.get('/demand-sheets/:id/events', async (c) => {
     const user = c.get('user');
     if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
-    return c.json(repo.listEvents(sheet.id));
+    return c.json(await repo.listEvents(sheet.id));
   });
 
   /* ---------------- 遗漏补录与回流报表（产品文档 7.6） ---------------- */
 
-  const omissionRows = (id: string, demandName: string) =>
-    omissionLedger(repo.listEvents(id), new Map([[id, demandName]]));
+  const omissionRows = async (id: string, demandName: string) =>
+    omissionLedger(await repo.listEvents(id), new Map([[id, demandName]]));
 
   /*
    * 补录：量房结束后补一句「这次该问但没列的是……」。
@@ -322,42 +325,42 @@ export function createApp(deps: AppDeps) {
   app.post('/demand-sheets/:id/omissions', async (c) => {
     const user = c.get('user');
     if (!can(user, 'omission:write')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     const parsed = OmissionCreateSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '补录格式不对', issues: parsed.error.issues }, 400);
     const at = now();
-    repo.createEvents({
+    await repo.createEvents({
       demandSheetId: sheet.id,
       source: 'server',
       operator: user.name,
       at,
       events: [{ name: 'omission_log', at, props: parsed.data }],
     });
-    return c.json(omissionRows(sheet.id, sheet.demandName), 201);
+    return c.json(await omissionRows(sheet.id, sheet.demandName), 201);
   });
 
-  app.get('/demand-sheets/:id/omissions', (c) => {
+  app.get('/demand-sheets/:id/omissions', async (c) => {
     const user = c.get('user');
     if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
-    const sheet = repo.getDemandSheet(c.req.param('id'));
+    const sheet = await repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
-    return c.json(omissionRows(sheet.id, sheet.demandName));
+    return c.json(await omissionRows(sheet.id, sheet.demandName));
   });
 
   /* 四张报表：只汇总与排序，不自动改规则（产品文档 7.5 第 1 条）。 */
-  app.get('/reports', (c) => {
+  app.get('/reports', async (c) => {
     const user = c.get('user');
     if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
-    return c.json(buildReports(repo));
+    return c.json(await buildReports(repo));
   });
 
   /* ---------------- 现场记录 ---------------- */
 
-  app.get('/checklists/:id/site-records', (c) => {
-    const stored = repo.getChecklist(c.req.param('id'));
+  app.get('/checklists/:id/site-records', async (c) => {
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
-    const records = repo.listSiteRecords(stored.id);
+    const records = await repo.listSiteRecords(stored.id);
     const stats = siteStats(toDomainChecklist(stored), records);
     return c.json({ records, stats });
   });
@@ -365,14 +368,14 @@ export function createApp(deps: AppDeps) {
   app.post('/checklists/:id/site-records', async (c) => {
     const user = c.get('user');
     if (!can(user, 'site-record:write')) return c.json({ error: '没有这个权限' }, 403);
-    const stored = repo.getChecklist(c.req.param('id'));
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
     const parsed = SiteRecordBatchSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '现场记录格式不对', issues: parsed.error.issues }, 400);
     const keys = new Set(stored.items.map((i) => i.key));
     const unknown = parsed.data.records.filter((r) => !keys.has(r.itemKey)).map((r) => r.itemKey);
     if (unknown.length) return c.json({ error: '记录指向的清单条目不存在', itemKeys: unknown }, 400);
-    const saved = repo.createSiteRecords(
+    const saved = await repo.createSiteRecords(
       parsed.data.records.map((r) => ({
         id: r.id || randomUUID(),
         demandSheetId: stored.demandSheetId,
@@ -384,20 +387,23 @@ export function createApp(deps: AppDeps) {
         operator: user.name,
       })),
     );
-    return c.json({ records: saved, stats: siteStats(toDomainChecklist(stored), repo.listSiteRecords(stored.id)) }, 201);
+    return c.json(
+      { records: saved, stats: siteStats(toDomainChecklist(stored), await repo.listSiteRecords(stored.id)) },
+      201,
+    );
   });
 
   /* 现场端首页要的东西：今天要去的这一家、必问还剩几条。 */
-  app.get('/checklists/:id/summary', (c) => {
-    const stored = repo.getChecklist(c.req.param('id'));
+  app.get('/checklists/:id/summary', async (c) => {
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
-    return c.json(toChecklistSummary(repo, stored));
+    return c.json(await toChecklistSummary(repo, stored));
   });
 
-  app.get('/checklists/:id/preview-outbound', (c) => {
-    const stored = repo.getChecklist(c.req.param('id'));
+  app.get('/checklists/:id/preview-outbound', async (c) => {
+    const stored = await repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
-    const sheet = repo.getDemandSheet(stored.demandSheetId)!;
+    const sheet = (await repo.getDemandSheet(stored.demandSheetId))!;
     return c.json(previewOutbound(sheet.payload, DEFAULT_POLICY));
   });
 

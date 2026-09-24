@@ -1,0 +1,36 @@
+# API 服务的 Cloudflare Workers 部署形态（技术方案 9.2）。
+#
+#   cd services/api
+#   npx wrangler d1 execute zx-api --remote --file=src/db/schema.sql   # 建表（同一份 schema.sql）
+#   npx wrangler secret put TOKEN_SECRET                               # 密钥只走 secret，不进这里
+#   npx wrangler deploy
+#
+# 两种持久化各管一条路：Workers 上是 D1（这里），自有服务器上是容器里的 SQLite
+# （deploy/api.compose.yaml）。同一份 schema.sql、同一个 repo.ts。
+
+name = "zx-api"
+main = "src/worker.ts"
+# nodejs_compat：Worker 里要用 node:crypto（签名与 uuid），其余按 Web 标准来
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+# 模型：演示环境用桩数据；换真模型时设 MODEL_PROVIDER=deepseek 并配 DEEPSEEK_API_KEY 这个 secret
+MODEL_PROVIDER = "fake"
+# CORS 白名单：只有这两个静态托管的来源能跨域调它（技术方案 5.3 的上线前置）
+CORS_ALLOWED_ORIGINS = "https://demand-studio.pages.dev,https://xinhao021121-web.github.io"
+# Worker 的请求只能从 Cloudflare 边缘进来，由边缘写 X-Forwarded-For，所以这里开代理信任：
+# 不认客户端的连接地址（边缘运行时拿不到），认边缘写进来的那个头。
+TRUST_PROXY = "1"
+# 采集通道限流：每个来源 20 次 / 60 秒（匿名通道，宁可紧一点）
+COLLECTION_RATE_LIMIT = "20"
+COLLECTION_RATE_WINDOW_SECONDS = "60"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zx-api"
+# 由 `wrangler d1 create zx-api` 产出（不是密钥，可以进仓库）
+database_id = "db3b42d2-1cc5-4f7d-ace5-3c0f999d0e4e"

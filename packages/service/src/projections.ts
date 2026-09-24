@@ -107,8 +107,8 @@ export function toChecklistView(stored: ChecklistRecord): ChecklistView {
   };
 }
 
-export function toSummary(store: SheetStore, sheet: SheetRecord): DemandSheetSummary {
-  const stored = store.latestChecklist(sheet.id);
+export async function toSummary(store: SheetStore, sheet: SheetRecord): Promise<DemandSheetSummary> {
+  const stored = await store.latestChecklist(sheet.id);
   return {
     id: sheet.id,
     demandName: sheet.demandName,
@@ -121,8 +121,8 @@ export function toSummary(store: SheetStore, sheet: SheetRecord): DemandSheetSum
   };
 }
 
-export function toDetail(store: SheetStore, sheet: SheetRecord): DemandSheetDetail {
-  const stored = store.latestChecklist(sheet.id);
+export async function toDetail(store: SheetStore, sheet: SheetRecord): Promise<DemandSheetDetail> {
+  const stored = await store.latestChecklist(sheet.id);
   return {
     sheet: {
       id: sheet.id,
@@ -154,10 +154,10 @@ export function toFieldValues(model: FormModel, checklist: Checklist): FieldValu
 }
 
 /** 现场端的首页与量房记录：清单 + 统计 + 速记，一次给全。 */
-export function toChecklistSummary(store: SheetStore, stored: ChecklistRecord): ChecklistSummaryView {
-  const sheet = store.getDemandSheet(stored.demandSheetId)!;
+export async function toChecklistSummary(store: SheetStore, stored: ChecklistRecord): Promise<ChecklistSummaryView> {
+  const sheet = (await store.getDemandSheet(stored.demandSheetId))!;
   const domain = toDomainChecklist(stored);
-  const records = store.listSiteRecords(stored.id) as SiteRecord[];
+  const records = (await store.listSiteRecords(stored.id)) as SiteRecord[];
   const heading = {
     name: sheet.demandName,
     overview: buildOverview(sheet.payload, []),

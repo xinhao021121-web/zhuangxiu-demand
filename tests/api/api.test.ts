@@ -39,9 +39,9 @@ async function login(phone: string, instance = app): Promise<string> {
   return body.token;
 }
 
-function boot(provider: ModelProvider = createFakeProvider(), envOverrides: NodeJS.ProcessEnv = {}) {
+async function boot(provider: ModelProvider = createFakeProvider(), envOverrides: NodeJS.ProcessEnv = {}) {
   repo = createRepo(openDatabase(':memory:'));
-  seedDatabase(repo);
+  await seedDatabase(repo);
   const env = readEnv({
     AUTH_CODE: '000000',
     TOKEN_SECRET: 'test-secret',
@@ -101,7 +101,7 @@ async function generate(sheetId: string, t = token, body: unknown = {}) {
 }
 
 beforeEach(async () => {
-  app = boot();
+  app = await boot();
   token = await login(DESIGNER);
   adminToken = await login(ADMIN);
 });
@@ -191,7 +191,7 @@ describe('需求单导入与列表', () => {
     expect(res.status).toBe(201);
     const created = (await res.json()) as { id: string; source: string };
     expect(created.source).toBe('file');
-    const stored = repo.getDemandSheet(created.id)!;
+    const stored = (await repo.getDemandSheet(created.id))!;
     // 与采集通道相反的两处：来源固定 file、提交人是内部人员
     expect(stored.source).toBe('file');
     expect(stored.submittedBy).not.toBeNull();
@@ -214,7 +214,7 @@ describe('需求单导入与列表', () => {
     expect(created.source).toBe('file');
     // 房主端不收集姓名，所以名字是契约默认的「未命名需求单」，设计师再改
     expect(created.demandName).toBe('未命名需求单');
-    expect(repo.getDemandSheet(created.id)!.payload.values.base_area).toBe(76);
+    expect((await repo.getDemandSheet(created.id))!.payload.values.base_area).toBe(76);
   });
 });
 
@@ -320,7 +320,7 @@ describe('模型返回的两道红线', () => {
         };
       },
     };
-    const instance = boot(bad);
+    const instance = await boot(bad);
     const t = await login(DESIGNER, instance);
     const res = await instance.request('/demand-sheets/d1/checklist', {
       method: 'POST',
@@ -336,7 +336,7 @@ describe('模型返回的两道红线', () => {
 
   it('结构不合法：同样降级，不落半成品清单', async () => {
     const broken: ModelProvider = { name: 'broken', async understand() { return { nope: true }; } };
-    const instance = boot(broken);
+    const instance = await boot(broken);
     const t = await login(DESIGNER, instance);
     const res = await instance.request('/demand-sheets/d1/checklist', {
       method: 'POST',
@@ -351,7 +351,7 @@ describe('模型返回的两道红线', () => {
 
   it('模型调用抛错：清单照样出得来，只少掉推导项', async () => {
     const failing: ModelProvider = { name: 'failing', async understand() { throw new Error('限流'); } };
-    const instance = boot(failing);
+    const instance = await boot(failing);
     const t = await login(DESIGNER, instance);
     const res = await instance.request('/demand-sheets/d1/checklist', {
       method: 'POST',
@@ -394,7 +394,7 @@ describe('核实对象名归一（BC-05）', () => {
         };
       },
     };
-    const instance = boot(variant);
+    const instance = await boot(variant);
     const t = await login(DESIGNER, instance);
     const res = await instance.request('/demand-sheets/d1/checklist', {
       method: 'POST',
@@ -635,7 +635,7 @@ describe('采集通道与内部通道分离', () => {
       body: JSON.stringify(submittedSheet()),
     });
     expect(res.status).toBe(401);
-    expect(repo.getDemandSheet('a-lq3k-7f2')).toBeUndefined();
+    expect(await repo.getDemandSheet('a-lq3k-7f2')).toBeUndefined();
   });
 
   it('没有会话就提交不了', async () => {
@@ -654,7 +654,7 @@ describe('采集通道与内部通道分离', () => {
     expect(res.status).toBe(201);
     expect(body.replay).toBe(false);
 
-    const stored = repo.getDemandSheet(body.id)!;
+    const stored = (await repo.getDemandSheet(body.id))!;
     expect(stored.source).toBe('miniapp');
     expect(stored.submittedBy).toBeNull();
     expect(stored.aiMarks).toEqual(['pet_litter_box']);
@@ -686,7 +686,7 @@ describe('采集通道与内部通道分离', () => {
       }),
     );
     expect(body.acceptedEvents).toBe(3);
-    const events = repo.listEvents(body.id);
+    const events = await repo.listEvents(body.id);
     expect(events.map((e) => e.name)).toEqual(['session', 'ignore', 'submit']);
     expect(events[0].source).toBe('client');
     expect(events[0].operator).toBeNull();
@@ -710,7 +710,7 @@ describe('采集通道与内部通道分离', () => {
       acceptedEvents: 0,
       replay: true,
     });
-    expect(repo.listDemandSheets().filter((s) => s.id === 'a-retry-1')).toHaveLength(1);
+    expect((await repo.listDemandSheets()).filter((s) => s.id === 'a-retry-1')).toHaveLength(1);
   });
 
   it('同一批埋点重新提交（重填后再交一次）不会被计两遍', async () => {
@@ -917,11 +917,11 @@ describe('改名、遗漏补录与回流报表', () => {
 
 describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () => {
   const STUDIO = 'https://demand-studio.pages.dev';
-  const bootWithCors = (extra: NodeJS.ProcessEnv = {}) =>
+  const bootWithCors = async (extra: NodeJS.ProcessEnv = {}) =>
     boot(createFakeProvider(), { CORS_ALLOWED_ORIGINS: STUDIO, ...extra } as NodeJS.ProcessEnv);
 
   it('白名单里的来源拿得到 CORS 头，预检请求直接答完', async () => {
-    const corsApp = bootWithCors();
+    const corsApp = await bootWithCors();
     const preflight = await corsApp.request('/a/session', {
       method: 'OPTIONS',
       headers: {
@@ -943,7 +943,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('白名单外的来源被挡住，一个字段都不回', async () => {
-    const corsApp = bootWithCors();
+    const corsApp = await bootWithCors();
     const res = await corsApp.request('/a/session', { method: 'POST', headers: { origin: 'https://evil.example.com' } });
     expect(res.status).toBe(403);
     expect(res.headers.get('access-control-allow-origin')).toBeNull();
@@ -955,7 +955,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('没有 Origin 的请求不算跨域：服务端到服务端与 curl 照常', async () => {
-    const corsApp = bootWithCors();
+    const corsApp = await bootWithCors();
     expect((await corsApp.request('/health')).status).toBe(200);
     const res = await corsApp.request('/a/session', { method: 'POST' });
     expect(res.status).toBe(200);
@@ -963,7 +963,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('采集通道超过限额回 429，并告诉客户端多久之后再来', async () => {
-    const limited = bootWithCors({
+    const limited = await bootWithCors({
       COLLECTION_RATE_LIMIT: '3',
       COLLECTION_RATE_WINDOW_SECONDS: '60',
     } as NodeJS.ProcessEnv);
@@ -983,7 +983,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
    */
   const conn = (ip: string) =>
     ({ incoming: { socket: { remoteAddress: ip, remotePort: 51000, remoteFamily: 'IPv4' } } }) as never;
-  const tight = (extra: NodeJS.ProcessEnv = {}) =>
+  const tight = async (extra: NodeJS.ProcessEnv = {}) =>
     bootWithCors({
       COLLECTION_RATE_LIMIT: '2',
       COLLECTION_RATE_WINDOW_SECONDS: '60',
@@ -991,7 +991,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
     } as NodeJS.ProcessEnv);
 
   it('额度按连接地址分开：一个来源刷爆不影响别人', async () => {
-    const limited = tight();
+    const limited = await tight();
     expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(200);
     expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(200);
     expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(429);
@@ -1000,7 +1000,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('伪造 X-Forwarded-For 换不掉额度：默认只认连接地址', async () => {
-    const limited = tight();
+    const limited = await tight();
     const spoof = (ip: string) => ({ method: 'POST', headers: { 'x-forwarded-for': ip } }) as RequestInit;
     expect((await limited.request('/a/session', spoof('1.1.1.1'), conn('203.0.113.7'))).status).toBe(200);
     expect((await limited.request('/a/session', spoof('2.2.2.2'), conn('203.0.113.7'))).status).toBe(200);
@@ -1009,7 +1009,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('挂在反向代理后面（TRUST_PROXY=1）才按 X-Forwarded-For 记账', async () => {
-    const limited = tight({ TRUST_PROXY: '1' });
+    const limited = await tight({ TRUST_PROXY: '1' });
     const from = (ip: string) => ({ method: 'POST', headers: { 'x-forwarded-for': ip } }) as RequestInit;
     // 代理的地址是同一个，真正的房主看 X-Forwarded-For：两个来源各自有额度，不会被互相锁住
     expect((await limited.request('/a/session', from('203.0.113.7'), conn('10.0.0.1'))).status).toBe(200);
@@ -1019,7 +1019,7 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('拿不到连接信息时（非 Node 适配器）退到反代写的头，实在没有就共用一个额度', async () => {
-    const limited = tight({ COLLECTION_RATE_LIMIT: '1' });
+    const limited = await tight({ COLLECTION_RATE_LIMIT: '1' });
     const from = (ip?: string) =>
       ({ method: 'POST', headers: ip ? { 'x-real-ip': ip } : {} }) as RequestInit;
     expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
@@ -1031,14 +1031,14 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
   });
 
   it('窗口过去之后额度恢复（这里把窗口设成 0 秒来复现）', async () => {
-    const limited = tight({ COLLECTION_RATE_LIMIT: '1', COLLECTION_RATE_WINDOW_SECONDS: '0' });
+    const limited = await tight({ COLLECTION_RATE_LIMIT: '1', COLLECTION_RATE_WINDOW_SECONDS: '0' });
     for (let i = 0; i < 3; i += 1) {
       expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
     }
   });
 
   it('限额只挂在采集通道：公司内部读接口不受它影响', async () => {
-    const limited = tight();
+    const limited = await tight();
     for (let i = 0; i < 5; i += 1) {
       expect((await limited.request('/demand-sheets', { headers: auth(token) })).status).toBe(200);
     }

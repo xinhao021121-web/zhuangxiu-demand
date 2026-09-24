@@ -14,15 +14,15 @@ import { unclearAnswers } from '@zx/checklist';
 import type { ItemSource, Tier } from '@zx/checklist';
 import { RULE_META } from '@zx/rules';
 import type { CriterionHealth, FieldHealth, OmissionCategory, Reports, RuleHealth } from '@zx/contracts';
-import type { EventRecord, SheetRecord, SiteRecordRecord, ChecklistRecord } from './types';
+import type { EventRecord, Maybe, SheetRecord, SiteRecordRecord, ChecklistRecord } from './types';
 
 /** 报表需要的读能力：仓储层与内存实现都满足它，换存储不动这里。 */
 export interface ReportSource {
-  listDemandSheets(): SheetRecord[];
-  latestChecklist(demandSheetId: string): ChecklistRecord | undefined;
-  listSiteRecords(checklistId: string): SiteRecordRecord[];
+  listDemandSheets(): Maybe<SheetRecord[]>;
+  latestChecklist(demandSheetId: string): Maybe<ChecklistRecord | undefined>;
+  listSiteRecords(checklistId: string): Maybe<SiteRecordRecord[]>;
   /** 不带参数就是全部事件（技术方案 6.11 的查询接口同口径） */
-  listEvents(demandSheetId?: string): EventRecord[];
+  listEvents(demandSheetId?: string): Maybe<EventRecord[]>;
 }
 
 /** 率一律是百分数（保留一位小数）；分母为 0 时是 null——「还没有样本」不是 0%。 */
@@ -87,11 +87,11 @@ function ruleReport(events: EventRecord[]): RuleHealth[] {
  * 只统计每份需求单**最新那一份**清单：重新生成过的旧清单不再计入，否则「生成三次、删一次」
  * 会把同一条条目数成三条。删减取条目的当前状态（撤销后不计入被删，7.5 第 2 条）。
  */
-function criterionReport(sheets: SheetRecord[], source: ReportSource): CriterionHealth[] {
+async function criterionReport(sheets: SheetRecord[], source: ReportSource): Promise<CriterionHealth[]> {
   const rows = new Map<string, CriterionHealth>();
-  sheets.forEach((sheet) => {
-    const checklist = source.latestChecklist(sheet.id);
-    if (!checklist) return;
+  for (const sheet of sheets) {
+    const checklist = await source.latestChecklist(sheet.id);
+    if (!checklist) continue;
     checklist.items.forEach((item) => {
       const group = `${SOURCE_LABEL[item.source]} · ${TIER_LABEL[item.tier]}`;
       const row =
@@ -101,7 +101,7 @@ function criterionReport(sheets: SheetRecord[], source: ReportSource): Criterion
       if (item.removed) row.removed += 1;
       rows.set(group, row);
     });
-  });
+  }
 
   return [...rows.values()]
     .map((r) => ({ ...r, removalRate: pct(r.removed, r.items) }))
@@ -118,21 +118,21 @@ function criterionReport(sheets: SheetRecord[], source: ReportSource): Criterion
  * 同一条清单条目引用多个字段时，这条条目在这几个字段上各算一次——否则「一条问三件事」的
  * 条目会把分母算少，率会虚高。现场修正率没有来源（现场记录只标「已问 / 没问上」），恒为 null。
  */
-function fieldReport(sheets: SheetRecord[], source: ReportSource): FieldHealth[] {
+async function fieldReport(sheets: SheetRecord[], source: ReportSource): Promise<FieldHealth[]> {
   const answered = new Map<string, number>();
   const unclear = new Map<string, number>();
   const referenced = new Map<string, number>();
   const skipped = new Map<string, number>();
   const bump = (map: Map<string, number>, id: string) => map.set(id, (map.get(id) ?? 0) + 1);
 
-  sheets.forEach((sheet) => {
+  for (const sheet of sheets) {
     answeredFieldIds(sheet.payload).forEach((id) => bump(answered, id));
     unclearAnswers(sheet.payload).forEach((q) => bump(unclear, splitKey(q.fieldKey)[1]));
 
-    const checklist = source.latestChecklist(sheet.id);
-    if (!checklist) return;
+    const checklist = await source.latestChecklist(sheet.id);
+    if (!checklist) continue;
     const skippedItems = new Set(
-      source.listSiteRecords(checklist.id).filter((r) => r.status === 'skip').map((r) => r.itemKey),
+      (await source.listSiteRecords(checklist.id)).filter((r) => r.status === 'skip').map((r) => r.itemKey),
     );
     checklist.items.forEach((item) => {
       new Set(item.relatedFields.map((key) => splitKey(key)[1])).forEach((id) => {
@@ -140,7 +140,7 @@ function fieldReport(sheets: SheetRecord[], source: ReportSource): FieldHealth[]
         if (skippedItems.has(item.key)) bump(skipped, id);
       });
     });
-  });
+  }
 
   const ids = new Set([...answered.keys(), ...unclear.keys(), ...referenced.keys(), ...skipped.keys()]);
   return [...ids]
@@ -161,15 +161,15 @@ function fieldReport(sheets: SheetRecord[], source: ReportSource): FieldHealth[]
     .sort((a, b) => b.unclear + b.skipped - (a.unclear + a.skipped) || a.fieldId.localeCompare(b.fieldId));
 }
 
-export function buildReports(source: ReportSource): Reports {
-  const sheets = source.listDemandSheets();
-  const events = source.listEvents();
+export async function buildReports(source: ReportSource): Promise<Reports> {
+  const sheets = await source.listDemandSheets();
+  const events = await source.listEvents();
   const nameById = new Map(sheets.map((s) => [s.id, s.demandName]));
 
   return {
     rules: ruleReport(events),
-    criteria: criterionReport(sheets, source),
-    fields: fieldReport(sheets, source),
+    criteria: await criterionReport(sheets, source),
+    fields: await fieldReport(sheets, source),
     omissions: omissionLedger(events, nameById),
     unavailable: [
       {
