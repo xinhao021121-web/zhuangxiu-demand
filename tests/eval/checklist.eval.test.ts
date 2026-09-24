@@ -30,7 +30,7 @@ const MODEL = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat';
 describe('清单质量：离线回归', () => {
   it('种子场景不退化，并写出回归报告', async () => {
     const provider = createFixtureProvider(seed as never, 'recorded');
-    const report = await runEval({ label: '离线回归 · 录制输出', cases: RECORDED_CASES, provider });
+    const report = await runEval({ label: '离线回归 · 录制输出', cases: RECORDED_CASES, provider, gated: true });
     write('report-offline.md', renderReport(report));
 
     const detail = report.results
@@ -50,6 +50,7 @@ describe.skipIf(!API_KEY)('清单质量：真实模型实测', () => {
       cases: EVAL_CASES,
       provider,
       runs: 3,
+      gated: false,
     });
     write('report-model.md', renderReport(report));
 

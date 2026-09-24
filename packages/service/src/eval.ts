@@ -191,6 +191,8 @@ export interface EvalReport {
   label: string;
   provider: string;
   runs: number;
+  /** 判不判通过：离线回归判，真机实测只测量（报告头要据此措辞） */
+  gated: boolean;
   results: EvalCaseResult[];
   passed: boolean;
 }
@@ -243,6 +245,8 @@ export interface EvalRunOptions {
   provider: ModelProvider;
   /** 每个用例采样几次；>1 时同时给出稳定性（真机实测用） */
   runs?: number;
+  /** 判不判通过：离线回归判（判死项必须为 0），真机实测只测量 */
+  gated: boolean;
 }
 
 export async function runEval(options: EvalRunOptions): Promise<EvalReport> {
@@ -312,6 +316,7 @@ export async function runEval(options: EvalRunOptions): Promise<EvalReport> {
     label: options.label,
     provider: options.provider.name,
     runs,
+    gated: options.gated,
     results,
     passed: results.every((r) => r.samples.every((s) => s.failures.length === 0)),
   };
@@ -332,11 +337,16 @@ function averagePairs(sets: Set<string>[]): number {
 /** 报告刻意不带时间戳：重跑不改文件，才好当作回归基线提交。 */
 export function renderReport(report: EvalReport): string {
   const lines: string[] = [];
+  const failedCases = report.results.filter((r) => r.samples.some((s) => s.failures.length)).length;
   lines.push(`# 清单质量评估 · ${report.label}`);
   lines.push('');
   lines.push(`- 用例数：${report.results.length}（每个采样 ${report.runs} 次）`);
   lines.push(`- provider：\`${report.provider}\``);
-  lines.push(`- 结论：${report.passed ? '**通过**' : '**未通过**'}`);
+  lines.push(
+    report.gated
+      ? `- 结论：${report.passed ? '**通过**' : '**未通过**'}`
+      : `- 结论：本次是**测量**，不设通过阈值——${failedCases} 个用例有期望未覆盖，逐条进 \`evals/badcases.md\` 判断`,
+  );
   lines.push('');
   lines.push('判据见 `evals/rubric.md`：只判确定性的部分（可溯源、重复、降级、期望覆盖），');
   lines.push('条数与分区分布只报数不判死。');
