@@ -12,6 +12,7 @@
     "test:api": "pnpm --dir packages/devtools exec vitest run --root ../.. tests/api",
     "api:dev": "pnpm --dir services/api exec tsx src/server.ts",
     "measure:model": "node tools/measure-model.mjs",
+    "eval:model": "pnpm --dir packages/devtools exec vitest run --root ../.. tests/eval",
     "studio:dev": "pnpm --dir studio run dev",
     "studio:build": "pnpm --dir studio run build",
     "test:app": "node tests/app.e2e.mjs",

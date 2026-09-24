@@ -23,7 +23,7 @@ export default {
     },
   },
   test: {
-    include: ['tests/unit/**/*.test.ts', 'tests/api/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/api/**/*.test.ts', 'tests/eval/**/*.test.ts'],
     environment: 'node',
   },
 };

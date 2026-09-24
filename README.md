@@ -32,6 +32,7 @@ packages/
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 问需的产品设计文档与技术方案
 research/             用户研究：访谈方案与记录模板（一手证据，还没执行）
+evals/                清单质量评估：用例、评分标准、badcase 台账与回归报告
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
 designer/            设计需求解读台 Demo + 现场量房手机端 Demo（数据模拟）
 tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）
@@ -63,6 +64,7 @@ pnpm run api:dev        # 起 API 服务（默认 http://127.0.0.1:8787，种子
  pnpm run onsite:dev     # 起现场端（默认 http://127.0.0.1:5174，需要 API 一起跑）
 pnpm run test:api       # 只跑 API 层测试
 pnpm run measure:model  # 真实模型实测（三个种子场景各跑一次，出耗时/降级/合并口径；需要 DEEPSEEK_API_KEY）
+pnpm run eval:model     # 清单质量实测（13 个用例各采样 3 次，出覆盖率与稳定性报告；需要 DEEPSEEK_API_KEY）
 pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 ```
 
@@ -111,6 +113,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
+| 清单质量 | `pnpm run test:unit`（含 `evals/` 离线回归） | 三个种子场景的清单不退化：可溯源、同对象不重复、期望覆盖；报告见 `evals/report-offline.md`，口径见 `evals/rubric.md` |
 | 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
