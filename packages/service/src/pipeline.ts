@@ -16,6 +16,7 @@ import type { UnderstandingIssues } from '@zx/contracts';
 import { UNDERSTAND_TASK } from './model';
 import type { ModelProvider } from './model';
 import { fieldKeysOf } from './fields';
+import { ruleDerivedItems } from './rule-candidates';
 import type { ServiceStore } from './types';
 
 /** 判据与规则这一版的口径，落库便于事后还原。 */
@@ -113,8 +114,10 @@ export async function generateChecklist(
     console.warn(['[清单降级]', input.demandSheetId, JSON.stringify(issues)].join(' '));
   }
 
-  // 四、判据筛选、合并、排序全部在领域包里，服务端只做编排
-  const checklist = buildChecklist({ model, derived });
+  // 四、判据筛选、合并、排序全部在领域包里，服务端只做编排。
+  // 推导项有两路来源：模型出的在前（它带着这份需求单的具体依据），规则托底的在后
+  // （规则算得出来的信号不该赌模型会不会注意到，见 badcases.md BC-03）。
+  const checklist = buildChecklist({ model, derived: [...derived, ...ruleDerivedItems(model)] });
 
   const stored = store.createChecklist({
     demandSheetId: input.demandSheetId,

@@ -260,7 +260,8 @@ describe('模型返回的两道红线', () => {
     });
     const body = (await res.json()) as { degraded: boolean; counts: { total: number }; items: { object: string }[] };
     expect(body.degraded).toBe(true);
-    expect(body.counts.total).toBe(17);
+    // 降级清单 = 16 项通用核实 + 房主答「不清楚」的新风系统 + 规则托底的猫砂盆位置
+    expect(body.counts.total).toBe(18);
     expect(body.items.map((i) => i.object)).not.toContain('凭空来的');
   });
 
@@ -276,7 +277,7 @@ describe('模型返回的两道红线', () => {
     const body = (await res.json()) as { degraded: boolean; model: string; counts: { total: number } };
     expect(body.degraded).toBe(true);
     expect(body.model).toContain('降级');
-    expect(body.counts.total).toBe(17);
+    expect(body.counts.total).toBe(18);
   });
 
   it('模型调用抛错：清单照样出得来，只少掉推导项', async () => {
@@ -290,7 +291,7 @@ describe('模型返回的两道红线', () => {
     });
     const body = (await res.json()) as { degraded: boolean; counts: { must: number } };
     expect(body.degraded).toBe(true);
-    expect(body.counts.must).toBe(9);
+    expect(body.counts.must).toBe(10);
   });
 });
 

@@ -2,7 +2,7 @@
   "name": "@zx/checklist",
   "version": "0.1.0",
   "private": true,
-  "description": "量房沟通清单：四类来源、判据筛选、合并去重、排序计数与导出，零框架依赖",
+  "description": "量房沟通清单：来源候选、判据筛选、合并去重、排序计数与导出，零框架依赖",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

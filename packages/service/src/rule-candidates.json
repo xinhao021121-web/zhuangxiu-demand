@@ -1,0 +1,37 @@
+[
+  {
+    "ruleId": "pet-cat",
+    "fieldIds": ["live_pet", "live_pet_count"],
+    "object": "猫砂盆位置",
+    "space": "卫生间",
+    "tier": "must",
+    "question": "猫砂盆放哪个空间，就近有没有插座与通风",
+    "onsiteChecks": ["猫砂盆与食盆的数量和位置", "就近插座与通风条件", "会不会挡住生活动线"]
+  },
+  {
+    "ruleId": "elder-home",
+    "fieldIds": ["live_elder"],
+    "object": "适老通行",
+    "space": "基本信息",
+    "tier": "must",
+    "question": "门洞净宽、地面高差与扶手要不要预留",
+    "onsiteChecks": ["各门洞净宽与门槛高差", "常用动线上能否加扶手", "地面是否需要防滑处理"]
+  },
+  {
+    "ruleId": "bath-elder-safe",
+    "fieldIds": ["live_elder", "wc_safe"],
+    "object": "卫生间适老",
+    "space": "卫生间",
+    "tier": "must",
+    "question": "淋浴区防滑与扶手预埋怎么做",
+    "onsiteChecks": ["淋浴区与马桶旁能否预埋扶手", "地面防滑与排水坡度", "干湿分区怎么分"]
+  },
+  { "ruleId": "old-house", "fieldIds": ["base_house_state"], "object": "旧房隐蔽" },
+  { "ruleId": "open-kitchen-risk", "fieldIds": ["kt_form", "kt_freq"], "object": "排烟" },
+  { "ruleId": "ac-central", "fieldIds": ["dev_ac"], "object": "空调外机" },
+  { "ruleId": "floor-heating", "fieldIds": ["dev_heat"], "object": "采暖" },
+  { "ruleId": "fresh-air", "fieldIds": ["dev_freshair"], "object": "新风系统" },
+  { "ruleId": "balcony-dryer", "fieldIds": ["bl_dryer"], "object": "家政封窗" },
+  { "ruleId": "bedroom-quiet", "fieldIds": ["br_quiet"], "object": "采光噪音" },
+  { "ruleId": "kitchen-fridge-embedded", "fieldIds": ["kt_fridge"], "object": "大件电器" }
+]

@@ -25,7 +25,7 @@ packages/
   rules/              规则引擎：命中、排序、去重、静默状态机、写回动作
   summary/            需求摘要与量房确认清单文本
   data/               草稿读写、版本迁移、提交与埋点
-  checklist/          量房沟通清单：四类来源、判据筛选、合并去重、排序计数、导出
+  checklist/          量房沟通清单：来源候选、判据筛选、合并去重、排序计数、导出
   redact/             外发脱敏：字段级三级策略、自由文本替换、外发 payload 与审计记录
   contracts/          API 契约与共享类型（zod → 类型 + OpenAPI）
   devtools/           单测与类型检查用的开发依赖
