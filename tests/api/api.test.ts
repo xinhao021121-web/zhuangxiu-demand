@@ -727,3 +727,153 @@ describe('采集通道与内部通道分离', () => {
     expect(detail.form.values.base_area).toBe(89);
   });
 });
+
+describe('改名、遗漏补录与回流报表', () => {
+  const rename = (id: string, demandName: string, t = token) =>
+    app.request(`/demand-sheets/${id}`, {
+      method: 'PATCH',
+      headers: jsonHeaders(t),
+      body: JSON.stringify({ demandName }),
+    });
+
+  const omit = (id: string, body: unknown, t = token) =>
+    app.request(`/demand-sheets/${id}/omissions`, {
+      method: 'POST',
+      headers: jsonHeaders(t),
+      body: JSON.stringify(body),
+    });
+
+  const reports = async (t = token) =>
+    (await (await app.request('/reports', { headers: auth(t) })).json()) as {
+      rules: { ruleId: string; shown: number; adopted: number; rejected: number; rejectRate: number | null }[];
+      criteria: { group: string; items: number; removed: number; removalRate: number | null }[];
+      fields: { fieldId: string; label: string; referenced: number; skipped: number; skipRate: number | null; corrected: number | null }[];
+      omissions: { space: string; category: string; note: string; demandName: string; operator: string }[];
+      unavailable: { column: string; reason: string }[];
+    };
+
+  it('改名只动名字，房主填的内容一个字不变', async () => {
+    const res = await rename('d1', '张先生 · 89㎡ 老房翻新');
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { demandName: string }).demandName).toBe('张先生 · 89㎡ 老房翻新');
+
+    const detail = (await (await app.request('/demand-sheets/d1', { headers: auth(token) })).json()) as {
+      sheet: { demandName: string; submittedAt: string };
+      form: { values: Record<string, unknown> };
+    };
+    expect(detail.sheet.demandName).toBe('张先生 · 89㎡ 老房翻新');
+    expect(detail.form.values.base_area).toBe(89);
+    // 时间、来源、表单都没跟着动
+    expect(detail.sheet.submittedAt).toBe('2026-09-21 20:14');
+  });
+
+  it('空名字与不存在的需求单各有各的说法', async () => {
+    expect((await rename('d1', '   ')).status).toBe(400);
+    expect((await rename('不存在', '随便叫')).status).toBe(404);
+  });
+
+  it('补录一条遗漏：落成 omission_log 事件，台账按时间倒序', async () => {
+    const first = await omit('d1', { space: '主卧', category: '字段清单', note: '阳台有没有晾晒需求' });
+    expect(first.status).toBe(201);
+    const ledger = (await first.json()) as { space: string; category: string; demandName: string; operator: string }[];
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]).toMatchObject({
+      space: '主卧',
+      category: '字段清单',
+      demandName: '张先生',
+      operator: '王设计',
+    });
+
+    const second = await omit('d1', { space: '卫生间', category: '通用清单', note: '楼上邻居的下水噪声' });
+    const two = (await second.json()) as { space: string; at: string }[];
+    expect(two).toHaveLength(2);
+    // 两次补录的落库时间一样（测试时钟固定），按写入先后倒序：后补的排前面
+    expect(two[0].space).toBe('卫生间');
+
+    // 口径一处定义：台账就是这些事件，事件表里当然查得到
+    const events = (await (await app.request('/demand-sheets/d1/events', { headers: auth(token) })).json()) as {
+      name: string;
+      source: string;
+      operator: string;
+    }[];
+    const logged = events.filter((e) => e.name === 'omission_log');
+    expect(logged).toHaveLength(2);
+    expect(logged[0]).toMatchObject({ source: 'server', operator: '王设计' });
+  });
+
+  it('补录要选分区、归类必须是四类之一', async () => {
+    expect((await omit('d1', { space: '', category: '字段清单' })).status).toBe(400);
+    expect((await omit('d1', { space: '主卧', category: '说不清哪一类' })).status).toBe(400);
+    expect((await omit('不存在', { space: '主卧', category: '字段清单' })).status).toBe(404);
+  });
+
+  it('报表：判据、字段、遗漏三张表用真数据算，规则表没有埋点就是空的', async () => {
+    await generate('d1');
+    await omit('d1', { space: '卫生间', category: '模型推演', note: '楼上邻居的下水噪声' });
+    const view = await reports();
+
+    expect(view.criteria.length).toBeGreaterThan(0);
+    expect(view.criteria.every((c) => c.removalRate !== null)).toBe(true);
+    expect(view.fields.length).toBeGreaterThan(0);
+    expect(view.fields.some((f) => f.referenced > 0)).toBe(true);
+    expect(view.fields.every((f) => f.corrected === null)).toBe(true);
+    expect(view.omissions[0]).toMatchObject({ demandName: '张先生', operator: '王设计' });
+    // 没有采集端埋点：规则表是空的，不是一堆 0（产品文档第十章）
+    expect(view.rules).toEqual([]);
+    expect(view.unavailable.map((u) => u.column)).toEqual(['现场修正率']);
+  });
+
+  it('规则健康度用采集通道提交进来的埋点算', async () => {
+    const session = await openSession();
+    const at = Date.now();
+    await collect(session, {
+      ...submittedSheet({ submissionId: 'a-rules-1' }),
+      telemetry: {
+        batchId: 'a-rules-1',
+        events: [
+          { name: 'shown', at: at - 3000, props: { rule: 'pet-cat', target: 'base_other', kind: 'discover' } },
+          { name: 'shown', at: at - 2000, props: { rule: 'pet-cat', target: 'base_other', kind: 'discover' } },
+          { name: 'adopt', at: at - 1000, props: { rule: 'pet-cat', target: 'base_other' } },
+          { name: 'ignore', at, props: { rule: 'budget-reserve', id: 'budget#-' } },
+        ],
+      },
+    });
+
+    const view = await reports();
+    const cat = view.rules.find((r) => r.ruleId === 'pet-cat')!;
+    expect(cat).toMatchObject({ shown: 2, adopted: 1, rejected: 0 });
+    expect(cat.rejectRate).toBe(0);
+    // 没展示过就被拒了：拒绝率是「还没有样本」，不是 0%
+    const budget = view.rules.find((r) => r.ruleId === 'budget-reserve')!;
+    expect(budget).toMatchObject({ shown: 0, rejected: 1 });
+    expect(budget.rejectRate).toBeNull();
+  });
+
+  it('现场记录算进「没问上」率', async () => {
+    const { body } = await generate('d1');
+    const items = (await (await app.request(`/checklists/${body.id}`, { headers: auth(token) })).json()) as {
+      groups: { items: { key: string; relatedFields: string[] }[] }[];
+    };
+    const first = items.groups.flatMap((g) => g.items).find((i) => i.relatedFields.length > 0)!;
+    await app.request(`/checklists/${body.id}/site-records`, {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: JSON.stringify({
+        records: [
+          { id: 'r-skip', demandSheetId: 'd1', checklistId: body.id, itemKey: first.key, status: 'skip', note: '没问上', at: '14:30', operator: '王设计' },
+        ],
+      }),
+    });
+    const fieldId = first.relatedFields[0].includes('.') ? first.relatedFields[0].split('.')[1] : first.relatedFields[0];
+    const row = (await reports()).fields.find((f) => f.fieldId === fieldId)!;
+    expect(row).toMatchObject({ skipped: 1, skipRate: 100 });
+  });
+
+  it('内部通道的读接口要登录，报表按权限控住', async () => {
+    expect((await app.request('/reports')).status).toBe(401);
+    expect((await app.request('/demand-sheets/d1/omissions')).status).toBe(401);
+    // 采集通道的会话令牌读不了报表：这条通道本来就没有读接口
+    const session = await openSession();
+    expect((await app.request('/reports', { headers: auth(session) })).status).toBe(401);
+  });
+});

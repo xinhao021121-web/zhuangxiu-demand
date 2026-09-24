@@ -135,6 +135,21 @@ try {
   ok((await count(studio, '.item')) === 21, '线上演示的清单 21 条');
   ok((await text(studio, '.card h3')).includes('必问 11 条'), '线上演示的必问 11 条（与种子场景一致）');
   ok((await count(studio, '.badge.b-src-both')) >= 3, '推导项与通用项已合并');
+  // 演示模式也要能补录与看报表：静态托管那份走的是浏览器内的 LocalService，不是另一套假数据
+  await studio.locator('#om-note').fill('线上演示补的一条遗漏');
+  await studio.locator('#om-add').click();
+  await studio.waitForSelector('#om-list');
+  ok((await text(studio, '#om-list')).includes('线上演示补的一条遗漏'), '演示模式也能补录遗漏');
+  await studio.locator('#btn-reports').click();
+  await studio.waitForSelector('#rep-rules');
+  ok(
+    (await count(studio, '#rep-criteria .rtable tr')) > 1 && (await count(studio, '#rep-fields .rtable tr')) > 1,
+    '演示模式的判据与字段健康度都出得了数',
+  );
+  ok((await text(studio, '#rep-omissions')).includes('线上演示补的一条遗漏'), '演示模式的遗漏台账看得到补录');
+  ok((await text(studio, '#rep-fields')).includes('未采集'), '演示模式也如实标出没有来源的列');
+  await studio.locator('#rep-back').click();
+  await studio.waitForTimeout(200);
   await studio.screenshot({ path: path.join(SHOT, 'pages-02-桌面工作台.png') });
   ok(studioErrors.length === 0, '桌面工作台控制台无错误' + (studioErrors.length ? '：' + studioErrors.join(' | ') : ''));
   await studio.close();

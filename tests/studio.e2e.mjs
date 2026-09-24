@@ -132,6 +132,50 @@ try {
   await page.locator('#send-cancel').click();
   await page.waitForTimeout(200);
 
+  // 九、改名：只动叫法，房主填的内容一个字不变
+  await page.locator('#btn-rename').click();
+  await page.waitForSelector('#modal #rn-name');
+  await page.locator('#rn-name').fill('张先生 · 89㎡ 老房翻新');
+  await page.locator('#rn-ok').click();
+  await page.waitForTimeout(500);
+  ok((await count('#modal')) === 0, '改名后弹层关闭');
+  ok((await text('.head')).includes('老房翻新'), '改名后详情头部跟着变');
+  ok((await text('.dcard.on')).includes('老房翻新'), '改名后左侧列表跟着变');
+  await page.locator('.tab[data-tab="form"]').click();
+  await page.waitForTimeout(200);
+  ok((await page.locator('[data-fld="base_area"]').innerText()).includes('89'), '改名不动房主填的内容');
+
+  // 十、遗漏补录：量房结束后补一句「这次该问但没列的是……」
+  await page.locator('.tab[data-tab="list"]').click();
+  await page.waitForSelector('#omission');
+  ok((await count('#om-empty')) === 1, '还没补录时给出空状态');
+  await page.locator('#om-space').selectOption({ index: 0 });
+  await page.locator('#om-cat').selectOption('字段清单');
+  await page.locator('#om-note').fill('阳台有没有晾晒需求');
+  await page.locator('#om-add').click();
+  await page.waitForSelector('#om-list');
+  ok((await text('#om-list')).includes('阳台有没有晾晒需求'), '补录后这份台账里出现这条');
+  ok((await text('#om-list')).includes('字段清单'), '台账带上归类');
+  await page.screenshot({ path: path.join(SHOT, '09-遗漏补录.png') });
+
+  // 十一、回流报表：四张口径 + 算不出来的列
+  await page.locator('#btn-reports').click();
+  await page.waitForSelector('#rep-rules');
+  ok((await count('#rep-rules')) === 1 && (await count('#rep-criteria')) === 1, '规则与判据两张报表都在');
+  ok((await count('#rep-fields')) === 1 && (await count('#rep-omissions')) === 1, '字段与遗漏两张报表都在');
+  ok((await count('#rep-criteria .rtable tr')) > 1, '判据健康度按来源与档位分组出数');
+  ok((await count('#rep-fields .rtable tr')) > 1, '字段健康度出数');
+  ok((await text('#rep-omissions')).includes('阳台有没有晾晒需求'), '遗漏台账里能看到刚补的那条');
+  ok((await text('#rep-omissions')).includes('张先生 · 89㎡ 老房翻新'), '台账按改后的叫法认人');
+  ok((await text('#rep-fields')).includes('未采集'), '现场修正率这一列写「未采集」而不是 0');
+  ok((await text('#rep-unavailable')).includes('现场记录'), '并写清这一列为什么没有来源');
+  // 规则表来自房主端埋点：这一份是文件导入的种子数据，没有埋点，所以是空表而不是一堆 0
+  ok((await text('#rep-rules')).includes('还没有埋点'), '没有埋点时规则表是空表');
+  await page.screenshot({ path: path.join(SHOT, '10-回流报表.png') });
+  await page.locator('#rep-back').click();
+  await page.waitForTimeout(200);
+  ok((await count('#rep-rules')) === 0, '可以回到需求单');
+
   // 八、布局指标
   await page.locator('.tab[data-tab="list"]').click();
   await page.waitForTimeout(300);

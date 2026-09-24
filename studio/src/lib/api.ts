@@ -13,7 +13,10 @@ import type {
   ChecklistView,
   DemandSheetDetail,
   DemandSheetSummary,
+  Omission,
+  OmissionCreate,
   OutboundRecordContract,
+  Reports,
   User,
 } from '@zx/contracts';
 
@@ -105,6 +108,16 @@ const httpApi = {
       { method: 'PATCH', body: JSON.stringify({ removed }) },
     ),
   outboundRecords: (id: string) => request<OutboundRecordContract[]>(`/demand-sheets/${id}/outbound-records`),
+  renameSheet: async (id: string, demandName: string) => {
+    await request<DemandSheetSummary>(`/demand-sheets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ demandName }),
+    });
+  },
+  omissions: (id: string) => request<Omission[]>(`/demand-sheets/${id}/omissions`),
+  addOmission: (id: string, input: OmissionCreate) =>
+    request<Omission[]>(`/demand-sheets/${id}/omissions`, { method: 'POST', body: JSON.stringify(input) }),
+  reports: () => request<Reports>('/reports'),
 };
 
 /** 界面只认这个接口：HTTP 封装与内存服务都必须满足它（签名漂了会在编译期报出来）。 */
@@ -116,6 +129,14 @@ export interface StudioApi {
   checklist(id: string): Promise<ChecklistView>;
   setItemRemoved(checklistId: string, key: string, removed: boolean): Promise<{ key: string; removed: boolean }>;
   outboundRecords(id: string): Promise<OutboundRecordContract[]>;
+  /** 改名：采集端不收集姓名，房主提交的那份要靠设计师改成人认得出的叫法 */
+  renameSheet(id: string, demandName: string): Promise<void>;
+  /** 这份需求单补录过的遗漏（新的在前） */
+  omissions(id: string): Promise<Omission[]>;
+  /** 补录一条遗漏，返回这份需求单的完整台账 */
+  addOmission(id: string, input: OmissionCreate): Promise<Omission[]>;
+  /** 四张回流报表（产品文档 7.6） */
+  reports(): Promise<Reports>;
 }
 
 export const api: StudioApi = {
@@ -129,4 +150,11 @@ export const api: StudioApi = {
     httpApi.setItemRemoved,
   ),
   outboundRecords: pick((s, id: string) => s.outboundRecords(id), httpApi.outboundRecords),
+  renameSheet: pick((s, id: string, demandName: string) => s.renameSheet(id, demandName), httpApi.renameSheet),
+  omissions: pick((s, id: string) => s.omissions(id), httpApi.omissions),
+  addOmission: pick(
+    (s, id: string, input: OmissionCreate) => s.addOmission(id, input),
+    httpApi.addOmission,
+  ),
+  reports: pick((s) => s.reports(), httpApi.reports),
 };

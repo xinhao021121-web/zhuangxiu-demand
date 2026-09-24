@@ -15,8 +15,18 @@ import type { FormModel } from '@zx/field-spec';
 import { createFixtureProvider } from './fixture';
 import { generateChecklist } from './pipeline';
 import { toChecklistSummary, toChecklistView, toDetail, toDomainChecklist, toSummary } from './projections';
-import type { ChecklistRecord, OutboundRecordRecord, ServiceStore, SheetRecord, SiteRecordRecord } from './types';
+import { buildReports, omissionLedger } from './reports';
+import type { ReportSource } from './reports';
+import type {
+  ChecklistRecord,
+  EventRecord,
+  OutboundRecordRecord,
+  ServiceStore,
+  SheetRecord,
+  SiteRecordRecord,
+} from './types';
 import type { ModelProvider } from './model';
+import type { Omission, OmissionCategory, Reports } from '@zx/contracts';
 
 export interface LocalSeedSheet {
   id: string;
@@ -77,12 +87,17 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
   const checklists: ChecklistRecord[] = [];
   const outbound: OutboundRecordRecord[] = [];
   const sites: SiteRecordRecord[] = [];
+  const events: EventRecord[] = [];
 
-  const store: ServiceStore = {
+  /** 这一份内存 store 同时满足流水线与报表的读能力：报表要的「列全部需求单 / 列全部事件」也在这里。 */
+  const store: ServiceStore & ReportSource = {
     getDemandSheet: (id) => sheets.find((s) => s.id === id),
+    listDemandSheets: () => sheets,
     latestChecklist: (demandSheetId) =>
       [...checklists].reverse().find((c) => c.demandSheetId === demandSheetId),
     listSiteRecords: (checklistId) => sites.filter((r) => r.checklistId === checklistId),
+    listEvents: (demandSheetId?: string) =>
+      demandSheetId ? events.filter((e) => e.demandSheetId === demandSheetId) : events,
     createOutboundRecord: (record) => {
       outbound.push(record);
       return record;
@@ -118,6 +133,8 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     if (!found) throw new LocalServiceError(404, '需求单不存在');
     return found;
   };
+  const listOmissions = (sheet: SheetRecord): Omission[] =>
+    omissionLedger(store.listEvents(sheet.id), new Map([[sheet.id, sheet.demandName]]));
 
   return {
     /**
@@ -174,6 +191,38 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
     async outboundRecords(demandSheetId: string) {
       requireSheet(demandSheetId);
       return outbound.filter((r) => r.demandSheetId === demandSheetId).reverse();
+    },
+
+    /** 改名：与 API 的 `PATCH /demand-sheets/:id` 同一件事，只动名字、只回报改完了没有。 */
+    async renameSheet(id: string, demandName: string): Promise<void> {
+      const name = demandName.trim();
+      if (!name) throw new LocalServiceError(400, '名字不能为空');
+      requireSheet(id).demandName = name;
+    },
+
+    /** 遗漏补录：与 API 一样落成一条 `omission_log` 事件，台账就是这些事件本身。 */
+    async addOmission(id: string, input: { space: string; category: OmissionCategory; note?: string }): Promise<Omission[]> {
+      const sheet = requireSheet(id);
+      if (!input.space?.trim()) throw new LocalServiceError(400, '补录要选一个分区');
+      events.push({
+        id: crypto.randomUUID(),
+        demandSheetId: sheet.id,
+        name: 'omission_log',
+        at: now(),
+        source: 'server',
+        operator: current?.name ?? '演示账号',
+        props: { space: input.space, category: input.category, note: input.note ?? '' },
+      });
+      return listOmissions(sheet);
+    },
+
+    async omissions(id: string): Promise<Omission[]> {
+      return listOmissions(requireSheet(id));
+    },
+
+    /** 四张回流报表：与真实服务同一份聚合（`buildReports`），只是数据在内存里。 */
+    async reports(): Promise<Reports> {
+      return buildReports(store);
     },
 
     async summary(checklistId: string) {

@@ -68,6 +68,7 @@ export const PERMISSIONS = {
   'checklist:generate': ['admin', 'designer'],
   'checklist:export': ['admin', 'designer'],
   'site-record:write': ['admin', 'designer'],
+  'omission:write': ['admin', 'designer'],
   'audit:read': ['admin', 'designer'],
   'account:manage': ['admin'],
 } as const satisfies Record<string, readonly Role[]>;

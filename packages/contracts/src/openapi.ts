@@ -8,8 +8,10 @@ import { z } from 'zod';
 import { LoginSchema, UserSchema } from './account';
 import { ChecklistItemSchema, ChecklistSchema } from './checklist';
 import { CollectionSessionSchema, CollectionSubmitSchema } from './collection';
-import { DemandSheetImportSchema } from './demand-sheet';
+import { DemandSheetImportSchema, DemandSheetRenameSchema } from './demand-sheet';
+import { OmissionCreateSchema, OmissionSchema } from './omission';
 import { OutboundRecordSchema, SiteRecordBatchSchema, SiteRecordSchema } from './outbound';
+import { ReportsSchema } from './reports';
 import { EventBatchSchema, StoredEventSchema } from './telemetry';
 import { UnderstandingSchema } from './understanding';
 
@@ -17,8 +19,12 @@ const SCHEMAS = {
   User: UserSchema,
   Login: LoginSchema,
   DemandSheetImport: DemandSheetImportSchema,
+  DemandSheetRename: DemandSheetRenameSchema,
   CollectionSession: CollectionSessionSchema,
   CollectionSubmit: CollectionSubmitSchema,
+  Omission: OmissionSchema,
+  OmissionCreate: OmissionCreateSchema,
+  Reports: ReportsSchema,
   Understanding: UnderstandingSchema,
   Checklist: ChecklistSchema,
   ChecklistItem: ChecklistItemSchema,
@@ -89,6 +95,31 @@ export const API_PATHS = {
       summary: '需求单详情：原始表格 + 表外信息',
       parameters: [path('id')],
       responses: { '200': json('DemandSheetImport', '需求单') },
+    },
+    patch: {
+      summary: '改名：采集端不收集姓名，这一份叫什么叫由设计师定',
+      parameters: [path('id')],
+      requestBody: body('DemandSheetRename', '新的叫法'),
+      responses: { '200': json('DemandSheetImport', '改完之后的这份需求单') },
+    },
+  },
+  '/demand-sheets/{id}/omissions': {
+    get: {
+      summary: '这份需求单补录过的遗漏',
+      parameters: [path('id')],
+      responses: { '200': jsonArray('Omission', '按时间倒序的补录') },
+    },
+    post: {
+      summary: '补录一条遗漏（量房结束后：这次该问但没列的是……）',
+      parameters: [path('id')],
+      requestBody: body('OmissionCreate', '分区、归类与一句话'),
+      responses: { '201': json('Omission', '已落库的补录') },
+    },
+  },
+  '/reports': {
+    get: {
+      summary: '四张回流报表：规则 / 判据 / 字段健康度 与 遗漏台账',
+      responses: { '200': json('Reports', '报表；算不出来的列在 unavailable 里写清原因') },
     },
   },
   '/demand-sheets/{id}/checklist': {

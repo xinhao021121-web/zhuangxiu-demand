@@ -58,6 +58,20 @@ export interface SiteRecordRecord {
   operator: string;
 }
 
+/**
+ * 埋点事件（技术方案 6.11）：报表按事件名取数，`props` 是取数用得到的字段。
+ * 只列报表与投影用得到的那些键，比仓储层的行少几个（id、seq 这些落库细节报表不看）。
+ */
+export interface EventRecord {
+  id: string;
+  demandSheetId: string;
+  name: string;
+  at: string;
+  source: 'client' | 'server';
+  operator: string | null;
+  props: Record<string, unknown>;
+}
+
 /** 读模型需要的读能力。 */
 export interface SheetStore {
   getDemandSheet(id: string): SheetRecord | undefined;

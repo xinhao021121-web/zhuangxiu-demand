@@ -164,6 +164,13 @@ export function createRepo(db: Db) {
       const row = one<Record<string, unknown>>('SELECT * FROM demand_sheets WHERE id = ?', id);
       return row ? mapSheet(row) : undefined;
     },
+    /** 改名：只动名字，房主填的内容一个字都不动（技术方案 5.3 的待定项 9）。 */
+    renameDemandSheet(id: string, demandName: string): DemandSheetRow | undefined {
+      const existing = this.getDemandSheet(id);
+      if (!existing) return undefined;
+      run('UPDATE demand_sheets SET demand_name = ? WHERE id = ?', demandName, id);
+      return { ...existing, demandName };
+    },
 
     /* ---------------- 清单 ---------------- */
     createChecklist(input: {

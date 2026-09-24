@@ -49,3 +49,13 @@ export type FieldValueInput = z.infer<typeof FieldValueSchema>;
 export type InstanceStateInput = z.infer<typeof InstanceStateSchema>;
 export type FormModelInput = z.infer<typeof FormModelSchema>;
 export type DemandSheetImport = z.infer<typeof DemandSheetImportSchema>;
+
+/**
+ * 改名：采集端不收集房主姓名，所以房主提交的需求单落库时叫「未命名需求单」，
+ * 由设计师在桌面端改成认得出的叫法（技术方案 5.3 待定项 9 的收敛）。
+ */
+export const DemandSheetRenameSchema = z.object({
+  demandName: z.string().trim().min(1).max(40),
+});
+
+export type DemandSheetRename = z.infer<typeof DemandSheetRenameSchema>;

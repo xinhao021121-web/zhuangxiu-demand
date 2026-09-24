@@ -6,18 +6,25 @@ import type {
   ChecklistView,
   DemandSheetDetail,
   DemandSheetSummary,
+  Omission,
+  OmissionCreate,
   OutboundRecordContract,
+  Reports,
   User,
 } from '@zx/contracts';
 import { api, ApiError, DEMO_MODE, getToken, setToken } from '../lib/api';
 import { ChecklistPanel } from './ChecklistPanel';
-import { ExportDialog, OutboundDialog } from './Dialogs';
+import { ExportDialog, OutboundDialog, RenameDialog } from './Dialogs';
 import { FormView } from './FormView';
 import { LoginView } from './Login';
+import { OmissionPanel } from './OmissionPanel';
+import { ReportsView } from './ReportsView';
 import { UnderstandingPanel } from './UnderstandingPanel';
 
 type Tab = 'form' | 'under' | 'list';
-type Dialog = { kind: 'outbound' } | { kind: 'export' } | null;
+type Dialog = { kind: 'outbound' } | { kind: 'export' } | { kind: 'rename' } | null;
+/** 主区两种视图：某一份需求单，或整条链路的回流报表 */
+type View = 'sheet' | 'reports';
 
 const USER_KEY = 'zx.studio.user';
 
@@ -44,12 +51,16 @@ export function Workbench() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DemandSheetDetail | null>(null);
   const [tab, setTab] = useState<Tab>('form');
+  const [view, setView] = useState<View>('sheet');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   /** 外发记录：生成前给设计师看一眼上次发了什么（F3 的事后可查） */
   const [history, setHistory] = useState<OutboundRecordContract[]>([]);
+  /** 这份需求单补录过的遗漏（新的在前） */
+  const [omissions, setOmissions] = useState<Omission[]>([]);
+  const [reports, setReports] = useState<Reports | null>(null);
   const [error, setError] = useState('');
 
   const reloadSheets = useCallback(async () => {
@@ -70,6 +81,14 @@ export function Workbench() {
     const next = await api.detail(id);
     setDetail(next);
     return next;
+  }, []);
+
+  const reloadOmissions = useCallback(async (id: string) => {
+    try {
+      setOmissions(await api.omissions(id));
+    } catch {
+      setOmissions([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -96,7 +115,8 @@ export function Workbench() {
     if (!currentId) return;
     reloadDetail(currentId).catch((err: unknown) => setError(err instanceof Error ? err.message : '加载失败'));
     void reloadHistory(currentId);
-  }, [currentId, reloadDetail, reloadHistory]);
+    void reloadOmissions(currentId);
+  }, [currentId, reloadDetail, reloadHistory, reloadOmissions]);
 
   const currentSummary = useMemo(() => sheets.find((s) => s.id === currentId) ?? null, [sheets, currentId]);
 
@@ -117,8 +137,51 @@ export function Workbench() {
   const selectSheet = (id: string) => {
     setCurrentId(id);
     setTab('form');
+    setView('sheet');
     setFlash(null);
     setError('');
+  };
+
+  /** 改名：只动叫法，房主填的内容一个字不变（技术方案 5.3 的待定项 9）。 */
+  const renameSheet = async (demandName: string) => {
+    if (!currentId) return;
+    setBusy(true);
+    try {
+      await api.renameSheet(currentId, demandName);
+      await reloadSheets();
+      await reloadDetail(currentId);
+      setDialog(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '改名失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 遗漏补录：落一条 omission_log，台账立刻回来（补录不回溯改历史）。 */
+  const addOmission = async (input: OmissionCreate) => {
+    if (!currentId) return;
+    setBusy(true);
+    try {
+      setOmissions(await api.addOmission(currentId, input));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '补录失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openReports = async () => {
+    setBusy(true);
+    try {
+      setReports(await api.reports());
+      setView('reports');
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '取报表失败');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const confirmGenerate = async (selected: Record<string, boolean>) => {
@@ -188,6 +251,9 @@ export function Workbench() {
           <span className="pill">公司内部 · 数据不出自有服务端</span>
         )}
         <div className="spacer" />
+        <button type="button" className="btn ghost" id="btn-reports" onClick={openReports}>
+          回流报表
+        </button>
         <span className="pill">
           {user.name} · {user.role === 'admin' ? '管理员' : '设计师'}
         </span>
@@ -225,7 +291,9 @@ export function Workbench() {
         </aside>
 
         <section className="main" id="main">
-          {!detail ? (
+          {view === 'reports' && reports ? (
+            <ReportsView reports={reports} onClose={() => setView('sheet')} />
+          ) : !detail ? (
             <div className="card">
               <div className="empty-st">正在加载需求单…</div>
             </div>
@@ -240,9 +308,13 @@ export function Workbench() {
                     <span>
                       推荐项完成度 {detail.progress.done}/{detail.progress.total}（{detail.progress.percent}%）
                     </span>
+                    <span>{detail.sheet.source === 'miniapp' ? '房主端提交' : '文件导入'}</span>
                   </div>
                 </div>
                 <div className="acts">
+                  <button type="button" className="btn" id="btn-rename" onClick={() => setDialog({ kind: 'rename' })}>
+                    改名
+                  </button>
                   {hasChecklist ? (
                     <button type="button" className="btn" id="btn-replay" onClick={() => setDialog({ kind: 'outbound' })}>
                       重新解读
@@ -314,7 +386,15 @@ export function Workbench() {
                   </div>
                 )
               ) : checklist ? (
-                <ChecklistPanel checklist={checklist} onToggle={toggleItem} onJump={jumpToField} pendingKey={pendingKey} />
+                <>
+                  <ChecklistPanel checklist={checklist} onToggle={toggleItem} onJump={jumpToField} pendingKey={pendingKey} />
+                  <OmissionPanel
+                    spaces={checklist.groups.map((g) => g.space)}
+                    omissions={omissions}
+                    busy={busy}
+                    onAdd={addOmission}
+                  />
+                </>
               ) : (
                 <div className="card">
                   <div className="empty-st">
@@ -343,6 +423,14 @@ export function Workbench() {
         />
       ) : null}
       {dialog?.kind === 'export' ? <ExportDialog markdown={markdown} onClose={() => setDialog(null)} /> : null}
+      {dialog?.kind === 'rename' && detail ? (
+        <RenameDialog
+          current={detail.sheet.demandName}
+          busy={busy}
+          onCancel={() => setDialog(null)}
+          onConfirm={renameSheet}
+        />
+      ) : null}
     </>
   );
 }

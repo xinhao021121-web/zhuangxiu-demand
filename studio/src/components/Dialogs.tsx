@@ -190,3 +190,66 @@ export function ExportDialog({ markdown, onClose }: { markdown: string; onClose:
     </Shell>
   );
 }
+
+/**
+ * 改名：采集端不收集房主姓名，房主提交的需求单落库叫「未命名需求单」，
+ * 设计师在桌面端改成认得出的叫法（技术方案 5.3 的待定项 9 收敛为「桌面端加改名」）。
+ *
+ * 只动名字：房主填的内容一个字都不动，也不留「原名」——名字是给设计师看的分类，
+ * 不是这份数据的一部分。
+ */
+export function RenameDialog({
+  current,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  current: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (demandName: string) => void;
+}) {
+  const [name, setName] = useState(current);
+  const trimmed = name.trim();
+  return (
+    <Shell
+      title="给这份需求单改个叫法"
+      onMask={onCancel}
+      footer={
+        <>
+          <span className="hint">只改叫法，房主填的内容不变</span>
+          <div className="spacer" />
+          <button type="button" className="btn" id="rn-cancel" onClick={onCancel}>
+            取消
+          </button>
+          <button
+            type="button"
+            className="btn primary"
+            id="rn-ok"
+            disabled={busy || !trimmed}
+            onClick={() => onConfirm(trimmed)}
+          >
+            保存
+          </button>
+        </>
+      }
+    >
+      <label className="field">
+        <span className="lbl">需求单叫法</span>
+        <input
+          id="rn-name"
+          value={name}
+          maxLength={40}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && trimmed) onConfirm(trimmed);
+          }}
+        />
+      </label>
+      <div className="note">
+        建议写「称呼 + 户型或小区」这类能认出来的叫法，例如「张先生 · 89㎡ 老房翻新」。
+      </div>
+    </Shell>
+  );
+}

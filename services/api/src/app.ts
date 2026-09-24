@@ -12,8 +12,10 @@ import { previewOutbound, DEFAULT_POLICY } from '@zx/redact';
 import { buildOverview } from '@zx/summary';
 import {
   DemandSheetImportSchema,
+  DemandSheetRenameSchema,
   EventBatchSchema,
   LoginSchema,
+  OmissionCreateSchema,
   SiteRecordBatchSchema,
   UserCreateSchema,
   openApiDocument,
@@ -23,7 +25,9 @@ import { can, signToken, verifyToken } from './auth';
 import { createCollectionChannel } from './collection';
 import { toIsoAt } from './events';
 import {
+  buildReports,
   generateChecklist,
+  omissionLedger,
   toChecklistSummary,
   toChecklistView,
   toDetail,
@@ -151,6 +155,17 @@ export function createApp(deps: AppDeps) {
     const sheet = repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     return c.json(toDetail(repo, sheet));
+  });
+
+  /* 改名：采集端不收集姓名，房主提交的那份落库叫「未命名需求单」，由设计师改成认得出的叫法。 */
+  app.patch('/demand-sheets/:id', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'demand-sheet:write')) return c.json({ error: '没有这个权限' }, 403);
+    const parsed = DemandSheetRenameSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return c.json({ error: '名字不合法', issues: parsed.error.issues }, 400);
+    const sheet = repo.renameDemandSheet(c.req.param('id'), parsed.data.demandName);
+    if (!sheet) return c.json({ error: '需求单不存在' }, 404);
+    return c.json(toSummary(repo, sheet));
   });
 
   /* ---------------- 清单 ---------------- */
@@ -284,6 +299,48 @@ export function createApp(deps: AppDeps) {
     const sheet = repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     return c.json(repo.listEvents(sheet.id));
+  });
+
+  /* ---------------- 遗漏补录与回流报表（产品文档 7.6） ---------------- */
+
+  const omissionRows = (id: string, demandName: string) =>
+    omissionLedger(repo.listEvents(id), new Map([[id, demandName]]));
+
+  /*
+   * 补录：量房结束后补一句「这次该问但没列的是……」。
+   * 落成一条 `omission_log` 事件（技术方案 6.11 的落点），台账就是这些事件本身。
+   */
+  app.post('/demand-sheets/:id/omissions', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'omission:write')) return c.json({ error: '没有这个权限' }, 403);
+    const sheet = repo.getDemandSheet(c.req.param('id'));
+    if (!sheet) return c.json({ error: '需求单不存在' }, 404);
+    const parsed = OmissionCreateSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return c.json({ error: '补录格式不对', issues: parsed.error.issues }, 400);
+    const at = now();
+    repo.createEvents({
+      demandSheetId: sheet.id,
+      source: 'server',
+      operator: user.name,
+      at,
+      events: [{ name: 'omission_log', at, props: parsed.data }],
+    });
+    return c.json(omissionRows(sheet.id, sheet.demandName), 201);
+  });
+
+  app.get('/demand-sheets/:id/omissions', (c) => {
+    const user = c.get('user');
+    if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
+    const sheet = repo.getDemandSheet(c.req.param('id'));
+    if (!sheet) return c.json({ error: '需求单不存在' }, 404);
+    return c.json(omissionRows(sheet.id, sheet.demandName));
+  });
+
+  /* 四张报表：只汇总与排序，不自动改规则（产品文档 7.5 第 1 条）。 */
+  app.get('/reports', (c) => {
+    const user = c.get('user');
+    if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
+    return c.json(buildReports(repo));
   });
 
   /* ---------------- 现场记录 ---------------- */
