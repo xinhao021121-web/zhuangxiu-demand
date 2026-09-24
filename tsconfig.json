@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
     "baseUrl": ".",
@@ -24,5 +25,5 @@
       "vitest": ["packages/devtools/node_modules/vitest"]
     }
   },
-  "include": [ "packages/**/*.ts", "services/**/*.ts", "evals/**/*.ts", "tests/unit/**/*.ts", "tests/api/**/*.ts", "tests/eval/**/*.ts", "vitest.config.ts" ]
+  "include": [ "packages/**/*.ts", "services/**/*.ts", "evals/**/*.ts", "tools/**/*.ts", "tests/unit/**/*.ts", "tests/api/**/*.ts", "tests/eval/**/*.ts", "vitest.config.ts" ]
 }

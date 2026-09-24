@@ -7,6 +7,7 @@
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "build:spec": "python tools/build_field_spec.py",
+    "build:research": "pnpm --dir services/api exec tsx ../../tools/build-research-materials.ts",
     "test": "pnpm run test:unit && pnpm run test:app && pnpm run test:preview && pnpm run test:demo && pnpm run test:designer && pnpm run test:studio && pnpm run test:onsite && pnpm run test:onsite-app && pnpm run test:pages",
     "test:unit": "pnpm --dir packages/devtools exec vitest run --root ../..",
     "test:api": "pnpm --dir packages/devtools exec vitest run --root ../.. tests/api",

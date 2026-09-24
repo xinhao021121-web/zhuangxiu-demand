@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>问需 · 分档卡片（16 张）</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif; color: #1e2430; }
+  .tip { border: 1px dashed #b9c1cc; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.7; }
+  .tip b { color: #b0392f; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+  .card { border: 1px solid #6b7480; border-radius: 6px; min-height: 60mm; display: flex;
+          align-items: center; justify-content: center; text-align: center; padding: 7mm; }
+  .card span { font-size: 19px; font-weight: 600; letter-spacing: .02em; }
+  @media print { .tip { display: none; } }
+</style>
+</head>
+<body>
+  <div class="tip">
+    <b>这张纸不要交给受访者看。</b>剪开成 16 张，只说任务：「这里 16 张卡片，都是量房现场要核实的内容，请分成两堆：一堆是不问就会做错、要返工的；一堆是问一下更好的。」
+    卡片上没有序号也没有档位，这是刻意的——印上去，这个任务就变成核对答案了。
+    分完追问：哪张犹豫最久、为什么、如果现场只剩 20 分钟你先问哪几张、有没有哪张会因为情况不同换堆。
+  </div>
+  <div class="grid">
+      <div class="card"><span>各房间实际净尺寸与层高</span></div>
+      <div class="card"><span>承重墙、梁位与门窗洞口位置</span></div>
+      <div class="card"><span>上下水点位、排水立管与管井</span></div>
+      <div class="card"><span>同层排水与马桶移位条件</span></div>
+      <div class="card"><span>燃气表位置与排烟条件</span></div>
+      <div class="card"><span>配电箱回路容量、弱电箱与入户网络</span></div>
+      <div class="card"><span>空调外机位与冷凝水排放</span></div>
+      <div class="card"><span>采暖分水器与暖气片位置</span></div>
+      <div class="card"><span>阳台承重、封窗与排水条件</span></div>
+      <div class="card"><span>墙体材质与可开槽条件</span></div>
+      <div class="card"><span>旧房管线年限、防水与墙体状况</span></div>
+      <div class="card"><span>采光朝向与噪音源</span></div>
+      <div class="card"><span>定制柜安装深度与墙面垂直度</span></div>
+      <div class="card"><span>地面完成面高度衔接</span></div>
+      <div class="card"><span>大件电器型号与尺寸确认</span></div>
+      <div class="card"><span>入户门与窗户是否更换及尺寸</span></div>
+  </div>
+</body>
+</html>

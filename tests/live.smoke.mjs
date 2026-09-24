@@ -22,6 +22,10 @@ const STUDIO_URL = new URL('studio/', URL_TO_CHECK).href;
 const ONSITE_URL = new URL('onsite/', URL_TO_CHECK).href;
 
 const fails = [];
+/** 仓库里这一版文档的版本号：线上入口页必须写着同一个，否则发出去的不是本地这一版 */
+const LOCAL_VERSION = fs
+  .readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8')
+  .match(/产品设计文档 (V[\d.]+)/)?.[1];
 const ok = (cond, msg) => {
   console.log((cond ? 'PASS  ' : 'FAIL  ') + msg);
   if (!cond) fails.push(msg);
@@ -45,6 +49,10 @@ if (landing.error) {
     '入口页给出三个体验入口',
   );
   ok(html.includes('判据') && html.includes('脱敏'), '入口页写出关键设计点');
+  ok(
+    !!LOCAL_VERSION && html.includes(`产品设计文档 ${LOCAL_VERSION}`),
+    `线上产物与仓库同一版（${LOCAL_VERSION ?? '读不到本地版本号'}）`,
+  );
 }
 
 /* 二、采集端 H5（在 /app/ 下，用相对路径，两种托管都不用改） */
@@ -128,6 +136,19 @@ await checkApp('桌面工作台', STUDIO_URL, '.dcard', async () => {
   const hasChecklist = (await page.locator('.dcard.on').innerText()).includes('已解读');
   return cards === 3 && hasChecklist;
 });
+
+/* 五、线上产物带没带上这一版的新能力：导入、遗漏补录、回流报表 */
+ok((await page.locator('#btn-import').count()) === 1, '线上桌面端有「导入」入口');
+ok((await page.locator('#btn-reports').count()) === 1, '线上桌面端有「回流报表」入口');
+await page.click('#btn-reports');
+await page.waitForSelector('#rep-criteria');
+ok((await page.locator('#rep-criteria .rtable tr').count()) > 1, '线上桌面端出得了判据健康度');
+ok((await page.locator('#rep-fields').innerText()).includes('未采集'), '线上报表如实标出没有来源的列');
+await page.locator('#rep-back').click();
+await page.waitForTimeout(200);
+await page.locator('.tab[data-tab="list"]').click();
+await page.waitForSelector('#omission');
+ok((await page.locator('#om-note').count()) === 1, '线上桌面端有遗漏补录入口');
 
 await checkApp('现场端', ONSITE_URL, '.dc', async () => {
   const cards = await page.locator('.dc').count();
