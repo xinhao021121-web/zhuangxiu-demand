@@ -1,5 +1,7 @@
 /** 环境变量都在这里读，密钥不进仓库、不进前端（技术方案 7.1）。 */
 
+import type { RateLimiterBinding } from './guard';
+
 const num = (v: string | undefined, fallback: number) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -38,6 +40,15 @@ export interface ApiEnv {
   /** 采集通道的限流：同一来源在一个窗口里允许的请求数 */
   collectionRateLimit: number;
   collectionRateWindowSeconds: number;
+  /** 内部登录的限流：公开的无鉴权入口 + 6 位验证码，不限一下等于让人慢慢试 */
+  loginRateLimit: number;
+  loginRateWindowSeconds: number;
+  /**
+   * Cloudflare 的原生限流绑定。边缘上进程内计数不跨实例（实测连猜 11 次全部放行），
+   * 所以 Worker 会把 `[[ratelimits]]` 的绑定塞进来；容器路线没有它，退回进程内计数。
+   * 这不是环境变量，是运行时绑定，所以单独放一个可空字段（`worker.ts` 里赋值）。
+   */
+  limiters?: { login?: RateLimiterBinding; collection?: RateLimiterBinding };
   /** 服务挂在反向代理后面：限流用 X-Forwarded-For 当客户端地址；直连时保持关闭，那个头可以伪造 */
   trustProxy: boolean;
   /** fake：不调模型，用桩数据跑通流程；deepseek：官方 API */
@@ -61,6 +72,8 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
     corsAllowedOrigins: list(source.CORS_ALLOWED_ORIGINS) ?? LOCAL_ORIGINS,
     collectionRateLimit: num(source.COLLECTION_RATE_LIMIT, 20),
     collectionRateWindowSeconds: num(source.COLLECTION_RATE_WINDOW_SECONDS, 60),
+    loginRateLimit: num(source.LOGIN_RATE_LIMIT, 10),
+    loginRateWindowSeconds: num(source.LOGIN_RATE_WINDOW_SECONDS, 60),
     trustProxy: source.TRUST_PROXY === '1',
     model: source.MODEL_PROVIDER === 'deepseek' ? 'deepseek' : 'fake',
     deepseekApiKey: source.DEEPSEEK_API_KEY ?? '',

@@ -16,12 +16,15 @@ import { createDeepSeekProvider } from './model/deepseek';
 import { createRepo } from './repo';
 import { seedDatabase } from './seed';
 import type { D1DatabaseLike } from './db/d1';
+import type { RateLimiterBinding } from './guard';
 import type { Repo } from './repo';
 import type { ModelProvider } from '@zx/service';
 
-/** Workers 的绑定：D1 与那几个变量/密钥（见 `wrangler.toml`）。 */
+/** Workers 的绑定：D1、两个原生限流绑定，以及那几个变量/密钥（见 `wrangler.toml`）。 */
 export interface WorkerEnv {
   DB: D1DatabaseLike;
+  LOGIN_LIMITER?: RateLimiterBinding;
+  COLLECTION_LIMITER?: RateLimiterBinding;
   [key: string]: unknown;
 }
 
@@ -48,6 +51,8 @@ function createProvider(env: ReturnType<typeof readEnv>): ModelProvider {
 export default {
   async fetch(request: Request, bindings: WorkerEnv): Promise<Response> {
     const env = readEnv(bindings as unknown as NodeJS.ProcessEnv);
+    // 限流走边缘账号级计数：进程内计数在 Workers 上不跨实例，等于没限（guard.ts 写了实测）
+    env.limiters = { login: bindings.LOGIN_LIMITER, collection: bindings.COLLECTION_LIMITER };
     const repo = createRepo(createD1Database(bindings.DB));
     await ensureSeed(repo);
     return createApp({ repo, provider: createProvider(env), env }).fetch(request, bindings);

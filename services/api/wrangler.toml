@@ -28,9 +28,30 @@ TRUST_PROXY = "1"
 # 采集通道限流：每个来源 20 次 / 60 秒（匿名通道，宁可紧一点）
 COLLECTION_RATE_LIMIT = "20"
 COLLECTION_RATE_WINDOW_SECONDS = "60"
+# 内部登录限流：公开地址 + 6 位验证码，10 次 / 60 秒
+LOGIN_RATE_LIMIT = "10"
+LOGIN_RATE_WINDOW_SECONDS = "60"
+
+# 限流绑定（Cloudflare 原生）：边缘会起多个实例，进程内计数各记各的，等于没限；
+# 这两个绑定把计数放到账号级，跨实例生效。容器那条路线没有它，退化成进程内计数（单实例够用）。
+[[ratelimits]]
+name = "LOGIN_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "COLLECTION_LIMITER"
+namespace_id = "1002"
+simple = { limit = 20, period = 60 }
 
 [[d1_databases]]
 binding = "DB"
 database_name = "zx-api"
 # 由 `wrangler d1 create zx-api` 产出（不是密钥，可以进仓库）
 database_id = "db3b42d2-1cc5-4f7d-ace5-3c0f999d0e4e"
+
+# 自有域名：`*.workers.dev` 在境内被 DNS 污染，绑一个自己的域名才进得来。
+# custom_domain = true 时 wrangler 会自己建 DNS 记录与证书（域名要在同一个账号下）。
+[[routes]]
+pattern = "api.xinhao02.ccwu.cc"
+custom_domain = true

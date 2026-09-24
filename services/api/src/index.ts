@@ -4,6 +4,7 @@ export { openDatabase } from './db/sqlite';
 export { createD1Database } from './db/d1';
 export type { Db } from './db/driver';
 export type { D1DatabaseLike, D1PreparedStatementLike } from './db/d1';
+export type { RateLimiterBinding } from './guard';
 export { createRepo } from './repo';
 export { seedDatabase, SEED_USERS } from './seed';
 export { generateChecklist, RULE_VERSION } from '@zx/service';

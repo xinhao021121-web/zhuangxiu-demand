@@ -23,7 +23,7 @@ import {
 import type { User } from '@zx/contracts';
 import { can, signToken, verifyToken } from './auth';
 import { createCollectionChannel } from './collection';
-import { createCors } from './guard';
+import { createCors, createRateLimit } from './guard';
 import { toIsoAt } from './events';
 import {
   buildReports,
@@ -59,6 +59,29 @@ export function createApp(deps: AppDeps) {
    * 采集通道与内部通道都过它。预检请求在这里就答完，不落到下面的路由上。
    */
   app.use('*', createCors(env));
+
+  /*
+   * 登录限流：这是唯一不要令牌的写入口，而验证码只有 6 位——公开地址上不限速，
+   * 等于让人慢慢试。额度与采集通道那条分开算：内部人员的正常登录不该被房主的提交挤掉。
+   */
+  app.use(
+    '/auth/login',
+    createRateLimit({
+      limit: env.loginRateLimit,
+      windowSeconds: env.loginRateWindowSeconds,
+      trustProxy: env.trustProxy,
+      binding: env.limiters?.login,
+      /*
+       * 按手机号记账：要防的是「拿已知账号慢慢猜验证码」，换 IP 不该等于换个人；
+       * 请求体不是 JSON 或没带手机号时返回 undefined，退回按客户端地址记账。
+       */
+      keyOf: async (c) => {
+        const body = await c.req.json().catch(() => ({}));
+        const phone = (body as { phone?: unknown }).phone;
+        return typeof phone === 'string' && phone ? `login:${phone}` : undefined;
+      },
+    }),
+  );
 
   app.get('/health', (c) => c.json({ ok: true, model: provider.name }));
   app.get('/openapi.json', (c) => c.json(openApiDocument()));

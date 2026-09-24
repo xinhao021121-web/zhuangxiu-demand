@@ -27,6 +27,8 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 | `CORS_ALLOWED_ORIGINS` | 本机三个端口（见下） | 跨域白名单，逗号分隔，不支持通配 |
 | `COLLECTION_RATE_LIMIT` | `20` | 采集通道：每个来源在一个窗口里允许的请求数 |
 | `COLLECTION_RATE_WINDOW_SECONDS` | `60` | 上面那个窗口的长度 |
+| `LOGIN_RATE_LIMIT` | `10` | 内部登录：每个来源在一个窗口里允许的尝试次数（公开地址 + 6 位验证码，不限速等于让人慢慢试） |
+| `LOGIN_RATE_WINDOW_SECONDS` | `60` | 上面那个窗口的长度 |
 | `TRUST_PROXY` | 关闭 | 服务挂在反向代理后面时置 `1`，限流改用 `X-Forwarded-For` 当客户端地址 |
 | `MODEL_PROVIDER` | `fake` | `fake` 用桩数据；`deepseek` 走真实模型 |
 | `DEEPSEEK_API_KEY` | 空 | 走 `deepseek` 时必填 |
@@ -58,6 +60,12 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 | --- | --- | --- |
 | CORS 白名单 | 来源不在名单里直接 403（不是「只加头不拦」）；没有 `Origin` 的请求不算跨域，照常放行；预检在最外层答完 | `CORS_ALLOWED_ORIGINS=https://a.pages.dev,https://b.github.io` |
 | 采集通道限流 | 超过额度回 429 并带 `Retry-After`；**只挂 `/a`**，内部读接口不吃这条额度 | `COLLECTION_RATE_LIMIT` / `COLLECTION_RATE_WINDOW_SECONDS` |
+| 登录限流 | 同上，只挂 `/auth/login`，**按手机号记账**（换 IP 不该等于换个人）：这是唯一不要令牌的写入口，而验证码只有 6 位 | `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW_SECONDS` |
+
+**限流的两套实现**（`guard.ts` 里写清了为什么）：Cloudflare 的原生限流绑定（`wrangler.toml` 的
+`[[ratelimits]]`，计数在账号级、跨实例）与进程内计数（容器与本地这条路线是单实例，够用）。
+Workers 上**必须**用前者——进程内计数在边缘等于没限，实测连猜 16 次全部放行；而按 IP 记账在
+出口 IP 会变的客户端上也等于每个请求一个新桶，所以登录按手机号记账（IP 只作兜底）。
 
 不配 `CORS_ALLOWED_ORIGINS` 时只放开本机开发的三个端口：H5 预览 `http://127.0.0.1:4173`、
 桌面工作台 `http://127.0.0.1:3000`、现场端 `http://127.0.0.1:5174`（`localhost` 同样算）。
@@ -103,7 +111,7 @@ npx wrangler deploy
 - `TRUST_PROXY=1`：Worker 的请求只能从 Cloudflare 边缘进来，客户端地址只能由边缘写的 `X-Forwarded-For` 给出——边缘运行时拿不到连接地址，不开这个，所有人会共用一个限流额度；
 - `COLLECTION_RATE_LIMIT` / `COLLECTION_RATE_WINDOW_SECONDS`：采集通道的限额。
 
-**上线后的一个实测结论**：`*.workers.dev` 在境内被 DNS 污染（解析到 Facebook 的 IP），从国内网络访问不到。要在国内稳定用，得绑一个自有域名（`wrangler.toml` 里加 `routes`），或改走容器那条路线。演示环境只放合成种子数据（首次请求时自动灌入），不放真实房主信息。
+**上线后的一个实测结论**：默认的 `*.workers.dev` 地址在境内被 DNS 污染（解析到 Facebook 的 IP），所以绑了自有域名——`wrangler.toml` 里的 `[[routes]]` 段，`custom_domain = true` 时 wrangler 会自己建 DNS 记录与证书（域名要在同一个账号下）。绑上以后 `https://api.xinhao02.ccwu.cc/health` 从境内实测 200。演示环境只放合成种子数据（首次请求时自动灌入），不放真实房主信息。
 
 ## 一次生成做了什么
 

@@ -10,6 +10,12 @@
  *      来源不在名单里直接 403，而不是「只加头不拦」——后者会把失败推迟到浏览器里变成一句玄学错误。
  *   2. **限流的键不被客户端伪造。** 默认用连接的远端地址；只有服务真的挂在反向代理后面
  *      （`TRUST_PROXY=1`）才认 `X-Forwarded-For`，否则客户端自己写这个头就能绕过限额。
+ *
+ * 限流有两套实现，差别是「计数存在哪」：
+ *   - **Cloudflare 的原生限流绑定**（`wrangler.toml` 的 `[[ratelimits]]`）：计数在账号级，
+ *     跨实例、跨边缘节点生效。Workers 上必须用这套——边缘会起很多实例，进程内计数各记各的，
+ *     实测连猜 11 次全部放行，等于没限。
+ *   - **进程内计数**（本文件下面那段 Map）：容器与本地这条路线只有单实例，够用。
  */
 
 import { getConnInfo } from '@hono/node-server/conninfo';
@@ -43,23 +49,45 @@ export function createCors(env: Pick<ApiEnv, 'corsAllowedOrigins'>): MiddlewareH
   };
 }
 
+/** Cloudflare 的限流绑定（`wrangler.toml` 的 `[[ratelimits]]`）。 */
+export interface RateLimiterBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface RateLimitOptions {
   /** 窗口内允许的请求数 */
   limit: number;
   windowSeconds: number;
   trustProxy: boolean;
+  /** 有它就用它：边缘上自己数等于没数（见文件头） */
+  binding?: RateLimiterBinding;
+  /**
+   * 自己算限流的键，返回值优先于客户端地址。
+   *
+   * 登录用手机号当键，而不是 IP：要防的是「拿已知账号慢慢猜验证码」，换个 IP 就不该等于换个人；
+   * 而且国内房主多半在运营商 NAT 后面，按 IP 限流既容易误伤也容易被绕开。IP 只作兜底。
+   */
+  keyOf?: (c: Context) => Promise<string | undefined> | string | undefined;
   /** 注入时钟，测试里好复现 */
   now?: () => number;
 }
 
 export function createRateLimit(options: RateLimitOptions): MiddlewareHandler {
-  const { limit, windowSeconds, trustProxy } = options;
+  const { limit, windowSeconds, trustProxy, binding, keyOf } = options;
   const now = options.now ?? Date.now;
   const windowMs = windowSeconds * 1000;
   const buckets = new Map<string, { count: number; resetAt: number }>();
 
   return async (c, next) => {
-    const key = clientKey(c, trustProxy);
+    const key = (keyOf ? await keyOf(c) : undefined) ?? clientKey(c, trustProxy);
+    if (binding) {
+      const { success } = await binding.limit({ key });
+      if (!success) {
+        c.header('retry-after', String(windowSeconds));
+        return c.json({ error: '请求太频繁，稍后再试' }, 429);
+      }
+      return next();
+    }
     const at = now();
     let bucket = buckets.get(key);
     if (!bucket || bucket.resetAt <= at) {

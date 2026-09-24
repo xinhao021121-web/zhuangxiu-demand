@@ -89,10 +89,11 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 两条发布命令：`pnpm run deploy:pages`（GitHub Pages）与 `pnpm run deploy:cf-pages`（Cloudflare Pages）。
 
-**API 服务已经部署**（Cloudflare Workers + D1）：<https://zx-api.lixinhao1121.workers.dev>
+**API 服务已经部署**（Cloudflare Workers + D1）：<https://api.xinhao02.ccwu.cc>
 ——`services/api/wrangler.toml`，建库、建表、密钥与发布命令见 `services/api/README.md`。
-两个注意：数据落在 Cloudflare（境外），只放合成数据；`*.workers.dev` 在境内被 DNS 污染，
-国内要稳定访问得绑自有域名或改走容器那条路线（`deploy/api.compose.yaml`）。
+两个注意：数据落在 Cloudflare（境外），只放合成数据；默认的 `*.workers.dev` 地址在境内被
+DNS 污染（实测解析到 Facebook 的 IP），所以绑了自有域名（`routes` 那一段）——换域名改一行即可，
+要全部落在境内就走容器那条路线（`deploy/api.compose.yaml`）。
 
 **三个端目前仍走演示模式**：在没有 API 时，判据、脱敏、合并、排序仍是
 `packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现；接回真服务时把

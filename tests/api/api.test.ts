@@ -16,6 +16,7 @@ import {
   seedDatabase,
 } from '../../services/api/src/index';
 import type { ModelProvider } from '@zx/service';
+import type { RateLimiterBinding } from '../../services/api/src/index';
 import seedSheets from '../../services/api/seed/demand-sheets.json';
 
 const DESIGNER = '13800000002';
@@ -39,15 +40,22 @@ async function login(phone: string, instance = app): Promise<string> {
   return body.token;
 }
 
-async function boot(provider: ModelProvider = createFakeProvider(), envOverrides: NodeJS.ProcessEnv = {}) {
+async function boot(
+  provider: ModelProvider = createFakeProvider(),
+  envOverrides: NodeJS.ProcessEnv = {},
+  limiters?: { login?: RateLimiterBinding; collection?: RateLimiterBinding },
+) {
   repo = createRepo(openDatabase(':memory:'));
   await seedDatabase(repo);
-  const env = readEnv({
-    AUTH_CODE: '000000',
-    TOKEN_SECRET: 'test-secret',
-    DB_PATH: ':memory:',
-    ...envOverrides,
-  } as NodeJS.ProcessEnv);
+  const env = {
+    ...readEnv({
+      AUTH_CODE: '000000',
+      TOKEN_SECRET: 'test-secret',
+      DB_PATH: ':memory:',
+      ...envOverrides,
+    } as NodeJS.ProcessEnv),
+    ...(limiters ? { limiters } : {}),
+  };
   return createApp({ repo, provider, env, now: () => '2026-09-23 10:05' });
 }
 
@@ -974,6 +982,72 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get('retry-after')).toBe('60');
     expect((await blocked.json()) as Record<string, unknown>).toEqual({ error: '请求太频繁，稍后再试' });
+  });
+
+  it('有边缘的原生限流绑定时走绑定：进程内计数在 Workers 上等于没限', async () => {
+    const keys: string[] = [];
+    const binding: RateLimiterBinding = {
+      limit: async ({ key }) => {
+        keys.push(key);
+        return { success: keys.length < 2 };
+      },
+    };
+    const limited = await boot(createFakeProvider(), { CORS_ALLOWED_ORIGINS: STUDIO }, { login: binding });
+    const attempt = () =>
+      limited.request(
+        '/auth/login',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phone: DESIGNER, code: '999999' }),
+        },
+        conn('203.0.113.9'),
+      );
+    // 绑定放行 → 走到路由（验证码错，401）；绑定拦住 → 429，连路由都不进
+    expect((await attempt()).status).toBe(401);
+    expect((await attempt()).status).toBe(429);
+    // 交给绑定的键就是这条入口自己的键（登录按手机号），不是进程内的固定桶
+    expect(keys).toEqual([`login:${DESIGNER}`, `login:${DESIGNER}`]);
+  });
+
+  it('登录也有限额：公开地址 + 6 位验证码，不能让人慢慢试', async () => {
+    const limited = await boot(createFakeProvider(), {
+      LOGIN_RATE_LIMIT: '2',
+      LOGIN_RATE_WINDOW_SECONDS: '60',
+    } as NodeJS.ProcessEnv);
+    const attempt = (code: string) =>
+      limited.request('/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ phone: DESIGNER, code }),
+      });
+    expect((await attempt('000001')).status).toBe(401);
+    expect((await attempt('000002')).status).toBe(401);
+    // 第三次连猜的代价是被挡在门外；正确验证码在窗口内也一样进不来，这是有意的
+    expect((await attempt('000003')).status).toBe(429);
+  });
+
+  it('登录按手机号记账：换 IP 不该等于换个人（IP 只作兜底）', async () => {
+    const limited = await boot(createFakeProvider(), {
+      LOGIN_RATE_LIMIT: '2',
+      LOGIN_RATE_WINDOW_SECONDS: '60',
+    } as NodeJS.ProcessEnv);
+    const attempt = (ip: string, phone: string, code: string) =>
+      limited.request(
+        '/auth/login',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phone, code }),
+        },
+        conn(ip),
+      );
+    expect((await attempt('203.0.113.1', DESIGNER, '000001')).status).toBe(401);
+    // 换了 IP，但猜的是同一个账号：额度是同一个
+    expect((await attempt('203.0.113.2', DESIGNER, '000002')).status).toBe(401);
+    expect((await attempt('203.0.113.3', DESIGNER, '000003')).status).toBe(429);
+    // 另一个账号有自己的额度，不会被上一个人的连猜牵连
+    expect((await attempt('203.0.113.4', ADMIN, '000004')).status).toBe(401);
   });
 
   /*

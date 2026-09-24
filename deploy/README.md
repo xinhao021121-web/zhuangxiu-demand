@@ -42,9 +42,9 @@ docker compose -f deploy/api.compose.yaml up -d     # 需要一台能跑 Docker 
 ```
 
 另有一条不需要服务器的路线：**Cloudflare Workers + D1**（当前演示环境就用这条，
-地址 `https://zx-api.lixinhao1121.workers.dev`）。建库、建表、配密钥与发布的命令在
+地址 `https://api.xinhao02.ccwu.cc`，绑的是自有域名）。建库、建表、配密钥与发布的命令在
 `services/api/README.md`。注意两点：数据落在 Cloudflare（境外），只适合放合成数据；
-`*.workers.dev` 在境内被 DNS 污染，国内要稳定访问得绑自有域名。
+默认的 `*.workers.dev` 地址在境内被 DNS 污染，所以要绑自有域名（`wrangler.toml` 的 `routes`）。
 
 默认用容器内的 SQLite（`/data/api.sqlite`，挂在卷上）；技术方案选的持久化是境内托管 Postgres，
 换的是 `services/api/src/repo.ts` 这一层，路由与流水线不动。模型默认 `MODEL_PROVIDER=fake`，

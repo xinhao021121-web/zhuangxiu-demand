@@ -38,6 +38,7 @@ export function createCollectionChannel(deps: CollectionChannelDeps) {
       limit: env.collectionRateLimit,
       windowSeconds: env.collectionRateWindowSeconds,
       trustProxy: env.trustProxy,
+      binding: env.limiters?.collection,
     }),
   );
 
