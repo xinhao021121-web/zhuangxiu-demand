@@ -39,13 +39,14 @@ async function login(phone: string, instance = app): Promise<string> {
   return body.token;
 }
 
-function boot(provider: ModelProvider = createFakeProvider()) {
+function boot(provider: ModelProvider = createFakeProvider(), envOverrides: NodeJS.ProcessEnv = {}) {
   repo = createRepo(openDatabase(':memory:'));
   seedDatabase(repo);
   const env = readEnv({
     AUTH_CODE: '000000',
     TOKEN_SECRET: 'test-secret',
     DB_PATH: ':memory:',
+    ...envOverrides,
   } as NodeJS.ProcessEnv);
   return createApp({ repo, provider, env, now: () => '2026-09-23 10:05' });
 }
@@ -911,5 +912,104 @@ describe('改名、遗漏补录与回流报表', () => {
     // 采集通道的会话令牌读不了报表：这条通道本来就没有读接口
     const session = await openSession();
     expect((await app.request('/reports', { headers: auth(session) })).status).toBe(401);
+  });
+});
+
+describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () => {
+  const STUDIO = 'https://demand-studio.pages.dev';
+  const bootWithCors = (extra: NodeJS.ProcessEnv = {}) =>
+    boot(createFakeProvider(), { CORS_ALLOWED_ORIGINS: STUDIO, ...extra } as NodeJS.ProcessEnv);
+
+  it('白名单里的来源拿得到 CORS 头，预检请求直接答完', async () => {
+    const corsApp = bootWithCors();
+    const preflight = await corsApp.request('/a/session', {
+      method: 'OPTIONS',
+      headers: {
+        origin: STUDIO,
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe(STUDIO);
+    expect(preflight.headers.get('access-control-allow-methods')).toContain('POST');
+    expect(preflight.headers.get('access-control-allow-headers')).toContain('authorization');
+    // 白名单随来源变化，缓存要按 Origin 分开
+    expect(preflight.headers.get('vary')).toBe('origin');
+
+    const real = await corsApp.request('/a/session', { method: 'POST', headers: { origin: STUDIO } });
+    expect(real.status).toBe(200);
+    expect(real.headers.get('access-control-allow-origin')).toBe(STUDIO);
+  });
+
+  it('白名单外的来源被挡住，一个字段都不回', async () => {
+    const corsApp = bootWithCors();
+    const res = await corsApp.request('/a/session', { method: 'POST', headers: { origin: 'https://evil.example.com' } });
+    expect(res.status).toBe(403);
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+    // 跨域这道门不是只管采集通道：内部接口也从静态托管发请求
+    expect((await corsApp.request('/demand-sheets', { headers: { origin: 'https://evil.example.com' } })).status).toBe(403);
+    // 换句话说，没被白名单认下来的来源连 401 都拿不到，更别提数据
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(JSON.stringify(body)).not.toContain('token');
+  });
+
+  it('没有 Origin 的请求不算跨域：服务端到服务端与 curl 照常', async () => {
+    const corsApp = bootWithCors();
+    expect((await corsApp.request('/health')).status).toBe(200);
+    const res = await corsApp.request('/a/session', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('采集通道超过限额回 429，并告诉客户端多久之后再来', async () => {
+    const limited = bootWithCors({
+      COLLECTION_RATE_LIMIT: '3',
+      COLLECTION_RATE_WINDOW_SECONDS: '60',
+    } as NodeJS.ProcessEnv);
+    for (let i = 0; i < 3; i += 1) {
+      expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
+    }
+    const blocked = await limited.request('/a/session', { method: 'POST' });
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('retry-after')).toBe('60');
+    expect((await blocked.json()) as Record<string, unknown>).toEqual({ error: '请求太频繁，稍后再试' });
+  });
+
+  it('额度按来源分开：一个来源刷爆不影响别人', async () => {
+    const limited = bootWithCors({
+      COLLECTION_RATE_LIMIT: '2',
+      COLLECTION_RATE_WINDOW_SECONDS: '60',
+    } as NodeJS.ProcessEnv);
+    const from = (ip: string) => ({ method: 'POST', headers: { 'x-real-ip': ip } }) as RequestInit;
+    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(429);
+    // 同一条通道、同一时刻，另一个来源的额度还在
+    expect((await limited.request('/a/session', from('203.0.113.8'))).status).toBe(200);
+  });
+
+  it('窗口过去之后额度恢复（这里把窗口设成 0 秒来复现）', async () => {
+    const limited = bootWithCors({
+      COLLECTION_RATE_LIMIT: '1',
+      COLLECTION_RATE_WINDOW_SECONDS: '0',
+    } as NodeJS.ProcessEnv);
+    for (let i = 0; i < 3; i += 1) {
+      expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
+    }
+  });
+
+  it('限额只挂在采集通道：公司内部读接口不受它影响', async () => {
+    const limited = bootWithCors({
+      COLLECTION_RATE_LIMIT: '2',
+      COLLECTION_RATE_WINDOW_SECONDS: '60',
+    } as NodeJS.ProcessEnv);
+    for (let i = 0; i < 5; i += 1) {
+      expect((await limited.request('/demand-sheets', { headers: auth(token) })).status).toBe(200);
+    }
+    // 内部那 5 次没有吃掉采集通道的额度，房主的两个写入口仍然照常
+    expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
+    expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
+    expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(429);
   });
 });

@@ -31,7 +31,9 @@ Web 端与展示版是同一份 H5 产物（`app/dist/h5`）：宽屏是 Web 端
 **API 服务跑不在静态托管上。** 两个端在没有 API 时走演示模式：判据、脱敏、合并、排序仍是
 `packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现，所以线上地址点得开、演示得完整。
 接回真服务时，用 `NEXT_PUBLIC_API_BASE`（桌面端）与 `VITE_API_BASE`（现场端）指向自己的域名，
-并把这几个地址加进服务的 CORS 白名单。
+并把这几个地址加进服务的 CORS 白名单（`CORS_ALLOWED_ORIGINS`，逗号分隔；采集端那份用
+`COLLECTION_API_BASE` 指到 `/a`）。白名单外一律 403，采集通道另有按来源的限额（默认 20 次 / 60 秒），
+两项的取值办法见 `services/api/README.md`。
 
 ## 〇之一、API 服务怎么起
 

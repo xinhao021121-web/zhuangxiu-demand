@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { DemandSheetImportSchema } from '@zx/contracts';
 import { signToken, verifyToken } from './auth';
 import { toIsoAt } from './events';
+import { createRateLimit } from './guard';
 import type { CollectionTokenPayload } from './auth';
 import type { ApiEnv } from './env';
 import type { Repo } from './repo';
@@ -26,6 +27,19 @@ export function createCollectionChannel(deps: CollectionChannelDeps) {
   const { repo, env } = deps;
   const now = deps.now ?? (() => new Date().toISOString());
   const channel = new Hono();
+
+  /*
+   * 限流（技术方案 5.3 的上线前置）：这条通道是匿名的公开地址，先挡住「被当成免费写入口刷」。
+   * 挂在第一条，换会话、提交与兜底 404 都算在同一条额度里；内部通道不受这条限额影响。
+   */
+  channel.use(
+    '*',
+    createRateLimit({
+      limit: env.collectionRateLimit,
+      windowSeconds: env.collectionRateWindowSeconds,
+      trustProxy: env.trustProxy,
+    }),
+  );
 
   /*
    * 换会话：注册在守卫之前，所以它自己是唯一不要令牌的入口。

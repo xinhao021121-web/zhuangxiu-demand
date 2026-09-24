@@ -23,6 +23,7 @@ import {
 import type { User } from '@zx/contracts';
 import { can, signToken, verifyToken } from './auth';
 import { createCollectionChannel } from './collection';
+import { createCors } from './guard';
 import { toIsoAt } from './events';
 import {
   buildReports,
@@ -52,6 +53,12 @@ export function createApp(deps: AppDeps) {
   const { repo, provider, env } = deps;
   const now = deps.now ?? (() => new Date().toISOString());
   const app = new Hono<Env>();
+
+  /*
+   * CORS 白名单（技术方案 5.3 的上线前置）：三个浏览端都可能跨域，放在最外层一次管住，
+   * 采集通道与内部通道都过它。预检请求在这里就答完，不落到下面的路由上。
+   */
+  app.use('*', createCors(env));
 
   app.get('/health', (c) => c.json({ ok: true, model: provider.name }));
   app.get('/openapi.json', (c) => c.json(openApiDocument()));

@@ -24,6 +24,10 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 | `COLLECTION_SECRET` | `dev-only-collection-secret` | 采集通道匿名会话的密钥，与 `TOKEN_SECRET` 是两把钥匙 |
 | `COLLECTION_SESSION_TTL_SECONDS` | `86400` | 采集端会话的有效期 |
 | `AUTH_CODE` | `000000` | 公司内部账号的验证码 |
+| `CORS_ALLOWED_ORIGINS` | 本机三个端口（见下） | 跨域白名单，逗号分隔，不支持通配 |
+| `COLLECTION_RATE_LIMIT` | `20` | 采集通道：每个来源在一个窗口里允许的请求数 |
+| `COLLECTION_RATE_WINDOW_SECONDS` | `60` | 上面那个窗口的长度 |
+| `TRUST_PROXY` | 关闭 | 服务挂在反向代理后面时置 `1`，限流改用 `X-Forwarded-For` 当客户端地址 |
 | `MODEL_PROVIDER` | `fake` | `fake` 用桩数据；`deepseek` 走真实模型 |
 | `DEEPSEEK_API_KEY` | 空 | 走 `deepseek` 时必填 |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | 私有化部署时改成内网地址 |
@@ -44,6 +48,27 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 两条通道的令牌互不通用：会话令牌调内部接口是 401，内部 token 调采集通道也是 401。
 采集端提交进来的需求单一律记 `source: 'miniapp'`、`submitted_by` 为空；弱网重试带同一个
 `submissionId` 时只落一份，回执里 `replay: true`。
+
+## 上线前置的两道门（CORS 与限流）
+
+三个浏览端都是从静态托管发跨域请求，而采集通道是匿名的公开写入口，所以门口有两道门
+（`src/guard.ts`，口径见技术方案 5.3）：
+
+| 门 | 行为 | 怎么配 |
+| --- | --- | --- |
+| CORS 白名单 | 来源不在名单里直接 403（不是「只加头不拦」）；没有 `Origin` 的请求不算跨域，照常放行；预检在最外层答完 | `CORS_ALLOWED_ORIGINS=https://a.pages.dev,https://b.github.io` |
+| 采集通道限流 | 超过额度回 429 并带 `Retry-After`；**只挂 `/a`**，内部读接口不吃这条额度 | `COLLECTION_RATE_LIMIT` / `COLLECTION_RATE_WINDOW_SECONDS` |
+
+不配 `CORS_ALLOWED_ORIGINS` 时只放开本机开发的三个端口：H5 预览 `http://127.0.0.1:4173`、
+桌面工作台 `http://127.0.0.1:3000`、现场端 `http://127.0.0.1:5174`（`localhost` 同样算）。
+换了端口、或要接线上静态托管，都得显式配。
+
+限流的键默认取**连接的远端地址**（客户端改不了）。挂在反向代理后面时远端地址永远是代理自己，
+所有房主会共用一个额度——这时才开 `TRUST_PROXY=1` 让服务改用代理写进来的 `X-Forwarded-For`；
+直连公网时不要开，那个头谁都能写。
+
+限额是每台 API 服务进程各自记账（内存里的窗口），单实例部署足够；要多实例或按接口细化，
+换成网关或 Redis 计数，路由与业务代码不动。
 
 ## 与部署形态的差异
 

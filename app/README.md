@@ -62,6 +62,10 @@ COLLECTION_API_BASE=https://api.example.com/a pnpm run build:h5
 网络那一层用 `Taro.request`（小程序端没有 `fetch`），所以小程序与 H5 共用同一份提交代码。
 埋点随这一次提交整批上报，送达后从草稿里清掉；没送达就留着，下次提交一起带。
 
+跨域那一侧由服务端管：静态托管的地址必须在 API 的 `CORS_ALLOWED_ORIGINS` 白名单里，
+否则提交会被 403 挡在门口（名单外的来源连 401 都拿不到）；采集通道另有按来源的限额，
+超过回 429，客户端按 `Retry-After` 稍后再试即可。两项取值见 `services/api/README.md`。
+
 ## 交接文件（F10）
 
 提交前检查里除了「仍要提交」，还有一个「存交接文件」：房主手机没网、或这套产物没接服务端时，
