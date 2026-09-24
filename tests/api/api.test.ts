@@ -976,34 +976,69 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
     expect((await blocked.json()) as Record<string, unknown>).toEqual({ error: '请求太频繁，稍后再试' });
   });
 
-  it('额度按来源分开：一个来源刷爆不影响别人', async () => {
-    const limited = bootWithCors({
+  /*
+   * 限流的键到底取什么，是这道门能不能挡住人的分界线，所以这几条不测「调通了」，测「伪造不了」。
+   * 这里的 conn() 就是 @hono/node-server 交进来的 env——`getConnInfo` 读的正是它的
+   * incoming.socket.remoteAddress，和线上走的是同一段代码。
+   */
+  const conn = (ip: string) =>
+    ({ incoming: { socket: { remoteAddress: ip, remotePort: 51000, remoteFamily: 'IPv4' } } }) as never;
+  const tight = (extra: NodeJS.ProcessEnv = {}) =>
+    bootWithCors({
       COLLECTION_RATE_LIMIT: '2',
       COLLECTION_RATE_WINDOW_SECONDS: '60',
+      ...extra,
     } as NodeJS.ProcessEnv);
-    const from = (ip: string) => ({ method: 'POST', headers: { 'x-real-ip': ip } }) as RequestInit;
-    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
-    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
-    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(429);
+
+  it('额度按连接地址分开：一个来源刷爆不影响别人', async () => {
+    const limited = tight();
+    expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(200);
+    expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(200);
+    expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.7'))).status).toBe(429);
     // 同一条通道、同一时刻，另一个来源的额度还在
+    expect((await limited.request('/a/session', { method: 'POST' }, conn('203.0.113.8'))).status).toBe(200);
+  });
+
+  it('伪造 X-Forwarded-For 换不掉额度：默认只认连接地址', async () => {
+    const limited = tight();
+    const spoof = (ip: string) => ({ method: 'POST', headers: { 'x-forwarded-for': ip } }) as RequestInit;
+    expect((await limited.request('/a/session', spoof('1.1.1.1'), conn('203.0.113.7'))).status).toBe(200);
+    expect((await limited.request('/a/session', spoof('2.2.2.2'), conn('203.0.113.7'))).status).toBe(200);
+    // 同一个连接、第三个不同的假地址：还是超了
+    expect((await limited.request('/a/session', spoof('3.3.3.3'), conn('203.0.113.7'))).status).toBe(429);
+  });
+
+  it('挂在反向代理后面（TRUST_PROXY=1）才按 X-Forwarded-For 记账', async () => {
+    const limited = tight({ TRUST_PROXY: '1' });
+    const from = (ip: string) => ({ method: 'POST', headers: { 'x-forwarded-for': ip } }) as RequestInit;
+    // 代理的地址是同一个，真正的房主看 X-Forwarded-For：两个来源各自有额度，不会被互相锁住
+    expect((await limited.request('/a/session', from('203.0.113.7'), conn('10.0.0.1'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.7'), conn('10.0.0.1'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.8'), conn('10.0.0.1'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.7'), conn('10.0.0.1'))).status).toBe(429);
+  });
+
+  it('拿不到连接信息时（非 Node 适配器）退到反代写的头，实在没有就共用一个额度', async () => {
+    const limited = tight({ COLLECTION_RATE_LIMIT: '1' });
+    const from = (ip?: string) =>
+      ({ method: 'POST', headers: ip ? { 'x-real-ip': ip } : {} }) as RequestInit;
+    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(200);
     expect((await limited.request('/a/session', from('203.0.113.8'))).status).toBe(200);
+    expect((await limited.request('/a/session', from('203.0.113.7'))).status).toBe(429);
+    // 连头都没有的请求共用一个固定的键：第一次放行，第二次就超了（拿不到来源时宁可紧，不可漏）
+    expect((await limited.request('/a/session', from())).status).toBe(200);
+    expect((await limited.request('/a/session', from())).status).toBe(429);
   });
 
   it('窗口过去之后额度恢复（这里把窗口设成 0 秒来复现）', async () => {
-    const limited = bootWithCors({
-      COLLECTION_RATE_LIMIT: '1',
-      COLLECTION_RATE_WINDOW_SECONDS: '0',
-    } as NodeJS.ProcessEnv);
+    const limited = tight({ COLLECTION_RATE_LIMIT: '1', COLLECTION_RATE_WINDOW_SECONDS: '0' });
     for (let i = 0; i < 3; i += 1) {
       expect((await limited.request('/a/session', { method: 'POST' })).status).toBe(200);
     }
   });
 
   it('限额只挂在采集通道：公司内部读接口不受它影响', async () => {
-    const limited = bootWithCors({
-      COLLECTION_RATE_LIMIT: '2',
-      COLLECTION_RATE_WINDOW_SECONDS: '60',
-    } as NodeJS.ProcessEnv);
+    const limited = tight();
     for (let i = 0; i < 5; i += 1) {
       expect((await limited.request('/demand-sheets', { headers: auth(token) })).status).toBe(200);
     }
