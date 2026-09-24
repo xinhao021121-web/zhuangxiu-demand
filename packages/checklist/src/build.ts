@@ -35,7 +35,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
   const survey: SurveyItem[] = input.survey ?? SURVEY_CHECKLIST;
   const canonical = new Map(survey.map((s) => [s.object, s.relatedFields[0] ?? 'survey']));
 
-  const { candidates: derivedList, dropped } = derivedCandidates(derived, model, survey);
+  const { candidates: derivedList, dropped } = derivedCandidates(derived, model, survey, input.objects);
   const unclearList = unclearCandidates(model, survey);
   const surveyList = surveyCandidates(model, survey);
 

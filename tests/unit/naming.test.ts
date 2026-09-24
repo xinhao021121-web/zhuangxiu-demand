@@ -163,11 +163,11 @@ describe('文档一致性', () => {
   });
 
   it('文档版本号在表头、引用与入口页之间一致', () => {
-    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.3');
-    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.3');
-    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.3');
-    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.3');
-    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.3');
+    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.4');
+    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.4');
+    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.4');
+    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.4');
+    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.4');
   });
 
   it('两份文档都带变更记录', () => {

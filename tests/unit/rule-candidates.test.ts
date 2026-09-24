@@ -5,9 +5,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { FIELD_BY_ID, SURVEY_CHECKLIST, UNCLEAR_CHECKLIST } from '@zx/field-spec';
+import type { FormModel } from '@zx/field-spec';
 import { RULE_META } from '@zx/rules';
 import { buildChecklist } from '@zx/checklist';
-import { RULE_CANDIDATE_ROWS, ruleDerivedItems } from '@zx/service';
+import type { DerivedItem } from '@zx/checklist';
+import { RULE_CANDIDATE_ROWS, ruleDerivedItems, ruleObjectAssets } from '@zx/service';
 import { SEED_DERIVED, SEED_MODEL } from './fixtures/seed';
 
 const CANONICAL_OBJECTS = new Set([
@@ -109,5 +111,47 @@ describe('规则托底的行为', () => {
     expect(budget).toBeDefined();
     expect(budget!.question).toContain('预算上限');
     expect(budget!.relatedFieldIds).toContain('budget_total');
+  });
+});
+
+describe('核实对象名归一（BC-05）', () => {
+  const catItem: DerivedItem = {
+    object: '猫砂盆',
+    question: '猫砂盆放哪个卫生间、就近有没有插座',
+    why: '房主填了「是否养宠物：猫」',
+    onsiteChecks: ['卫生间排水与通风'],
+    relatedFieldIds: ['live_pet'],
+    impact: ['feasibility'],
+  };
+
+  it('模型用自己的名字说猫砂盆，与规则托底那条并成一条', () => {
+    const ruleItems = ruleDerivedItems(SEED_MODEL);
+    const checklist = buildChecklist({
+      model: SEED_MODEL,
+      derived: [catItem, ...ruleItems],
+      objects: ruleObjectAssets(ruleItems),
+    });
+    const items = checklist.items.filter((i) => i.object === '猫砂盆位置');
+    expect(items, '「猫砂盆」与「猫砂盆位置」是同一件事，不能各出一条').toHaveLength(1);
+    expect(checklist.items.map((i) => i.object)).not.toContain('猫砂盆');
+    expect(items[0].space).toBe('卫生间');
+    // 模型那条在前，问题用它的
+    expect(items[0].question).toBe(catItem.question);
+  });
+
+  it('资产对象只在唯一分区时登记：分区已经分叉就并列两条', () => {
+    const twoKids: FormModel = {
+      ...SEED_MODEL,
+      instances: {
+        ...SEED_MODEL.instances,
+        其他卧室: [
+          { key: 'room1', section: '其他卧室', values: { room_type: '儿童房' } },
+          { key: 'room2', section: '其他卧室', values: { room_type: '儿童房' } },
+        ],
+      },
+    };
+    const assets = ruleObjectAssets(ruleDerivedItems(twoKids));
+    expect(assets.find((a) => a.object === '儿童房空间')).toBeUndefined();
+    expect(assets.find((a) => a.object === '猫砂盆位置')).toEqual({ object: '猫砂盆位置', space: '卫生间' });
   });
 });

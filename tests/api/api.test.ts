@@ -295,6 +295,58 @@ describe('模型返回的两道红线', () => {
   });
 });
 
+describe('核实对象名归一（BC-05）', () => {
+  it('模型用自己的名字说资产里已经有的事，清单里只出一条', async () => {
+    const variant: ModelProvider = {
+      name: 'variant',
+      async understand() {
+        return {
+          profile: [],
+          demands: [],
+          conflicts: [],
+          derivedItems: [
+            {
+              object: '上水下水',
+              question: '上下水点位与排水立管能不能改',
+              why: '房主填了「排水点位」',
+              onsiteChecks: ['排水立管与管井位置'],
+              relatedFieldIds: ['dev_drain'],
+              impact: ['feasibility'],
+            },
+            {
+              object: '猫砂盆',
+              question: '猫砂盆放哪个卫生间',
+              why: '房主填了「是否养宠物：猫」',
+              onsiteChecks: ['卫生间排水与通风'],
+              relatedFieldIds: ['live_pet'],
+              impact: ['feasibility'],
+            },
+          ],
+        };
+      },
+    };
+    const instance = boot(variant);
+    const t = await login(DESIGNER, instance);
+    const res = await instance.request('/demand-sheets/d1/checklist', {
+      method: 'POST',
+      headers: jsonHeaders(t),
+      body: JSON.stringify({}),
+    });
+    const body = (await res.json()) as {
+      items: { object: string; space: string; source: string; question: string }[];
+    };
+    const objects = body.items.map((i) => i.object);
+    expect(objects, '自创名不该另外出一条').not.toContain('上水下水');
+    expect(objects).not.toContain('猫砂盆');
+    // 归到通用项的那条：与通用项合并
+    expect(body.items.find((i) => i.object === '上下水')!.source).toBe('both');
+    // 归到规则托底那条：与规则托底的「猫砂盆位置」并成一条，问题用模型那条
+    const cat = body.items.find((i) => i.object === '猫砂盆位置')!;
+    expect(cat.space).toBe('卫生间');
+    expect(cat.question).toBe('猫砂盆放哪个卫生间');
+  });
+});
+
 describe('清单的删减与撤销', () => {
   it('删减动作被记录，撤销后恢复', async () => {
     const { body } = await generate('d1');

@@ -19,6 +19,8 @@ import {
 } from '@zx/field-spec';
 import type { FieldValue, FormModel, SurveyItem } from '@zx/field-spec';
 import { classifyDerived } from './judge';
+import { canonicalObjectName, objectAssets } from './objects';
+import type { ObjectAsset } from './objects';
 import { baseSpaceOf, resolveSpace, spaceOfFieldKey } from './space';
 import type { Candidate, DerivedItem, OpenQuestion } from './types';
 
@@ -91,8 +93,9 @@ export function openQuestions(model: FormModel): OpenQuestion[] {
 /**
  * 从已填内容推导的问题：模型输出，先过判据，再过硬约束（指不到字段的不出现）。
  *
- * 分区按下面三条定，顺序不能反（产品文档 4.4 / 4.5.1）：
- *   1. 与通用清单资产里的核实对象同名 → 用资产声明的分区。资产是确定的，
+ * 核实对象先归一到资产的标准名（BC-05）：模型说「厨房排烟」、资产里是「排烟」，
+ * 归不上就会同一件事出两条。之后分区按下面三条定，顺序不能反（产品文档 4.4 / 4.5.1）：
+ *   1. 落在资产上的核实对象 → 用资产声明的分区。资产是确定的，
  *      分区不该随模型给字段的先后顺序漂移（实测过：主字段写成 base_house_state 时，
  *      「配电」会落到基本信息，和通用项里的「配电」并不到一条上）。
  *   2. 模型显式指定了分区（跨空间的核实对象，如猫砂盆放哪个卫生间）→ 用它的。
@@ -102,16 +105,18 @@ export function derivedCandidates(
   derived: DerivedItem[],
   model: FormModel,
   survey: SurveyItem[] = SURVEY_CHECKLIST,
+  objects: readonly ObjectAsset[] = [],
 ): { candidates: Candidate[]; dropped: DerivedItem[] } {
   const { accepted, dropped } = classifyDerived(derived);
-  const canonicalSpace = new Map(survey.map((s) => [s.object, { space: s.space, section: s.section }]));
+  const assets = objectAssets(survey, objects);
   const candidates = accepted.map(({ item, tier }) => {
+    const object = canonicalObjectName(item.object, assets);
+    const asset = assets.get(object);
     const [, primaryId] = splitKey(item.relatedFieldIds[0]!);
-    const fixed = canonicalSpace.get(item.object);
     return {
-      object: item.object,
-      space: fixed
-        ? resolveSpace(model, fixed.space, fixed.section)
+      object,
+      space: asset
+        ? resolveSpace(model, asset.space, asset.section)
         : item.space
           ? resolveSpace(model, item.space, sectionOf(primaryId))
           : spaceOfFieldKey(model, item.relatedFieldIds[0]!),

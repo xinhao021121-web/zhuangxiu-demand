@@ -217,6 +217,66 @@ describe('房主答「不清楚」的项进清单', () => {
   });
 });
 
+describe('核实对象名归一（BC-05）', () => {
+  const derived = (
+    object: string,
+    relatedFieldIds: string[],
+    impact: DerivedItem['impact'] = ['feasibility'],
+  ): DerivedItem => ({
+    object,
+    question: `${object}：按这家的情况怎么定`,
+    why: `房主填了「${relatedFieldIds.join('、')}」`,
+    onsiteChecks: ['现场条件'],
+    relatedFieldIds,
+    impact,
+  });
+
+  it('模型自创的名字归到资产的标准名，与通用项并成一条', () => {
+    const list = buildChecklist({
+      model: SEED_MODEL,
+      derived: [
+        derived('厨房排烟', ['kt_form']),
+        derived('封窗', ['bl_window'], ['cost']),
+        derived('上水下水', ['dev_drain']),
+      ],
+    });
+
+    // 加限定词：厨房排烟 → 排烟
+    expect(list.items.filter((i) => i.object === '排烟')).toHaveLength(1);
+    const smoke = list.items.find((i) => i.object === '排烟')!;
+    expect(smoke.source).toBe('both');
+    expect(smoke.question).toBe('厨房排烟：按这家的情况怎么定');
+
+    // 去后缀：封窗 → 家政封窗
+    const balcony = list.items.find((i) => i.object === '家政封窗')!;
+    expect(balcony.source).toBe('both');
+    expect(balcony.relatedFields).toContain('bl_window');
+
+    // 别名：上水下水 → 上下水，分区也跟着资产走
+    const water = list.items.find((i) => i.object === '上下水')!;
+    expect(water.source).toBe('both');
+    expect(water.space).toBe('设备与系统');
+    expect(water.key).toBe('上下水#dev_drain');
+  });
+
+  it('复合名与歧义名不归：宁可多一条让设计师删，也不错合并', () => {
+    const list = buildChecklist({
+      model: SEED_MODEL,
+      derived: [
+        // 一个名字牵涉两个标准对象，归到哪一个都可能是错的
+        derived('上下水与排烟', ['kt_form', 'dev_drain']),
+        // 「中央空调」可能指吊顶条件，也可能指外机位——判不准就不判
+        derived('中央空调', ['dev_ac'], ['cost']),
+      ],
+    });
+
+    expect(list.items.find((i) => i.object === '上下水与排烟')!.source).toBe('derived');
+    expect(list.items.find((i) => i.object === '中央空调')!.source).toBe('derived');
+    expect(list.items.find((i) => i.object === '排烟')!.source).toBe('survey');
+    expect(list.items.find((i) => i.object === '空调外机')!.source).toBe('survey');
+  });
+});
+
 describe('清单导出与现场记录', () => {
   it('导出的 Markdown 带标题、分组与逐条依据', () => {
     const md = buildChecklistMarkdown(seed(), {

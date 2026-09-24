@@ -16,7 +16,7 @@
 import { SURVEY_CHECKLIST, UNCLEAR_CHECKLIST, findInstance, instanceName } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
 import { evaluateRules } from '@zx/rules';
-import type { DerivedItem, Impact, Tier } from '@zx/checklist';
+import type { DerivedItem, Impact, ObjectAsset, Tier } from '@zx/checklist';
 import rows from './rule-candidates.json';
 
 export interface RuleCandidateRow {
@@ -83,4 +83,26 @@ export function ruleDerivedItems(model: FormModel): DerivedItem[] {
     });
   });
   return out;
+}
+
+/**
+ * 规则资产声明的核实对象与分区：交给清单包做对象名归一（badcases.md BC-05）。
+ *
+ * 规则给的是标准名（「猫砂盆位置」「工期口径」），模型可能用自己的名（「猫砂盆」「工期」），
+ * 两条落在不同的键上就并不上，设计师会看到同一件事的两条半截信息。
+ *
+ * 分区要一起给：实例规则的分区是算出来的（「次卧1 · 儿童房」），只登记名字的话，
+ * 模型那条会落到「其他卧室」，与规则那条错开，等于没归。
+ *
+ * 同一个对象落在多个分区时不登记——分区已经分叉，归到哪一条都可能是错的，宁可多留一条。
+ */
+export function ruleObjectAssets(items: DerivedItem[]): ObjectAsset[] {
+  const spacesOf = new Map<string, Set<string>>();
+  items.forEach((item) => {
+    if (!item.space) return;
+    spacesOf.set(item.object, (spacesOf.get(item.object) ?? new Set<string>()).add(item.space));
+  });
+  return [...spacesOf.entries()]
+    .filter(([, spaces]) => spaces.size === 1)
+    .map(([object, spaces]) => ({ object, space: [...spaces][0]! }));
 }

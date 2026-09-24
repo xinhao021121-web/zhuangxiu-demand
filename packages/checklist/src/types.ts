@@ -1,6 +1,7 @@
 /** 量房沟通清单的类型定义，零框架依赖。 */
 
 import type { FormModel, SurveyItem, SurveyTier } from '@zx/field-spec';
+import type { ObjectAsset } from './objects';
 
 export type Tier = SurveyTier;
 
@@ -91,4 +92,9 @@ export interface ChecklistInput {
   derived: DerivedItem[];
   /** 通用清单资产，缺省用 field-spec 的 16 项 */
   survey?: SurveyItem[];
+  /**
+   * 归一用的额外资产对象（规则托底里的「猫砂盆位置」「儿童房空间」这类）。
+   * 模型换一个名字说同一件事时要并成一条，靠的就是这份清单（badcases.md BC-05）。
+   */
+  objects?: readonly ObjectAsset[];
 }
