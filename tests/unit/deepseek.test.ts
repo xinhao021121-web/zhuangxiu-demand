@@ -79,12 +79,15 @@ describe('DeepSeek adapter', () => {
     await expect(provider.understand(request)).rejects.toThrow(/截断/);
   });
 
-  it('返回的不是 JSON 时抛出，并把开头一段带进错误信息', async () => {
+  it('返回的不是 JSON 时抛出，并带上能查的诊断信息', async () => {
     const provider = createDeepSeekProvider({
       apiKey: 'test-key',
       fetchImpl: (async () => reply('好的，我来分析一下这份需求单')) as unknown as typeof fetch,
     });
     await expect(provider.understand(request)).rejects.toThrow(/不是 JSON/);
+    // 那次降级只留下「不是 JSON」四个字，查不出是被截断还是模型跑偏——所以这几项必须有
+    await expect(provider.understand(request)).rejects.toThrow(/finish_reason=stop/);
+    await expect(provider.understand(request)).rejects.toThrow(/长度=/);
   });
 
   it('HTTP 失败与空内容都抛出，降级交给上游的流水线', async () => {
@@ -99,5 +102,41 @@ describe('DeepSeek adapter', () => {
       fetchImpl: (async () => new Response(JSON.stringify({ choices: [] }), { status: 200 })) as unknown as typeof fetch,
     });
     await expect(empty.understand(request)).rejects.toThrow(/没有内容/);
+  });
+
+  it('把用量交给调用方：算成本与验证前缀缓存都靠它', async () => {
+    const seen: { promptTokens: number; completionTokens: number; cachedPromptTokens: number }[] = [];
+    const provider = createDeepSeekProvider({
+      apiKey: 'test-key',
+      onUsage: (u) => seen.push(u),
+      fetchImpl: (async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: '{"profile":[]}' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 4200, completion_tokens: 800, prompt_cache_hit_tokens: 3800 },
+          }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    });
+    await provider.understand(request);
+    expect(seen).toEqual([{ promptTokens: 4200, completionTokens: 800, cachedPromptTokens: 3800 }]);
+  });
+
+  it('调用失败也要记用量：钱已经花了', async () => {
+    const seen: unknown[] = [];
+    const provider = createDeepSeekProvider({
+      apiKey: 'test-key',
+      onUsage: (u) => seen.push(u),
+      fetchImpl: (async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: '{"profile":[{"label":"家' }, finish_reason: 'length' }],
+            usage: { prompt_tokens: 4000, completion_tokens: 8192 },
+          }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    });
+    await expect(provider.understand(request)).rejects.toThrow(/截断/);
+    expect(seen).toHaveLength(1);
   });
 });

@@ -5,6 +5,7 @@
 - 产品设计文档：`docs/问需_产品设计文档_V1.md`（定位、三个端、回流闭环）
 - 技术方案：`docs/问需_技术方案_V1.md`
 - 用户研究：`research/问需_用户研究方案_V1.md`（访谈提纲、假设与判定标准、记录模板）
+- 成本与 ROI：`research/问需_成本与ROI模型_V1.md`（成本侧已实测；收益侧参数等访谈填）
 
 
 - 解读端 Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
@@ -31,8 +32,8 @@ packages/
   devtools/           单测与类型检查用的开发依赖
 tools/                字段清单 Excel → JSON、Demo 构建脚本
 docs/                 问需的产品设计文档与技术方案
-research/             用户研究：访谈方案与记录模板（一手证据，还没执行）
-evals/                清单质量评估：用例、评分标准、badcase 台账与回归报告
+research/             用户研究：访谈方案、记录模板、成本与 ROI 模型
+evals/                清单质量评估：用例、评分标准、badcase 台账、质量/成本报告
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
 designer/            设计需求解读台 Demo + 现场量房手机端 Demo（数据模拟）
 tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）

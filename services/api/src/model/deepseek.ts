@@ -5,7 +5,7 @@
  */
 
 import { SURVEY_OBJECTS_HINT, UNDERSTAND_TASK } from '@zx/service';
-import type { ModelProvider, UnderstandRequest } from '@zx/service';
+import type { ModelProvider, TokenUsage, UnderstandRequest } from '@zx/service';
 
 const SYSTEM_PROMPT = `${UNDERSTAND_TASK}
 
@@ -43,6 +43,8 @@ export interface DeepSeekOptions {
   /** 输出上限：默认 4096 会把长需求单的 JSON 截断，这里给到模型支持的上限 */
   maxTokens?: number;
   fetchImpl?: typeof fetch;
+  /** 每次调用的用量：接上埋点就能算单份解读的成本，也能量出前缀缓存有没有命中 */
+  onUsage?: (usage: TokenUsage) => void;
 }
 
 export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider {
@@ -86,7 +88,19 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
         }
         const body = (await response.json()) as {
           choices?: { message?: { content?: string }; finish_reason?: string }[];
+          usage?: {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            prompt_cache_hit_tokens?: number;
+          };
         };
+        if (body.usage) {
+          options.onUsage?.({
+            promptTokens: body.usage.prompt_tokens ?? 0,
+            completionTokens: body.usage.completion_tokens ?? 0,
+            cachedPromptTokens: body.usage.prompt_cache_hit_tokens ?? 0,
+          });
+        }
         const choice = body.choices?.[0];
         const content = choice?.message?.content;
         if (!content) throw new Error('DeepSeek 返回里没有内容');
@@ -96,7 +110,18 @@ export function createDeepSeekProvider(options: DeepSeekOptions): ModelProvider 
         try {
           return JSON.parse(stripFence(content)) as unknown;
         } catch {
-          throw new Error('DeepSeek 返回的不是 JSON：' + stripFence(content).slice(0, 120).replace(/\s+/g, ' '));
+          // 诊断信息要能分辨三种情况：被截断、裹了别的东西、模型跑偏。
+          // 只报前 120 字不够——那次降级只留下「不是 JSON」四个字，查不出原因。
+          const text = stripFence(content);
+          throw new Error(
+            [
+              'DeepSeek 返回的不是 JSON',
+              `finish_reason=${choice?.finish_reason ?? '未知'}`,
+              `长度=${text.length}`,
+              `结尾=${JSON.stringify(text.slice(-40))}`,
+              `开头=${JSON.stringify(text.slice(0, 120).replace(/\s+/g, ' '))}`,
+            ].join(' · '),
+          );
         }
       } finally {
         clearTimeout(timer);

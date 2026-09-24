@@ -20,7 +20,7 @@ import { SURVEY_CHECKLIST } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
 import type { UnderstandingIssues } from '@zx/contracts';
 import { generateChecklist } from './pipeline';
-import type { ModelProvider } from './model';
+import type { ModelProvider, TokenUsage } from './model';
 import type {
   ChecklistRecord,
   OutboundRecordRecord,
@@ -195,6 +195,8 @@ export interface EvalReport {
   gated: boolean;
   results: EvalCaseResult[];
   passed: boolean;
+  /** 调用用量：给了就出成本段（只有真机实测才有） */
+  usage?: TokenUsage[];
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -247,6 +249,8 @@ export interface EvalRunOptions {
   runs?: number;
   /** 判不判通过：离线回归判（判死项必须为 0），真机实测只测量 */
   gated: boolean;
+  /** 调用用量的收集器：调用方建一个空数组，接上 provider 的 onUsage，报告就会出成本段 */
+  usage?: TokenUsage[];
 }
 
 export async function runEval(options: EvalRunOptions): Promise<EvalReport> {
@@ -319,6 +323,7 @@ export async function runEval(options: EvalRunOptions): Promise<EvalReport> {
     gated: options.gated,
     results,
     passed: results.every((r) => r.samples.every((s) => s.failures.length === 0)),
+    usage: options.usage,
   };
 }
 
@@ -358,11 +363,17 @@ export function renderReport(report: EvalReport): string {
   lines.push('| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
   report.results.forEach((result) => {
     const s = result.samples[0]!;
+    const failed = result.samples.filter((x) => x.failures.length).length;
     lines.push(
-      `| \`${result.id}\` | ${result.intent} | ${s.items} | ${s.must} | ${s.suggest} | ${s.bySource.both} | ${s.novelObjects.length} | ${s.degraded ? '是' : '否'} | ${s.failures.length ? '不通过' : '通过'} |`,
+      `| \`${result.id}\` | ${result.intent} | ${s.items} | ${s.must} | ${s.suggest} | ${s.bySource.both} | ${s.novelObjects.length} | ${s.degraded ? '是' : '否'} | ${failed ? `不通过 ${failed}/${result.samples.length}` : '通过'} |`,
     );
   });
   lines.push('');
+  if (report.runs > 1) {
+    lines.push('> 表里的条目 / 必问 / 合并取自第 1 次采样，跨采样的区间见稳定性表。');
+    lines.push('> 「不通过 x/y」= y 次采样里有 x 次没满足期望，判定看的是全部采样。');
+    lines.push('');
+  }
 
   const failed = report.results.filter((r) => r.samples.some((s) => s.failures.length));
   if (failed.length) {
@@ -425,6 +436,26 @@ export function renderReport(report: EvalReport): string {
     uncovered.forEach((u) => {
       lines.push(`| \`${u.caseId}\` | ${u.label}（\`${u.fieldKey}\`） | ${u.why} |`);
     });
+    lines.push('');
+  }
+
+  if (report.usage?.length) {
+    const calls = report.usage.length;
+    const sum = (pick: (u: TokenUsage) => number) => report.usage!.reduce((acc, u) => acc + pick(u), 0);
+    const prompt = sum((u) => u.promptTokens);
+    const completion = sum((u) => u.completionTokens);
+    const cached = sum((u) => u.cachedPromptTokens);
+    const avg = (total: number) => Math.round(total / calls);
+    lines.push('## 成本口径');
+    lines.push('');
+    lines.push(`- 调用次数：${calls}（用例 ${report.results.length} 个 × 采样 ${report.runs} 次；降级才会重试第二次）`);
+    lines.push(`- 输入 token：合计 ${prompt} · 单次均值 ${avg(prompt)}`);
+    lines.push(`- 输出 token：合计 ${completion} · 单次均值 ${avg(completion)}`);
+    lines.push(`- 前缀缓存命中：${cached} / ${prompt}（${prompt ? Math.round((cached / prompt) * 100) : 0}%）`);
+    lines.push('');
+    lines.push('> **单份解读 = 1 次调用**（模型两道红线没过才重试一次，重试的用量也计在这里）。');
+    lines.push('> 这里只记 token，不记钱：单价随官方调整，写死会把报告写过期。');
+    lines.push('> 换算成钱与盈亏平衡见 `research/问需_成本与ROI模型_V1.md`。');
     lines.push('');
   }
 

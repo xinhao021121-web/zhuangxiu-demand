@@ -20,6 +20,20 @@ export interface ModelProvider {
 }
 
 /**
+ * 一次调用的用量。算单份解读的成本靠它（技术方案第十一章「调用成本超预期」那条风险）。
+ *
+ * 只记 token，不记钱：单价随官方调整，写死会把报告写过期。钱在文档里按参数换算。
+ */
+export interface TokenUsage {
+  /** 输入 token（含命中前缀缓存的部分） */
+  promptTokens: number;
+  /** 输出 token */
+  completionTokens: number;
+  /** 输入里命中前缀缓存的 token：用来验证「固定前缀」是否真的省了钱 */
+  cachedPromptTokens: number;
+}
+
+/**
  * 默认任务说明：这一段同时是提示词的前缀，固定放在请求前面以命中前缀缓存。
  *
  * 判据按产品文档 4.3 / 4.5 写成模型能照着做的定义。只列四个取值名、不给定义时，
