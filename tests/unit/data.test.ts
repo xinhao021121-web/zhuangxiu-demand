@@ -5,6 +5,7 @@ import {
   DEMAND_SCHEMA_VERSION,
   DRAFT_KEY,
   SCHEMA_VERSION,
+  buildHandoff,
   buildSubmission,
   createDraft,
   createLocalRepository,
@@ -14,6 +15,7 @@ import {
   newSubmissionId,
 } from '@zx/data';
 import type { DemandSheetSubmission, JsonRequest, JsonTransport } from '@zx/data';
+import { DemandSheetImportSchema } from '@zx/contracts';
 
 describe('草稿迁移', () => {
   it('没有草稿时给出默认草稿：两个卫生间、未静默', () => {
@@ -111,6 +113,19 @@ describe('采集通道', () => {
   it('提交 id 客户端生成：带上时间戳，两次不相同', () => {
     expect(newSubmissionId(1000)).toMatch(/^a-[0-9a-z]+-[0-9a-z]+$/);
     expect(newSubmissionId(2000)).not.toBe(newSubmissionId(1000));
+  });
+
+  it('交接文件与提交给通道的是同一份结构：存下来的 JSON 直接过契约', () => {
+    const draft = handleDraft();
+    draft.model = setValue(draft.model, 'base_area', 89);
+    const sheet = buildSubmission(draft, { submissionId: 'a-1-2', submittedAt: '2026-09-25T08:00:00.000Z' });
+    const file = buildHandoff(sheet);
+    expect(file.fileName).toBe('问需-需求单-20260925.json');
+    // 这一条是这条路的接缝：房主手递的那份文件，正是桌面端导入接口认的那份
+    const parsed = DemandSheetImportSchema.safeParse(JSON.parse(file.text));
+    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+    expect(parsed.data?.form.values.base_area).toBe(89);
+    expect(parsed.data?.source).toBe('miniapp');
   });
 
   it('没接通道（展示模式）就只留本机，不假装送到了', async () => {

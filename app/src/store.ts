@@ -21,9 +21,17 @@ import {
 } from '@zx/rules';
 import type { Suggestion } from '@zx/rules';
 import { buildSummary } from '@zx/summary';
-import { MAX_EVENTS, buildSubmission, createDraft, createLocalRepository, newSubmissionId } from '@zx/data';
+import {
+  MAX_EVENTS,
+  buildHandoff,
+  buildSubmission,
+  createDraft,
+  createLocalRepository,
+  newSubmissionId,
+} from '@zx/data';
 import type { Draft, EventName, SubmitOutcome } from '@zx/data';
 import { collectionChannel } from './platform/collection';
+import { saveHandoff } from './platform/handoff';
 import { taroStorage } from './platform/storage';
 
 /** 表单变化后防抖多久再更新助手（见产品文档 4.8）。 */
@@ -61,6 +69,7 @@ export interface AppStore {
   cancelPending: () => void;
   flash: (key: string) => void;
   requestSubmit: () => void;
+  exportHandoff: () => Promise<void>;
   reset: () => void;
   fillDemo: () => void;
 }
@@ -308,6 +317,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ pending: { kind: 'submit' } });
   },
 
+  /**
+   * 存一份交接文件：房主手机没网、或这套产物没接服务端时，靠它把需求单交到设计师手上
+   * （产品文档 F9）。内容与提交给采集通道的是同一份结构，只是递送方式不同。
+   */
+  async exportHandoff() {
+    const sheet = buildSubmission(get().draft, {
+      submissionId: newSubmissionId(Date.now()),
+      submittedAt: new Date().toISOString(),
+    });
+    const file = buildHandoff(sheet);
+    const how = await saveHandoff(file.fileName, file.text);
+    set({ pending: null });
+    toast(how === 'download' ? `已存成 ${file.fileName}，发给设计师即可` : '需求单已复制，粘给设计师即可');
+  },
+
   reset() {
     repository.clearDraft();
     const draft = createDraft();
@@ -369,7 +393,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
 /** 三种落点说三种话：送到了、展示模式只留本机、没送出去。 */
 function submitToast(outcome: SubmitOutcome): string {
-  if (!outcome.ok) return `没送出去（${outcome.reason}），本机已留一份，稍后再提交一次`;
+  if (!outcome.ok) return `没送出去（${outcome.reason}）：本机已留一份，也可以存成交接文件发给设计师`;
   if (outcome.delivered) return '已提交给设计师，本机仍留一份';
   return '已提交给设计师，正文与摘要在本机保存';
 }

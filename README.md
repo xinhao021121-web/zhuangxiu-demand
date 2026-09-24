@@ -117,7 +117,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、采集通道与内部通道的隔离、契约校验、清单流水线、外发审计、现场记录、改名、遗漏补录与四张报表 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
 | 清单质量 | `pnpm run test:unit`（含 `evals/` 离线回归） | 三个种子场景的清单不退化：可溯源、同对象不重复、期望覆盖；报告见 `evals/report-offline.md`，口径见 `evals/rubric.md` |
-| 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查（含结构化提交的落点提示）、断点恢复、两端布局指标 |
+| 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查（含结构化提交的落点提示与交接文件下载）、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |

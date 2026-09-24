@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createModel, setValue } from '@zx/field-spec';
-import { buildSubmission, createDraft } from '@zx/data';
+import { buildHandoff, buildSubmission, createDraft } from '@zx/data';
 import {
   createApp,
   createFakeProvider,
@@ -194,6 +194,26 @@ describe('需求单导入与列表', () => {
     // 与采集通道相反的两处：来源固定 file、提交人是内部人员
     expect(stored.source).toBe('file');
     expect(stored.submittedBy).not.toBeNull();
+  });
+
+  it('房主存下的交接文件，设计师这边原样导入得了（这条路的两端接得上）', async () => {
+    // 用采集端真正会用的那个函数造文件：存下来的是文本，导进去的是同一份
+    const draft = createDraft();
+    draft.model = setValue(createModel(), 'base_area', 76);
+    const file = buildHandoff(
+      buildSubmission(draft, { submissionId: 'a-handoff-1', submittedAt: '2026-09-24T10:00:00.000Z' }),
+    );
+    const res = await app.request('/demand-sheets', {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: file.text,
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { id: string; source: string; demandName: string };
+    expect(created.source).toBe('file');
+    // 房主端不收集姓名，所以名字是契约默认的「未命名需求单」，设计师再改
+    expect(created.demandName).toBe('未命名需求单');
+    expect(repo.getDemandSheet(created.id)!.payload.values.base_area).toBe(76);
   });
 });
 

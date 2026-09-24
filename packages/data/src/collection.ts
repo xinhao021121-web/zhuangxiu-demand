@@ -47,6 +47,20 @@ export function buildSubmission(
   };
 }
 
+/**
+ * 交接文件：房主手机把这份需求单存下来、通过任何渠道（微信、邮件、当面）交给设计师的那一份。
+ *
+ * 内容与提交给采集通道的是**同一份结构**，只是换了一种递送方式——设计师那边选文件导入，
+ * 服务端仍然记 `source: 'file'`。文件名带日期，同一份表反复导也不会互相盖掉。
+ */
+export function buildHandoff(sheet: DemandSheetSubmission): { fileName: string; text: string } {
+  const day = sheet.submittedAt.slice(0, 10).replace(/-/g, '');
+  return {
+    fileName: `问需-需求单-${/^\d{8}$/.test(day) ? day : '未标日期'}.json`,
+    text: JSON.stringify(sheet, null, 2),
+  };
+}
+
 export interface CollectionClientOptions {
   /** 采集通道的地址，例如 https://api.example.com/a */
   baseUrl: string;

@@ -48,6 +48,7 @@ pnpm run dev:h5                             # 本地开发
 | F7 | 空间实例管理（次卧 ≤4、卫生间 ≤3、书房 ≤2，房型决定字段） | `packages/field-spec` 的 `model.ts` |
 | F8 | 量房确认清单（16 项，随摘要一起给设计师） | `packages/summary` |
 | F9 | 结构化提交：草稿拼成需求单（含助手写入过的字段与一整批埋点）交给采集通道；没配通道就只留本机 | `packages/data` 的 `buildSubmission` / `createCollectionClient` + `store.ts` + `services/api` 的 `/a` |
+| F10 | 交接文件：没网或没接服务端时，把需求单存成一份 JSON 交给设计师 | `packages/data` 的 `buildHandoff` + `platform/handoff.ts` + 提交前检查里的「存交接文件」 |
 
 ## 采集通道
 
@@ -60,3 +61,11 @@ COLLECTION_API_BASE=https://api.example.com/a pnpm run build:h5
 
 网络那一层用 `Taro.request`（小程序端没有 `fetch`），所以小程序与 H5 共用同一份提交代码。
 埋点随这一次提交整批上报，送达后从草稿里清掉；没送达就留着，下次提交一起带。
+
+## 交接文件（F10）
+
+提交前检查里除了「仍要提交」，还有一个「存交接文件」：房主手机没网、或这套产物没接服务端时，
+靠它把需求单交到设计师手上——内容与提交给采集通道的是**同一份结构**，只是递送方式不同。
+
+两端各按自己的能力来：H5 直接下载 `问需-需求单-YYYYMMDD.json`；小程序端没有「下载文件」这个动作，
+退成把 JSON 复制到剪贴板，设计师那边粘进导入框。设计师怎么导入见 `studio/README.md` 的「导入（F1）」。

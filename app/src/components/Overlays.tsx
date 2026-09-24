@@ -64,6 +64,7 @@ export function ConfirmView() {
   const draft = useAppStore((s) => s.draft);
   const confirmPending = useAppStore((s) => s.confirmPending);
   const cancelPending = useAppStore((s) => s.cancelPending);
+  const exportHandoff = useAppStore((s) => s.exportHandoff);
   const stats = recommendStats(draft.model);
   const { open, adopted } = useMemo(() => summarise(draft), [draft]);
 
@@ -82,10 +83,16 @@ export function ConfirmView() {
           <Text className="panel-line">
             提交后会生成《需求意向书》和《量房确认清单》两份材料，量房确认清单 16 项由设计师现场逐条确认。
           </Text>
+          <Text className="panel-line">
+            没网、或者这套演示没接服务端时，可以「存交接文件」：存下一份需求单 JSON，直接发给设计师导入。
+          </Text>
         </View>
         <View className="panel-foot">
           <View className="btn btn-sm" id="cf-cancel" onClick={cancelPending}>
             <Text>返回修改</Text>
+          </View>
+          <View className="btn btn-sm" id="cf-export" onClick={exportHandoff}>
+            <Text>存交接文件</Text>
           </View>
           <View className="btn btn-sm btn-primary" id="cf-ok" onClick={confirmPending}>
             <Text>仍要提交</Text>

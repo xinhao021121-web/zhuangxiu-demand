@@ -196,6 +196,22 @@ function watch(page) {
   await page.click('#cf-cancel');
   await page.waitForTimeout(200);
   ok((await count(page, '#cf-body')) === 0, '提交前检查可返回修改');
+
+  // 交接文件：房主手机没网、或这套演示没接服务端时，靠它把需求单交到设计师手上
+  await page.click('#btn-submit');
+  await page.waitForTimeout(200);
+  const [handoff] = await Promise.all([page.waitForEvent('download'), page.click('#cf-export')]);
+  ok(/^问需-需求单-\d{8}\.json$/.test(handoff.suggestedFilename()), `存下的文件名带日期（${handoff.suggestedFilename()}）`);
+  const handed = JSON.parse(fs.readFileSync(await handoff.path(), 'utf8'));
+  ok(handed.form.values.base_area === 89, '交接文件里带着房主填的值');
+  ok(
+    handed.source === 'miniapp' && typeof handed.submittedAt === 'string' && handed.schemaVersion === '1.0',
+    '交接文件与提交给通道的是同一份结构（来源、提交时间、字段清单版本都在）',
+  );
+  await page.waitForTimeout(200);
+  ok((await count(page, '#cf-body')) === 0, '存完交接文件后弹层关闭');
+  ok((await text(page, '#toast')).includes('发给设计师'), '提示说清接下来怎么交给设计师');
+
   await page.click('#btn-submit');
   await page.waitForTimeout(200);
   await page.click('#cf-ok');
@@ -341,6 +357,13 @@ function watch(page) {
   await page.waitForTimeout(250);
   const check = await text(page, '#cf-body');
   ok(check.includes('需求清晰度') && check.includes('量房确认清单'), '窄屏提交前检查说明清晰度与两份输出物');
+  ok((await count(page, '#cf-export')) === 1, '窄屏提交前检查也给了「存交接文件」这个动作');
+  const footFits = await page.evaluate(() => {
+    const foot = document.querySelector('.panel-foot').getBoundingClientRect();
+    const buttons = [...document.querySelectorAll('.panel-foot .btn')].map((b) => b.getBoundingClientRect());
+    return buttons.every((b) => b.right <= foot.right + 1 && b.left >= foot.left - 1 && b.width >= 40);
+  });
+  ok(footFits, '窄屏三个动作排得下（没有被挤出弹层）');
   await page.click('#cf-cancel');
   await page.waitForTimeout(200);
 
