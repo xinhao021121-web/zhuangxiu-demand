@@ -59,5 +59,7 @@ describe.skipIf(!API_KEY)('清单质量：真实模型实测', () => {
       r.samples.flatMap((s) => s.untraceable.map((o) => `${r.id}：${o}`)),
     );
     expect(untraceable, `出现指不到字段的条目：\n${untraceable.join('\n')}`).toEqual([]);
-  }, 900_000);
+    // 13 个用例 × 3 次采样 = 39 次调用；实测单次 4–19s，降级还要重试一次，
+    // 所以超时按 30 分钟给，别让跑了一半的实测被掐掉。
+  }, 1_800_000);
 });
