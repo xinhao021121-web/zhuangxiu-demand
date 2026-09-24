@@ -40,3 +40,6 @@ build/
 # 本地凭据（Cloudflare API Token 等，用完即删）
 .cf-token
 _deploy/
+
+# wrangler 的本地临时产物（build 缓存、dev 的 bundle、本地 D1 状态）
+.wrangler/
