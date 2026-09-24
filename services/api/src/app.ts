@@ -20,6 +20,8 @@ import {
 } from '@zx/contracts';
 import type { User } from '@zx/contracts';
 import { can, signToken, verifyToken } from './auth';
+import { createCollectionChannel } from './collection';
+import { toIsoAt } from './events';
 import {
   generateChecklist,
   toChecklistSummary,
@@ -50,13 +52,24 @@ export function createApp(deps: AppDeps) {
   app.get('/health', (c) => c.json({ ok: true, model: provider.name }));
   app.get('/openapi.json', (c) => c.json(openApiDocument()));
 
+  /*
+   * 采集通道（技术方案 5.3）：房主提交需求单的那条路。
+   * 注册在内部守卫之前，两条通道的边界因此在路由层就分开了——不是靠中间件里判断路径。
+   */
+  app.route('/a', createCollectionChannel({ repo, env, now }));
+
   app.post('/auth/login', async (c) => {
     const parsed = LoginSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: '请求体不合法', issues: parsed.error.issues }, 400);
     const user = repo.findUserByPhone(parsed.data.phone);
     if (!user || parsed.data.code !== env.authCode) return c.json({ error: '手机号或验证码不对' }, 401);
     const token = signToken(
-      { sub: user.id, role: user.role, exp: Math.floor(Date.now() / 1000) + env.tokenTtlSeconds },
+      {
+        sub: user.id,
+        scope: 'internal',
+        role: user.role,
+        exp: Math.floor(Date.now() / 1000) + env.tokenTtlSeconds,
+      },
       env.tokenSecret,
     );
     return c.json({ token, user });
@@ -65,8 +78,8 @@ export function createApp(deps: AppDeps) {
   /* 未授权访问不返回任何数据：除了健康检查、契约与登录，一律先过 token。 */
   app.use('*', async (c, next) => {
     const token = (c.req.header('authorization') ?? '').replace(/^Bearer\s+/i, '');
-    const payload = token ? verifyToken(token, env.tokenSecret) : null;
-    const user = payload ? repo.findUserById(payload.sub) : undefined;
+    const payload = token ? verifyToken(token, env.tokenSecret, 'internal') : null;
+    const user = payload?.scope === 'internal' ? repo.findUserById(payload.sub) : undefined;
     if (!user) return c.json({ error: '未授权' }, 401);
     c.set('user', user);
     await next();
@@ -243,8 +256,8 @@ export function createApp(deps: AppDeps) {
 
   /*
    * 采集端的埋点先攒在房主手机上，随提交或断网重连整批上报（技术方案 6.11）。
-   * 房主端那条通道（A4 采集通道）还没开，所以现在只有内部 token 能调；通道开了之后
-   * 鉴权换成匿名会话，这一段的校验与落库不动。
+   * 房主提交那一次走的是采集通道（5.3），埋点随需求单一起进去；这个内部接口留的是
+   * 内部人员与文件导入的补报路径（比如导入时把 telemetry 单独补上）。
    */
   app.post('/demand-sheets/:id/events', async (c) => {
     const user = c.get('user');
@@ -325,14 +338,4 @@ export function createApp(deps: AppDeps) {
   app.notFound((c) => c.json({ error: '没有这个接口' }, 404));
 
   return app;
-}
-
-/**
- * 客户端时钟（毫秒）换算成落库时间：房主手机的时钟可能不准，明显不合法时用服务端时间兜住。
- * 填写时长这类跨事件差值要在同一个时钟下算，所以换算只做一次，落库后不再依赖客户端时钟。
- */
-function toIsoAt(clientMs: number, fallback: string): string {
-  if (!Number.isFinite(clientMs)) return fallback;
-  const at = new Date(clientMs);
-  return Number.isNaN(at.getTime()) ? fallback : at.toISOString();
 }

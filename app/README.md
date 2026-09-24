@@ -47,3 +47,16 @@ pnpm run dev:h5                             # 本地开发
 | F6 | 静默模式（连续 3 次不感兴趣，不跨会话继承） | `packages/rules` 的 `state.ts` |
 | F7 | 空间实例管理（次卧 ≤4、卫生间 ≤3、书房 ≤2，房型决定字段） | `packages/field-spec` 的 `model.ts` |
 | F8 | 量房确认清单（16 项，随摘要一起给设计师） | `packages/summary` |
+| F9 | 结构化提交：草稿拼成需求单（含助手写入过的字段与一整批埋点）交给采集通道；没配通道就只留本机 | `packages/data` 的 `buildSubmission` / `createCollectionClient` + `store.ts` + `services/api` 的 `/a` |
+
+## 采集通道
+
+提交走的是服务端那条只写的采集通道（技术方案 5.3），地址由构建时的 `COLLECTION_API_BASE` 注入——
+**留空就是展示模式**：照常走完全流程，提交只落在本机，提示里会说明，不假装送达。
+
+```bash
+COLLECTION_API_BASE=https://api.example.com/a pnpm run build:h5
+```
+
+网络那一层用 `Taro.request`（小程序端没有 `fetch`），所以小程序与 H5 共用同一份提交代码。
+埋点随这一次提交整批上报，送达后从草稿里清掉；没送达就留着，下次提交一起带。

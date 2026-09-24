@@ -21,15 +21,17 @@ import {
 } from '@zx/rules';
 import type { Suggestion } from '@zx/rules';
 import { buildSummary } from '@zx/summary';
-import { MAX_EVENTS, createDraft, createLocalRepository } from '@zx/data';
-import type { Draft, EventName } from '@zx/data';
+import { MAX_EVENTS, buildSubmission, createDraft, createLocalRepository, newSubmissionId } from '@zx/data';
+import type { Draft, EventName, SubmitOutcome } from '@zx/data';
+import { collectionChannel } from './platform/collection';
 import { taroStorage } from './platform/storage';
 
 /** 表单变化后防抖多久再更新助手（见产品文档 4.8）。 */
 export const REFRESH_DELAY = 800;
 const FLASH_DURATION = 1700;
 
-export const repository = createLocalRepository(taroStorage);
+/** 草稿与埋点始终落在本机；提交那一件事交给采集通道（没配通道时就是展示模式）。 */
+export const repository = createLocalRepository(taroStorage, Date.now, collectionChannel);
 
 /** 需要二次确认的动作：字段替换、删除已填内容的实例、提交。 */
 export type Pending =
@@ -261,7 +263,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     toast(quiet ? '已进入静默模式' : '已恢复建议');
   },
 
-  confirmPending() {
+  /** 提交那一支要等采集通道的回执，所以这里是异步的；其余两支仍然是同步的。 */
+  async confirmPending() {
     const { pending, draft } = get();
     if (!pending) return;
     if (pending.kind === 'overwrite') {
@@ -278,12 +281,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ pending: null });
     const { adopted } = summarise(draft);
     const summary = buildSummary(draft.model, adopted);
-    // 提交：先记一次提交事件（填写时长的终点），再交给仓储层留档。
-    // 采集通道（A4）开了之后，草稿里这一批事件就是随提交上报的那一批。
+    // 提交：先记一次提交事件（填写时长的终点），再把草稿拼成结构化需求单交给采集通道，
+    // 草稿里这一批事件随这次提交整批上报——所以要现取一份草稿，早一份会漏掉刚记的提交事件。
     trackEvent('submit', { length: summary.length });
-    repository.submit({ summary });
+    const submitted = useAppStore.getState().draft;
+    const outcome = await repository.submit(
+      buildSubmission(submitted, {
+        submissionId: newSubmissionId(Date.now()),
+        submittedAt: new Date().toISOString(),
+      }),
+      submitted.events,
+    );
+    // 送出去的这一批不再重报；没送出去（展示模式或网络不通）就留着，下次提交一起带。
+    if (outcome.ok && outcome.delivered) useAppStore.setState({ draft: { ...submitted, events: [] } });
     commit(useAppStore.getState().draft);
-    toast('已提交给设计师，正文与摘要在本机保存');
+    toast(submitToast(outcome));
   },
 
   cancelPending() {
@@ -354,6 +366,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     toast('已填入示例：89㎡ 旧房翻新 + 养猫 + 两个卫生间');
   },
 }));
+
+/** 三种落点说三种话：送到了、展示模式只留本机、没送出去。 */
+function submitToast(outcome: SubmitOutcome): string {
+  if (!outcome.ok) return `没送出去（${outcome.reason}），本机已留一份，稍后再提交一次`;
+  if (outcome.delivered) return '已提交给设计师，本机仍留一份';
+  return '已提交给设计师，正文与摘要在本机保存';
+}
 
 /** 读回草稿：字段清单升级后旧草稿仍可读，静默状态不跨会话继承。 */
 export function bootstrap(): void {

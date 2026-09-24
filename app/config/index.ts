@@ -21,7 +21,11 @@ export default defineConfig<'webpack5'>(async (merge) => {
     sourceRoot: 'src',
     outputRoot: `dist/${taroEnv}`,
     plugins: [],
-    defineConstants: {},
+    defineConstants: {
+      // 采集通道的地址（技术方案 5.3）：空串＝展示模式，提交只落本机。
+      // 键要写全 `process.env.`——Taro 把它直接交给 webpack 的 DefinePlugin，不自动加前缀。
+      'process.env.COLLECTION_API_BASE': JSON.stringify(process.env.COLLECTION_API_BASE ?? ''),
+    },
     // 手机版（PWA）：装到主屏幕需要的那四个文件，只跟 H5 产物走，小程序端不需要
     copy: {
       patterns:

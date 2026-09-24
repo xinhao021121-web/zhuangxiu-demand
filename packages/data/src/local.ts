@@ -1,8 +1,9 @@
 /** 本地实现的仓储：草稿、埋点、提交都只落在本机存储，接云端时只换实现。 */
 
 import { createDraft, migrateDraft } from './migrate';
+import { toSubmitter } from './collection';
 import type { EventName } from './events';
-import type { DemandRepository, Draft, StorageAdapter } from './types';
+import type { DemandRepository, DemandSubmitter, Draft, StorageAdapter } from './types';
 
 export const DRAFT_KEY = 'zx.demand.draft';
 
@@ -18,7 +19,13 @@ export function createMemoryStorage(initial: Record<string, string> = {}): Stora
   };
 }
 
-export function createLocalRepository(storage: StorageAdapter, now: () => number = Date.now): DemandRepository {
+export function createLocalRepository(
+  storage: StorageAdapter,
+  now: () => number = Date.now,
+  /** 采集通道：给了就真的上报，没给就是展示模式（提交只落在本机） */
+  channel: DemandSubmitter | null = null,
+): DemandRepository {
+  const submit = toSubmitter(channel, now);
   return {
     loadDraft(): Draft {
       const raw = storage.getItem(DRAFT_KEY);
@@ -47,11 +54,11 @@ export function createLocalRepository(storage: StorageAdapter, now: () => number
       storage.setItem(DRAFT_KEY, JSON.stringify(draft));
     },
     /*
-     * 本地实现只回报成功与时间：正文与摘要由界面留在本机，事件由调用方记（本层再记一次，
-     * 同一个动作就会出两条来源不同的事件）。A4 采集通道接上之后，这里换成真正的上报。
+     * 提交走采集通道（技术方案 5.3）：正文与摘要仍然由界面留在本机，事件由调用方记
+     * （本层再记一次，同一个动作就会出两条来源不同的事件）。
      */
-    submit(): { ok: boolean; at: number } {
-      return { ok: true, at: now() };
+    submit(sheet, events) {
+      return submit(sheet, events);
     },
   };
 }

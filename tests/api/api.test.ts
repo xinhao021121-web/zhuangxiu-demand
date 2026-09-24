@@ -5,6 +5,8 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createModel, setValue } from '@zx/field-spec';
+import { buildSubmission, createDraft } from '@zx/data';
 import {
   createApp,
   createFakeProvider,
@@ -20,6 +22,7 @@ const DESIGNER = '13800000002';
 const ADMIN = '13800000001';
 
 let app: ReturnType<typeof createApp>;
+let repo: ReturnType<typeof createRepo>;
 let token: string;
 let adminToken: string;
 
@@ -37,7 +40,7 @@ async function login(phone: string, instance = app): Promise<string> {
 }
 
 function boot(provider: ModelProvider = createFakeProvider()) {
-  const repo = createRepo(openDatabase(':memory:'));
+  repo = createRepo(openDatabase(':memory:'));
   seedDatabase(repo);
   const env = readEnv({
     AUTH_CODE: '000000',
@@ -45,6 +48,35 @@ function boot(provider: ModelProvider = createFakeProvider()) {
     DB_PATH: ':memory:',
   } as NodeJS.ProcessEnv);
   return createApp({ repo, provider, env, now: () => '2026-09-23 10:05' });
+}
+
+/** 采集通道：先换一个匿名会话令牌（房主不是用户，不走内部登录）。 */
+async function openSession(): Promise<string> {
+  const res = await app.request('/a/session', { method: 'POST' });
+  const body = (await res.json()) as { token: string; expiresAt: string };
+  return body.token;
+}
+
+/** 一份采集端会交上来的需求单：只填了一个字段，别的都空着。 */
+function submittedSheet(extra: Record<string, unknown> = {}) {
+  return {
+    submissionId: 'a-lq3k-7f2',
+    schemaVersion: '1.0',
+    submittedAt: '2026-09-25T08:00:00.000Z',
+    source: 'miniapp',
+    form: { values: { base_area: 89, live_pet: ['猫'] }, instances: {} },
+    aiMarks: ['pet_litter_box'],
+    ...extra,
+  };
+}
+
+async function collect(session: string, payload: unknown) {
+  const res = await app.request('/a/demand-sheets', {
+    method: 'POST',
+    headers: jsonHeaders(session),
+    body: JSON.stringify(payload),
+  });
+  return { res, body: (await res.json()) as { id: string; submittedAt: string; acceptedEvents: number; replay: boolean } };
 }
 
 interface GeneratedChecklist {
@@ -542,5 +574,156 @@ describe('现场记录', () => {
       await app.request(`/checklists/${body.id}/site-records`, { headers: auth(token) })
     ).json()) as { records: unknown[] };
     expect(listed.records).toHaveLength(1);
+  });
+});
+
+describe('采集通道与内部通道分离', () => {
+  it('房主不是用户：换会话不需要账号，会话里也没有任何身份', async () => {
+    const res = await app.request('/a/session', { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { token: string; expiresAt: string };
+    expect(body.token.split('.')).toHaveLength(2);
+    expect(Date.parse(body.expiresAt)).toBeGreaterThan(Date.now());
+    expect(JSON.stringify(body)).not.toContain('王设计');
+  });
+
+  it('两条通道的令牌互不通用：换一把钥匙、换一个 scope', async () => {
+    const session = await openSession();
+    // 会话令牌调内部接口：内部守卫只认内部 token
+    expect((await app.request('/demand-sheets', { headers: auth(session) })).status).toBe(401);
+    // 内部 token 调采集通道：采集通道只认会话令牌
+    const res = await app.request('/a/demand-sheets', {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: JSON.stringify(submittedSheet()),
+    });
+    expect(res.status).toBe(401);
+    expect(repo.getDemandSheet('a-lq3k-7f2')).toBeUndefined();
+  });
+
+  it('没有会话就提交不了', async () => {
+    const res = await app.request('/a/demand-sheets', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(submittedSheet()),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('提交落库：来源一定是 miniapp、不带提交人，内部列表立刻可见', async () => {
+    const session = await openSession();
+    // 客户端把自己写成 file 也没用：走这条路上来的一定记成房主提交
+    const { res, body } = await collect(session, submittedSheet({ source: 'file', demandName: '未命名需求单' }));
+    expect(res.status).toBe(201);
+    expect(body.replay).toBe(false);
+
+    const stored = repo.getDemandSheet(body.id)!;
+    expect(stored.source).toBe('miniapp');
+    expect(stored.submittedBy).toBeNull();
+    expect(stored.aiMarks).toEqual(['pet_litter_box']);
+
+    const list = (await (await app.request('/demand-sheets', { headers: auth(token) })).json()) as { id: string }[];
+    expect(list.map((s) => s.id)).toContain(body.id);
+  });
+
+  it('格式不对的需求单挡在契约层，房主那边只看到一句「格式不对」', async () => {
+    const session = await openSession();
+    const { res } = await collect(session, { submittedAt: '2026-09-25' });
+    expect(res.status).toBe(400);
+  });
+
+  it('整批埋点随需求单落库：来源 client、没有操作人（房主不是用户）', async () => {
+    const session = await openSession();
+    const at = Date.now();
+    const { body } = await collect(
+      session,
+      submittedSheet({
+        telemetry: {
+          batchId: 'a-lq3k-7f2',
+          events: [
+            { name: 'session', at: at - 60_000, props: { env: 'h5', narrow: true } },
+            { name: 'ignore', at: at - 30_000, props: { rule: 'pet-cat', id: 'pet-cat#-' } },
+            { name: 'submit', at, props: { length: 120 } },
+          ],
+        },
+      }),
+    );
+    expect(body.acceptedEvents).toBe(3);
+    const events = repo.listEvents(body.id);
+    expect(events.map((e) => e.name)).toEqual(['session', 'ignore', 'submit']);
+    expect(events[0].source).toBe('client');
+    expect(events[0].operator).toBeNull();
+    expect(events[0].batchId).toBe('a-lq3k-7f2');
+    expect(events[0].props).toEqual({ env: 'h5', narrow: true });
+    // 客户端时钟换算成落库时间：填写时长这类差值要在同一个时钟下算
+    expect(new Date(events[2].at).getTime()).toBe(at);
+  });
+
+  it('弱网重试：同一个 submissionId 只落一份，回执说清这是重放', async () => {
+    const session = await openSession();
+    const sheet = submittedSheet({ submissionId: 'a-retry-1' });
+    const first = await collect(session, sheet);
+    expect(first.res.status).toBe(201);
+    const again = await collect(session, sheet);
+    // 重放的回执只回客户端自己带上来的值，不回库里的行——这条通道没有读接口
+    expect(again.res.status).toBe(200);
+    expect(again.body).toEqual({
+      id: 'a-retry-1',
+      submittedAt: sheet.submittedAt,
+      acceptedEvents: 0,
+      replay: true,
+    });
+    expect(repo.listDemandSheets().filter((s) => s.id === 'a-retry-1')).toHaveLength(1);
+  });
+
+  it('同一批埋点重新提交（重填后再交一次）不会被计两遍', async () => {
+    const session = await openSession();
+    const telemetry = { batchId: 'b-repeat', events: [{ name: 'adopt', at: Date.now(), props: { rule: 'pet-cat' } }] };
+    const first = await collect(session, submittedSheet({ submissionId: 'a-one', telemetry }));
+    expect(first.body.acceptedEvents).toBe(1);
+    // 换个 submissionId 就等于新的一份需求单，但事件带的还是同一批号：幂等键仍然是 (batchId, 批内序号)
+    const second = await collect(session, submittedSheet({ submissionId: 'a-two', telemetry }));
+    expect(second.body.acceptedEvents).toBe(0);
+  });
+
+  it('采集通道没有读接口：拿着会话令牌也读不到任何需求单', async () => {
+    const session = await openSession();
+    const { body } = await collect(session, submittedSheet());
+    const paths = [
+      '/a/demand-sheets',
+      `/a/demand-sheets/${body.id}`,
+      `/a/demand-sheets/${body.id}/events`,
+      '/a/users',
+      '/a/health',
+    ];
+    for (const path of paths) {
+      const res = await app.request(path, { headers: auth(session) });
+      expect(res.status, path).toBe(404);
+      expect(await res.text(), path).not.toContain('张先生');
+    }
+  });
+
+  it('采集端那份 JSON 与内部导入是同一个契约：草稿直接提交，内部详情读回同一份表单', async () => {
+    // 用采集端真正会用的那个函数拼需求单，而不是测试里另写一份——两端的接缝就在这儿
+    const draft = createDraft();
+    draft.model = setValue(createModel(), 'base_area', 89);
+    draft.aiMarks = { budget_reserve: true };
+    const sheet = buildSubmission(draft, {
+      submissionId: 'a-draft-1',
+      submittedAt: '2026-09-25T08:00:00.000Z',
+    });
+
+    const session = await openSession();
+    const { body } = await collect(session, sheet);
+    const detail = (await (
+      await app.request(`/demand-sheets/${body.id}`, { headers: auth(token) })
+    ).json()) as {
+      sheet: { schemaVersion: string; source: string; aiMarks: string[] };
+      form: { values: Record<string, unknown> };
+    };
+    expect(detail.sheet.source).toBe('miniapp');
+    expect(detail.sheet.schemaVersion).toBe('1.0');
+    expect(detail.sheet.aiMarks).toEqual(['budget_reserve']);
+    expect(detail.form.values.base_area).toBe(89);
   });
 });

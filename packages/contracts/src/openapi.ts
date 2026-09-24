@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import { LoginSchema, UserSchema } from './account';
 import { ChecklistItemSchema, ChecklistSchema } from './checklist';
+import { CollectionSessionSchema, CollectionSubmitSchema } from './collection';
 import { DemandSheetImportSchema } from './demand-sheet';
 import { OutboundRecordSchema, SiteRecordBatchSchema, SiteRecordSchema } from './outbound';
 import { EventBatchSchema, StoredEventSchema } from './telemetry';
@@ -16,6 +17,8 @@ const SCHEMAS = {
   User: UserSchema,
   Login: LoginSchema,
   DemandSheetImport: DemandSheetImportSchema,
+  CollectionSession: CollectionSessionSchema,
+  CollectionSubmit: CollectionSubmitSchema,
   Understanding: UnderstandingSchema,
   Checklist: ChecklistSchema,
   ChecklistItem: ChecklistItemSchema,
@@ -44,6 +47,25 @@ const path = (id: string) => ({ name: 'id', in: 'path', required: true, schema: 
 
 /** V1 的接口清单：桌面工作台与现场端都用这一组。 */
 export const API_PATHS = {
+  /*
+   * 采集通道（技术方案 5.3）：独立前缀、独立鉴权、只有这两个写入口。
+   * 列在这里是因为「文档和实现不能两份」——但它是给房主用的，不接内部 token。
+   */
+  '/a/session': {
+    post: {
+      summary: '采集端：换一个匿名会话令牌（房主不是用户，不进账号体系）',
+      responses: { '200': json('CollectionSession', '会话令牌与到期时间') },
+    },
+  },
+  '/a/demand-sheets': {
+    post: {
+      summary: '采集端：提交结构化需求单（唯一写入口，落库即 source: miniapp）',
+      requestBody: body('DemandSheetImport', '采集端导出的需求单，可带一批埋点'),
+      responses: {
+        '201': json('CollectionSubmit', '提交回执；重试时 replay 为 true，不会再落一份'),
+      },
+    },
+  },
   '/auth/login': {
     post: {
       summary: '登录：手机号验证码换 token',

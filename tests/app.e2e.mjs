@@ -202,6 +202,7 @@ function watch(page) {
   await page.waitForTimeout(250);
   ok((await count(page, '#cf-body')) === 0, '确认提交后弹层关闭');
   ok((await count(page, '#toast')) === 1, '提交后给出反馈提示');
+  ok((await text(page, '#toast')).includes('本机'), '没接采集通道时提交提示说清只留本机（展示模式）');
 
   // 删除已填内容的实例需要二次确认
   const beforeDel = await count(page, '.inst-card');

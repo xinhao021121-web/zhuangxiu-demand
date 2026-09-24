@@ -1,10 +1,11 @@
 /** 需求单：采集端结构化导出的契约（产品文档第三章、技术方案 4.6）。 */
 
 import { z } from 'zod';
+import { DEMAND_SCHEMA_VERSION } from '@zx/data';
 import { EventBatchSchema } from './telemetry';
 
-/** 采集端导出的字段清单版本；读入时按版本做一次规范化。 */
-export const DEMAND_SCHEMA_VERSION = '1.0';
+/** 采集端导出的字段清单版本；读入时按版本做一次规范化。单一来源是 `@zx/data`。 */
+export { DEMAND_SCHEMA_VERSION };
 
 /** 字段值：单选是字符串，多选是字符串数组，数字类字段是数字。 */
 export const FieldValueSchema = z.union([z.string(), z.number(), z.array(z.string())]).optional();
@@ -30,6 +31,11 @@ export const DemandSheetImportSchema = z.object({
   submittedAt: z.string().min(1),
   /** 文件导入 / 采集端提交；V1 只有前者 */
   source: z.enum(['file', 'miniapp']).default('file'),
+  /**
+   * 客户端生成的提交 id：房主在弱网下重试时带同一个值，服务端认出是同一份，不再落第二份。
+   * 与埋点的 `batchId` 是同一个思路——重试的是整份需求单，不是一个字段。文件导入不带。
+   */
+  submissionId: z.string().min(1).optional(),
   /** 客户称呼：采集端不收集姓名，由导入的人写一个便于识别的叫法 */
   demandName: z.string().default('未命名需求单'),
   form: FormModelSchema,

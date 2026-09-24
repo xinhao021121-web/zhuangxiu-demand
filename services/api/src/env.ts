@@ -12,6 +12,9 @@ export interface ApiEnv {
   /** 自签 token 的密钥 */
   tokenSecret: string;
   tokenTtlSeconds: number;
+  /** 采集通道的匿名会话：另一把钥匙，与内部 token 互不通用（技术方案 5.3） */
+  collectionSecret: string;
+  collectionSessionTtlSeconds: number;
   /** 公司内部账号的验证码；V1 由管理员统一下发，待定项见技术方案第十章 */
   authCode: string;
   /** fake：不调模型，用桩数据跑通流程；deepseek：官方 API */
@@ -29,6 +32,8 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): ApiEnv {
     dbPath: source.DB_PATH ?? 'services/api/.data/api.sqlite',
     tokenSecret: source.TOKEN_SECRET ?? 'dev-only-secret',
     tokenTtlSeconds: num(source.TOKEN_TTL_SECONDS, 12 * 3600),
+    collectionSecret: source.COLLECTION_SECRET ?? 'dev-only-collection-secret',
+    collectionSessionTtlSeconds: num(source.COLLECTION_SESSION_TTL_SECONDS, 24 * 3600),
     authCode: source.AUTH_CODE ?? '000000',
     model: source.MODEL_PROVIDER === 'deepseek' ? 'deepseek' : 'fake',
     deepseekApiKey: source.DEEPSEEK_API_KEY ?? '',

@@ -18,7 +18,7 @@
 ```
 landing/              入口页（作品集首页：讲清问需与关键设计点，再分发三个入口）
 app/                  采集端（Taro：weapp + h5；pwa/ 是手机版资产，只复制进 H5 产物）
-services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、需求单与清单、外发审计
+services/api/         API 服务（Hono + node:sqlite）：鉴权与角色、采集通道、需求单与清单、外发审计
 studio/               解读端 · 桌面工作台（Next.js）：导入 → 确认外发 → 表格理解 → 清单 → 导出
 onsite/               现场端（Vite + React + PWA）：逐空间问、记一笔、离线记录与同步、量房记录
 packages/
@@ -88,9 +88,10 @@ pnpm run typecheck       # 领域层与应用配置的 TypeScript 检查
 
 两条发布命令：`pnpm run deploy:pages`（GitHub Pages）与 `pnpm run deploy:cf-pages`（Cloudflare Pages）。
 
-**API 服务跑不在静态托管上**：两个端在没有 API 时走演示模式，判据、脱敏、合并、排序仍是
+**API 服务跑不在静态托管上**：三个端在没有 API 时走演示模式，判据、脱敏、合并、排序仍是
 `packages/*` 里那份真代码，只有存储与模型换成浏览器内的实现；接回真服务时把
-`NEXT_PUBLIC_API_BASE` / `VITE_API_BASE` 指到自己的域名即可。API 本身用
+`NEXT_PUBLIC_API_BASE`（桌面端）/ `VITE_API_BASE`（现场端）/ `COLLECTION_API_BASE`（采集端，
+指到 API 的 `/a`）指到自己的域名即可。API 本身用
 `docker compose -f deploy/api.compose.yaml up -d` 起（见 `deploy/README.md`）。
 
 ```bash
@@ -112,10 +113,10 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 | 解读端 · 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、宽窄屏布局 |
 | 上线产物 | `pnpm run test:pages` | 按 gh-pages 的目录结构组装一次，用静态服务器按 /<repo>/ 前缀托管，逐个验证三个入口（含演示模式动线与 PWA manifest） |
 | 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
-| API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、契约校验、清单流水线、外发审计、现场记录 |
+| API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、采集通道与内部通道的隔离、契约校验、清单流水线、外发审计、现场记录 |
 | 领域包 | `pnpm run test:unit` | 字段规格、规则命中与排序去重、静默状态机、写回动作、摘要、草稿迁移、清单判据与合并、脱敏与外发、契约校验与降级 |
 | 清单质量 | `pnpm run test:unit`（含 `evals/` 离线回归） | 三个种子场景的清单不退化：可溯源、同对象不重复、期望覆盖；报告见 `evals/report-offline.md`，口径见 `evals/rubric.md` |
-| 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查、断点恢复、两端布局指标 |
+| 采集端 H5 产物 | `pnpm run test:app` | 填表、空间实例与房型、发现与三动作、静默、摘要、提交前检查（含结构化提交的落点提示）、断点恢复、两端布局指标 |
 | Web 上线 | `pnpm run test:preview` | 静态服务的 HTTP 行为、缓存头、深链接回退与首屏可用性 |
 | 线上地址 | `pnpm run test:live` | 公网地址可访问、产物可加载、首屏可用、控制台无错误 |
 | 早期 Demo | `pnpm run test:demo` | 交互设计稿的回归断言 |

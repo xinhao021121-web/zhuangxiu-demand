@@ -21,6 +21,8 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 | `DB_PATH` | `services/api/.data/api.sqlite` | 数据文件；`:memory:` 表示内存库（测试用） |
 | `TOKEN_SECRET` | `dev-only-secret` | 自签 token 的密钥，生产必须换 |
 | `TOKEN_TTL_SECONDS` | `43200` | token 有效期 |
+| `COLLECTION_SECRET` | `dev-only-collection-secret` | 采集通道匿名会话的密钥，与 `TOKEN_SECRET` 是两把钥匙 |
+| `COLLECTION_SESSION_TTL_SECONDS` | `86400` | 采集端会话的有效期 |
 | `AUTH_CODE` | `000000` | 公司内部账号的验证码 |
 | `MODEL_PROVIDER` | `fake` | `fake` 用桩数据；`deepseek` 走真实模型 |
 | `DEEPSEEK_API_KEY` | 空 | 走 `deepseek` 时必填 |
@@ -29,6 +31,19 @@ pnpm run api:dev                                     # http://127.0.0.1:8787
 | `MODEL_ENDPOINT` | `official` | `official` 官方接口 / `private` 私有化部署 |
 
 密钥只走环境变量，不进仓库、不进前端（技术方案 7.1）。
+
+## 两条通道
+
+房主不是用户，所以客户端分两条路进来（技术方案 5.3）：
+
+| 前缀 | 谁用 | 鉴权 | 接口 |
+| --- | --- | --- | --- |
+| `/` | 桌面工作台与现场端（公司内部） | `POST /auth/login` 换 token，按角色控权限 | 需求单读写、清单生成与导出、现场记录、账号 |
+| `/a` | 采集端（房主） | `POST /a/session` 换匿名会话令牌（另一把密钥 + `scope: 'collection'`） | 只有 `POST /a/session` 与 `POST /a/demand-sheets`，没有任何读接口 |
+
+两条通道的令牌互不通用：会话令牌调内部接口是 401，内部 token 调采集通道也是 401。
+采集端提交进来的需求单一律记 `source: 'miniapp'`、`submitted_by` 为空；弱网重试带同一个
+`submissionId` 时只落一份，回执里 `replay: true`。
 
 ## 与部署形态的差异
 

@@ -1,17 +1,29 @@
 /**
- * 公司内部账号：自签 token，访问权限按角色控制（技术方案 4.2）。
+ * 两条通道各一套自签 token（技术方案 4.2 与 5.3）。
  *
- * 房主不是用户——采集端走匿名会话，不进入账号体系。
+ * 内部通道按角色控制权限；房主不是用户，采集端走匿名会话。两套令牌的密钥与 scope 都不同，
+ * 互相拿到也调不通对面的接口——这是结构性隔离，不靠中间件里的路径判断。
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Role, User } from '@zx/contracts';
 
-export interface TokenPayload {
+/** 内部 token：一名公司内部人员的身份与角色。 */
+export interface InternalTokenPayload {
   sub: string;
+  scope: 'internal';
   role: Role;
   exp: number;
 }
+
+/** 采集会话令牌：只代表「一个匿名的房主会话」，不带任何身份与角色。 */
+export interface CollectionTokenPayload {
+  sub: string;
+  scope: 'collection';
+  exp: number;
+}
+
+export type TokenPayload = InternalTokenPayload | CollectionTokenPayload;
 
 const b64url = (input: Buffer | string) =>
   Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -27,7 +39,13 @@ export function signToken(payload: TokenPayload, secret: string): string {
   return `${body}.${signature(body, secret)}`;
 }
 
-export function verifyToken(token: string, secret: string, now = Date.now()): TokenPayload | null {
+/** 校验令牌：签名、有效期、scope 三者都要对，缺一样就当作没有令牌。 */
+export function verifyToken(
+  token: string,
+  secret: string,
+  scope: TokenPayload['scope'],
+  now = Date.now(),
+): TokenPayload | null {
   const [body, mac] = token.split('.');
   if (!body || !mac) return null;
   const expected = signature(body, secret);
@@ -36,6 +54,7 @@ export function verifyToken(token: string, secret: string, now = Date.now()): To
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const payload = JSON.parse(fromB64url(body).toString('utf8')) as TokenPayload;
+    if (payload.scope !== scope) return null;
     if (!payload.exp || payload.exp * 1000 <= now) return null;
     return payload;
   } catch {
