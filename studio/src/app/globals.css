@@ -29,6 +29,8 @@ button{font:inherit;cursor:pointer}
 .layout{display:grid;grid-template-columns:296px 1fr;min-height:calc(100vh - 56px)}
 .side{border-right:1px solid var(--line);background:#fbfcfd;padding:14px 12px}
 .side h2{font-size:12px;color:var(--dim2);margin:2px 6px 10px;font-weight:600;letter-spacing:.04em}
+.side-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 6px 10px}
+.side-head h2{margin:0}
 .dcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:.15s;display:block;width:100%;text-align:left}
 .dcard:hover{border-color:#cdd6e3}
 .dcard.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-weak)}
@@ -155,3 +157,10 @@ pre.md{background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding
 .rtable .dim{color:var(--dim)}
 .rtable .dash{color:var(--dim2)}
 .rtable .never{color:var(--amber);background:var(--amber-weak);border-radius:4px;padding:0 5px;font-size:11.5px}
+/* 导入：选文件或粘贴 JSON（产品文档 F1 的那一步）。 */
+.im-file{border:1px dashed var(--line);border-radius:8px;padding:12px 14px;background:#fafbfc;margin-bottom:14px}
+.im-file .lbl{display:block;font-size:12.5px;color:var(--dim);margin-bottom:8px}
+.im-json{width:100%;min-height:150px;border:1px solid var(--line);border-radius:8px;padding:10px 11px;
+  font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);resize:vertical}
+.field+.field{margin-top:14px}
+.err-line{font-size:12.5px;color:var(--red);margin-top:10px}

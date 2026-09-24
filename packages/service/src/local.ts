@@ -27,6 +27,7 @@ import type {
 } from './types';
 import type { ModelProvider } from './model';
 import type { Omission, OmissionCategory, Reports } from '@zx/contracts';
+import type { DemandSheetImport } from '@zx/contracts';
 
 export interface LocalSeedSheet {
   id: string;
@@ -159,6 +160,30 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
 
     async listSheets() {
       return sheets.map((s) => toSummary(store, s));
+    },
+
+    /**
+     * 文件导入：与真实服务同一条路（内部通道的 `POST /demand-sheets`），
+     * 来源固定成 `file`，提交人是当前登录的人。
+     *
+     * 演示模式下导入进来的需求单不在种子 fixture 里，解读时会退化成纯规则清单
+     * （没有模型的推导项）——这是桩 provider 的既定行为，不是降级错误。
+     */
+    async importSheet(input: DemandSheetImport) {
+      const sheet: SheetRecord = {
+        id: input.submissionId ?? crypto.randomUUID(),
+        demandName: input.demandName,
+        schemaVersion: input.schemaVersion,
+        submittedAt: input.submittedAt,
+        source: 'file',
+        submittedBy: current?.id ?? null,
+        createdAt: now(),
+        payload: input.form,
+        aiMarks: input.aiMarks,
+      };
+      // 刚导入的排最前，方便看一眼；演示模式不按提交时间重排（真实服务按 submitted_at 倒序）
+      sheets.unshift(sheet);
+      return toSummary(store, sheet);
     },
 
     async detail(id: string) {

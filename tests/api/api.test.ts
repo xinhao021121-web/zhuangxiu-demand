@@ -179,6 +179,22 @@ describe('需求单导入与列表', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it('导入的来源由路由决定：JSON 里写 miniapp 也记成 file，提交人是导入的人', async () => {
+    const sheet = (seedSheets as unknown as Record<string, unknown>[])[2];
+    const res = await app.request('/demand-sheets', {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: JSON.stringify({ ...sheet, id: undefined, demandName: '别处交来的', source: 'miniapp' }),
+    });
+    expect(res.status).toBe(201);
+    const created = (await res.json()) as { id: string; source: string };
+    expect(created.source).toBe('file');
+    const stored = repo.getDemandSheet(created.id)!;
+    // 与采集通道相反的两处：来源固定 file、提交人是内部人员
+    expect(stored.source).toBe('file');
+    expect(stored.submittedBy).not.toBeNull();
+  });
 });
 
 describe('生成清单是一条完整流水线', () => {

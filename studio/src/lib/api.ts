@@ -12,6 +12,7 @@ import type { LocalService } from '@zx/service';
 import type {
   ChecklistView,
   DemandSheetDetail,
+  DemandSheetImport,
   DemandSheetSummary,
   Omission,
   OmissionCreate,
@@ -95,6 +96,8 @@ const httpApi = {
       body: JSON.stringify({ phone, code }),
     }),
   listSheets: () => request<DemandSheetSummary[]>('/demand-sheets'),
+  importSheet: (input: DemandSheetImport) =>
+    request<DemandSheetSummary>('/demand-sheets', { method: 'POST', body: JSON.stringify(input) }),
   detail: (id: string) => request<DemandSheetDetail>(`/demand-sheets/${id}`),
   generate: (id: string, selected: Record<string, boolean>) =>
     request<ChecklistView>(`/demand-sheets/${id}/checklist`, {
@@ -124,6 +127,8 @@ const httpApi = {
 export interface StudioApi {
   login(phone: string, code: string): Promise<{ token: string; user: User }>;
   listSheets(): Promise<DemandSheetSummary[]>;
+  /** 文件导入：采集端导出的 JSON（同一份契约的另一种输入方式），来源由服务端定为 file */
+  importSheet(input: DemandSheetImport): Promise<DemandSheetSummary>;
   detail(id: string): Promise<DemandSheetDetail>;
   generate(id: string, selected: Record<string, boolean>): Promise<ChecklistView>;
   checklist(id: string): Promise<ChecklistView>;
@@ -142,6 +147,7 @@ export interface StudioApi {
 export const api: StudioApi = {
   login: pick((s, phone: string, code: string) => s.login(phone, code), httpApi.login),
   listSheets: pick((s) => s.listSheets(), httpApi.listSheets),
+  importSheet: pick((s, input: DemandSheetImport) => s.importSheet(input), httpApi.importSheet),
   detail: pick((s, id: string) => s.detail(id), httpApi.detail),
   generate: pick((s, id: string, selected: Record<string, boolean>) => s.generate(id, selected), httpApi.generate),
   checklist: pick((s, id: string) => s.checklist(id), httpApi.checklist),

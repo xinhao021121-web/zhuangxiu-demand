@@ -151,6 +151,22 @@ try {
   await studio.locator('#rep-back').click();
   await studio.waitForTimeout(200);
   await studio.screenshot({ path: path.join(SHOT, 'pages-02-桌面工作台.png') });
+  // 演示模式下的导入：静态托管没有服务端，走的是浏览器内的 LocalService
+  await studio.locator('#btn-import').click();
+  await studio.waitForSelector('#im-json');
+  await studio.locator('#im-name').fill('演示导入的一份');
+  await studio.locator('#im-json').fill(
+    JSON.stringify({
+      schemaVersion: '1.0',
+      submittedAt: '2026-09-24T10:00:00.000Z',
+      form: { values: { base_area: 76, base_house_state: '毛坯' }, instances: {} },
+      aiMarks: [],
+    }),
+  );
+  await studio.locator('#im-ok').click();
+  await studio.waitForTimeout(600);
+  ok((await count(studio, '.dcard')) === 4, '演示模式也能导入需求单');
+  ok((await text(studio, '.dcard.on')).includes('演示导入的一份'), '演示模式导入后直接选中这一份');
   ok(studioErrors.length === 0, '桌面工作台控制台无错误' + (studioErrors.length ? '：' + studioErrors.join(' | ') : ''));
   await studio.close();
 

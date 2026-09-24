@@ -176,6 +176,37 @@ try {
   await page.waitForTimeout(200);
   ok((await count('#rep-rules')) === 0, '可以回到需求单');
 
+  // 十二、文件导入：采集端导出的 JSON 与云端提交是同一份契约的两种输入方式
+  await page.locator('#btn-import').click();
+  await page.waitForSelector('#modal #im-json');
+  await page.locator('#im-json').fill('{ 不是 JSON');
+  await page.locator('#im-ok').click();
+  ok((await text('#im-err')).includes('不是合法的 JSON'), '粘错了当场说清，不用等一次往返');
+  await page.locator('#im-json').fill(JSON.stringify({ submittedAt: '2026-09-24T10:00:00.000Z' }));
+  await page.locator('#im-ok').click();
+  ok((await text('#im-err')).includes('对不上契约'), '缺 form 的 JSON 被契约挡下');
+  await page.locator('#im-name').fill('新客户 · 76㎡ 毛坯');
+  await page.locator('#im-json').fill(
+    JSON.stringify({
+      schemaVersion: '1.0',
+      submittedAt: '2026-09-24T10:00:00.000Z',
+      form: { values: { base_area: 76, base_house_state: '毛坯' }, instances: {} },
+      aiMarks: [],
+    }),
+  );
+  await page.locator('#im-ok').click();
+  await page.waitForTimeout(600);
+  ok((await count('#modal')) === 0, '导入后弹层关闭');
+  ok((await count('.dcard')) === 4, '导入后列表多了一份');
+  ok((await text('.dcard.on')).includes('新客户 · 76㎡ 毛坯'), '刚导入的这份直接选中');
+  ok((await text('.dcard.on')).includes('待解读'), '新导入的标为待解读');
+  ok((await text('.head')).includes('文件导入'), '详情里标明它来自文件导入');
+  ok((await page.locator('[data-fld="base_area"]').innerText()).includes('76'), '导入的字段值进得了表格');
+  await page.screenshot({ path: path.join(SHOT, '11-导入需求单.png') });
+  // 回到有清单的那一份，后面还要量布局
+  await page.locator('.dcard', { hasText: '张先生' }).click();
+  await page.waitForTimeout(400);
+
   // 八、布局指标
   await page.locator('.tab[data-tab="list"]').click();
   await page.waitForTimeout(300);

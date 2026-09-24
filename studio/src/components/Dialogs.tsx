@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { DemandSheetDetail, OutboundRecordContract } from '@zx/contracts';
+import { DemandSheetImportSchema } from '@zx/contracts';
+import type { DemandSheetDetail, DemandSheetImport, OutboundRecordContract } from '@zx/contracts';
 
 function Shell({
   title,
@@ -250,6 +251,127 @@ export function RenameDialog({
       <div className="note">
         建议写「称呼 + 户型或小区」这类能认出来的叫法，例如「张先生 · 89㎡ 老房翻新」。
       </div>
+    </Shell>
+  );
+}
+
+/**
+ * 文件导入（产品文档 F1、5.1）：采集端导出的 JSON 与云端提交是同一份契约的两种输入方式。
+ *
+ * 校验用契约本身（`DemandSheetImportSchema`）在浏览器里先过一遍：粘错了、少一块，
+ * 当场说清是哪一处不对，不用等一次往返。服务端仍然会再校验一次——两边认的是同一份 schema。
+ */
+export function ImportDialog({
+  busy,
+  error,
+  onCancel,
+  onImport,
+}: {
+  busy: boolean;
+  /** 服务端拒绝时的原话：契约校验通过、但服务端不认（例如同时被别处导入过） */
+  error: string;
+  onCancel: () => void;
+  onImport: (input: DemandSheetImport) => void;
+}) {
+  const [raw, setRaw] = useState('');
+  const [name, setName] = useState('');
+  const [localError, setLocalError] = useState('');
+
+  const read = (json: unknown): DemandSheetImport | null => {
+    if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+      setLocalError(
+        Array.isArray(json)
+          ? '这是一组需求单：一次导入一份，把其中一份的 JSON 复制过来'
+          : '这段 JSON 不是一个对象',
+      );
+      return null;
+    }
+    // 叫法优先用填的；没填就保留文件里的，再没有就是契约默认的「未命名需求单」
+    const parsed = DemandSheetImportSchema.safeParse(
+      name.trim() ? { ...json, demandName: name.trim() } : json,
+    );
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const where = issue.path.length ? issue.path.join('.') : '（根）';
+      setLocalError(`这份需求单对不上契约：${where} ${issue.message}`);
+      return null;
+    }
+    setLocalError('');
+    return parsed.data;
+  };
+
+  const submit = () => {
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      setLocalError('这段不是合法的 JSON');
+      return;
+    }
+    const input = read(json);
+    if (input) onImport(input);
+  };
+
+  return (
+    <Shell
+      title="导入需求单"
+      onMask={onCancel}
+      footer={
+        <>
+          <span className="hint">来源记为「文件导入」，与房主端提交那条路分开记</span>
+          <div className="spacer" />
+          <button type="button" className="btn" id="im-cancel" onClick={onCancel}>
+            取消
+          </button>
+          <button type="button" className="btn primary" id="im-ok" disabled={busy || !raw.trim()} onClick={submit}>
+            {busy ? '正在导入…' : '导入'}
+          </button>
+        </>
+      }
+    >
+      <div className="im-file">
+        <label className="lbl" htmlFor="im-file">
+          选择采集端导出的 JSON 文件
+        </label>
+        <input
+          type="file"
+          id="im-file"
+          accept=".json,application/json"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setRaw(await file.text());
+            setLocalError('');
+          }}
+        />
+      </div>
+
+      <label className="field">
+        <span className="lbl">或者把 JSON 粘在这里</span>
+        <textarea
+          id="im-json"
+          className="im-json"
+          value={raw}
+          placeholder='{"submittedAt":"2026-09-25T08:00:00.000Z","form":{"values":{},"instances":{}}}'
+          onChange={(e) => {
+            setRaw(e.target.value);
+            setLocalError('');
+          }}
+        />
+      </label>
+
+      <label className="field">
+        <span className="lbl">叫法（可留空，房主端不收集姓名）</span>
+        <input
+          id="im-name"
+          value={name}
+          maxLength={40}
+          placeholder="未命名需求单"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+
+      {localError || error ? <div className="err-line" id="im-err">{localError || error}</div> : null}
     </Shell>
   );
 }

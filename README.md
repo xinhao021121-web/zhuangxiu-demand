@@ -111,7 +111,7 @@ pnpm run deploy:pages      # 发布到 GitHub Pages（gh-pages 分支）
 
 | 层 | 命令 | 覆盖 |
 | --- | --- | --- |
-| 解读端 · 桌面工作台 | `pnpm run test:studio` | 登录、导入列表、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、改名、遗漏补录、四张回流报表、宽窄屏布局 |
+| 解读端 · 桌面工作台 | `pnpm run test:studio` | 登录、文件导入（含两类错误提示）、原始表格、外发前确认（含脱敏）、清单删减与撤销、字段定位、导出、改名、遗漏补录、四张回流报表、宽窄屏布局 |
 | 上线产物 | `pnpm run test:pages` | 按 gh-pages 的目录结构组装一次，用静态服务器按 /<repo>/ 前缀托管，逐个验证三个入口（含演示模式动线与 PWA manifest） |
 | 现场端 PWA | `pnpm run test:onsite-app` | 现场选单、出门前概览、逐空间问、记一笔/没问上、断网记录与重连同步、量房记录、装机能力（manifest 与 service worker） |
 | API 服务 | `pnpm run test:api`（也被 `test:unit` 覆盖） | 鉴权与角色、采集通道与内部通道的隔离、契约校验、清单流水线、外发审计、现场记录、改名、遗漏补录与四张报表 |

@@ -128,7 +128,9 @@ export function createApp(deps: AppDeps) {
       demandName: input.demandName,
       schemaVersion: input.schemaVersion,
       submittedAt: input.submittedAt,
-      source: input.source,
+      // 来源由通道决定，与采集通道同一条纪律（5.3）：走内部通道进来的就是文件导入，
+      // 客户端在 JSON 里写 miniapp 也不作数——房主那条路只有 /a。
+      source: 'file',
       submittedBy: user.id,
       payload: input.form,
       aiMarks: input.aiMarks,

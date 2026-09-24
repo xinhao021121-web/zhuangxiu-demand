@@ -5,6 +5,7 @@ import { buildChecklistMarkdown } from '@zx/checklist';
 import type {
   ChecklistView,
   DemandSheetDetail,
+  DemandSheetImport,
   DemandSheetSummary,
   Omission,
   OmissionCreate,
@@ -14,7 +15,7 @@ import type {
 } from '@zx/contracts';
 import { api, ApiError, DEMO_MODE, getToken, setToken } from '../lib/api';
 import { ChecklistPanel } from './ChecklistPanel';
-import { ExportDialog, OutboundDialog, RenameDialog } from './Dialogs';
+import { ExportDialog, ImportDialog, OutboundDialog, RenameDialog } from './Dialogs';
 import { FormView } from './FormView';
 import { LoginView } from './Login';
 import { OmissionPanel } from './OmissionPanel';
@@ -22,7 +23,7 @@ import { ReportsView } from './ReportsView';
 import { UnderstandingPanel } from './UnderstandingPanel';
 
 type Tab = 'form' | 'under' | 'list';
-type Dialog = { kind: 'outbound' } | { kind: 'export' } | { kind: 'rename' } | null;
+type Dialog = { kind: 'outbound' } | { kind: 'export' } | { kind: 'rename' } | { kind: 'import' } | null;
 /** 主区两种视图：某一份需求单，或整条链路的回流报表 */
 type View = 'sheet' | 'reports';
 
@@ -61,6 +62,8 @@ export function Workbench() {
   /** 这份需求单补录过的遗漏（新的在前） */
   const [omissions, setOmissions] = useState<Omission[]>([]);
   const [reports, setReports] = useState<Reports | null>(null);
+  /** 导入失败时服务端说的话：显示在导入弹层里，不藏到主区 */
+  const [importError, setImportError] = useState('');
   const [error, setError] = useState('');
 
   const reloadSheets = useCallback(async () => {
@@ -184,6 +187,22 @@ export function Workbench() {
     }
   };
 
+  /** 导入一份需求单：落库后刷新列表，并直接切到刚导入的这份。 */
+  const importSheet = async (input: DemandSheetImport) => {
+    setBusy(true);
+    try {
+      const created = await api.importSheet(input);
+      await reloadSheets();
+      setDialog(null);
+      setImportError('');
+      selectSheet(created.id);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : '导入失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmGenerate = async (selected: Record<string, boolean>) => {
     if (!currentId) return;
     setBusy(true);
@@ -264,7 +283,20 @@ export function Workbench() {
 
       <main className="layout">
         <aside className="side">
-          <h2>需求单</h2>
+          <div className="side-head">
+            <h2>需求单</h2>
+            <button
+              type="button"
+              className="btn sm"
+              id="btn-import"
+              onClick={() => {
+                setImportError('');
+                setDialog({ kind: 'import' });
+              }}
+            >
+              导入
+            </button>
+          </div>
           <div>
             {sheets.map((sheet) => (
               <button
@@ -430,6 +462,9 @@ export function Workbench() {
           onCancel={() => setDialog(null)}
           onConfirm={renameSheet}
         />
+      ) : null}
+      {dialog?.kind === 'import' ? (
+        <ImportDialog busy={busy} error={importError} onCancel={() => setDialog(null)} onImport={importSheet} />
       ) : null}
     </>
   );
