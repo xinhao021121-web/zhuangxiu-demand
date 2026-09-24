@@ -109,6 +109,23 @@ describe('规则表', () => {
   it('每条发现都必须带依据文案', () => {
     suggestionsOf(demoModel()).forEach((s) => expect(s.why.length).toBeGreaterThan(0));
   });
+
+  it('计划时间的依据文案跟实际填的对上，不替条件说话', () => {
+    const whyOf = (values: Record<string, FieldValue>) => {
+      let model = createModel();
+      Object.entries(values).forEach(([id, v]) => {
+        model = setValue(model, id, v);
+      });
+      return evaluateRules(model).find((s) => s.ruleId === 'schedule-conflict')!.why;
+    };
+    // 条件允许只填一个（填完工或填入住都算），文案就必须跟着变
+    expect(whyOf({ date_movein: '2026-12' })).toContain('计划入住时间');
+    expect(whyOf({ date_movein: '2026-12' })).not.toContain('两个');
+    expect(whyOf({ date_finish: '2026-10' })).toContain('计划完工时间');
+    expect(whyOf({ date_finish: '2026-10', date_movein: '2026-12' })).toContain('两个时间');
+    // 一个都没填就不该出现
+    expect(evaluateRules(createModel()).some((s) => s.ruleId === 'schedule-conflict')).toBe(false);
+  });
 });
 
 describe('发现引擎', () => {

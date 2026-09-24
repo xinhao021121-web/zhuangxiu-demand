@@ -68,7 +68,7 @@ describe('规则托底的行为', () => {
     // 模型那条在前，问题与档位用它的；规则托底只补依据与字段
     const item = checklist.items.find((i) => i.object === '猫砂盆位置')!;
     expect(item.question).toBe(SEED_DERIVED.find((d) => d.object === '猫砂盆位置')!.question);
-    expect(checklist.counts.total).toBe(19);
+    expect(checklist.counts.total).toBe(21);
   });
 
   it('能落到通用清单上的规则，把通用项变成「两者」并带上这家的依据', () => {
@@ -85,5 +85,29 @@ describe('规则托底的行为', () => {
   it('没命中的规则不产生条目', () => {
     const empty = { values: {}, instances: {} };
     expect(ruleDerivedItems(empty)).toEqual([]);
+  });
+
+  it('实例规则的字段带实例前缀、分区用实例名', () => {
+    const kid = ruleDerivedItems(SEED_MODEL).find((i) => i.object === '儿童房空间');
+    expect(kid, '种子里 room1 是儿童房，规则 room-kid 会命中').toBeDefined();
+    expect(kid!.relatedFieldIds).toEqual(['room1.room_type', 'room1.ch_read']);
+    expect(kid!.space).toBe('次卧1 · 儿童房');
+    expect(kid!.why).toContain('次卧1');
+  });
+
+  it('填了计划时间就把工期口径带进清单', () => {
+    const model = { ...SEED_MODEL, values: { ...SEED_MODEL.values, date_movein: '2026-11-01' } };
+    const timing = ruleDerivedItems(model).find((i) => i.object === '工期口径');
+    expect(timing).toBeDefined();
+    expect(timing!.relatedFieldIds).toContain('date_movein');
+    expect(timing!.why).toContain('计划入住时间');
+    expect(timing!.impact).toEqual(['cost']); // 建议问：判据里 cost/schedule 进建议问
+  });
+
+  it('担心超预算时把预算口径带进清单，问题沿用待定项资产那一条', () => {
+    const budget = ruleDerivedItems(SEED_MODEL).find((i) => i.object === '预算口径');
+    expect(budget).toBeDefined();
+    expect(budget!.question).toContain('预算上限');
+    expect(budget!.relatedFieldIds).toContain('budget_total');
   });
 });

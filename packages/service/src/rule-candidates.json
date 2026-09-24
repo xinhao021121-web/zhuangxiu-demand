@@ -33,5 +33,24 @@
   { "ruleId": "fresh-air", "fieldIds": ["dev_freshair"], "object": "新风系统" },
   { "ruleId": "balcony-dryer", "fieldIds": ["bl_dryer"], "object": "家政封窗" },
   { "ruleId": "bedroom-quiet", "fieldIds": ["br_quiet"], "object": "采光噪音" },
-  { "ruleId": "kitchen-fridge-embedded", "fieldIds": ["kt_fridge"], "object": "大件电器" }
+  { "ruleId": "kitchen-fridge-embedded", "fieldIds": ["kt_fridge"], "object": "大件电器" },
+  { "ruleId": "budget-communication", "fieldIds": ["budget_total", "pain_points"], "object": "预算口径" },
+  {
+    "ruleId": "schedule-conflict",
+    "fieldIds": ["date_movein", "date_finish"],
+    "object": "工期口径",
+    "space": "基本信息",
+    "tier": "suggest",
+    "question": "定制与主材的周期能不能赶上入住时间",
+    "onsiteChecks": ["可接受的完工与入住时间", "定制柜与主材的下单、安装周期", "是否需要分批进场"]
+  },
+  {
+    "ruleId": "room-kid",
+    "fieldIds": ["room_type", "ch_read"],
+    "object": "儿童房空间",
+    "space": "其他卧室",
+    "tier": "must",
+    "question": "儿童房的床位、书桌与活动空间怎么分",
+    "onsiteChecks": ["房间净尺寸与门窗位置", "可升降书桌与活动区的预留", "家具倒圆角与插座高度"]
+  }
 ]

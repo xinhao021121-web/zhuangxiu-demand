@@ -13,7 +13,7 @@
 //
 // 转换出来的东西和模型输出同形（DerivedItem），所以判据、合并、排序、导出都不用改一行。
 
-import { SURVEY_CHECKLIST, UNCLEAR_CHECKLIST } from '@zx/field-spec';
+import { SURVEY_CHECKLIST, UNCLEAR_CHECKLIST, findInstance, instanceName } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
 import { evaluateRules } from '@zx/rules';
 import type { DerivedItem, Impact, Tier } from '@zx/checklist';
@@ -68,14 +68,17 @@ export function ruleDerivedItems(model: FormModel): DerivedItem[] {
       const tier = canonical?.tier ?? row.tier;
       // 资产没写全就不生成条目；这种配置错误由单测挡住，不在运行期编一句问不出口的话
       if (!question || !tier) return;
+      // 实例规则（儿童房、卫生间…）：字段键要带实例前缀，分区用实例名，
+      // 否则「次卧1 的阅读区」会退化成一条不指向任何具体房间的通用项
+      const inst = hit.instKey ? findInstance(model, hit.instKey) : undefined;
       out.push({
         object: row.object,
         question,
         why: hit.why,
         onsiteChecks: canonical ? [...canonical.checks] : [...(row.onsiteChecks ?? [])],
-        relatedFieldIds: [...row.fieldIds],
+        relatedFieldIds: hit.instKey ? row.fieldIds.map((id) => `${hit.instKey}.${id}`) : [...row.fieldIds],
         impact: [...TIER_IMPACT[tier]],
-        space: canonical?.space ?? row.space,
+        space: canonical?.space ?? (inst ? instanceName(model, inst) : row.space),
       });
     });
   });

@@ -12,7 +12,7 @@ import type { Checklist, DerivedItem } from '@zx/checklist';
 import { DEFAULT_POLICY, buildOutbound } from '@zx/redact';
 import type { RedactionPolicy } from '@zx/redact';
 import { parseUnderstanding } from '@zx/contracts';
-import type { UnderstandingIssues } from '@zx/contracts';
+import type { UnderstandingIssues, UnderstandingResult } from '@zx/contracts';
 import { UNDERSTAND_TASK } from './model';
 import type { ModelProvider } from './model';
 import { fieldKeysOf } from './fields';
@@ -85,28 +85,36 @@ export async function generateChecklist(
   let degraded = false;
   let issues: UnderstandingIssues | undefined;
 
-  const attempt = async () => {
-    const raw = await provider.understand({
-      demandSheetId: input.demandSheetId,
-      fields: outbound.payload.fields,
-      task: UNDERSTAND_TASK,
-    });
-    return parseUnderstanding(raw, knownFieldIds);
+  /*
+   * 一次调用算「没成」的三种情况：结构不合法、越界字段、传输类失败（超时 / 非 JSON / HTTP 失败）。
+   * 前两种本来就重试；第三种原来是抛错直接降级，与「失败重试一次」的表述不一致——
+   * 真机实测里那次「不是 JSON」如果重试一次，很可能就不用退到纯规则清单（badcases.md BC-07）。
+   * 所以统一：任何没成都重试一次，仍没成才降级。
+   */
+  const attempt = async (): Promise<UnderstandingResult> => {
+    try {
+      const raw = await provider.understand({
+        demandSheetId: input.demandSheetId,
+        fields: outbound.payload.fields,
+        task: UNDERSTAND_TASK,
+      });
+      return parseUnderstanding(raw, knownFieldIds);
+    } catch (error) {
+      return {
+        ok: false,
+        issues: { structure: [error instanceof Error ? error.message : String(error)], unknownFields: [] },
+      };
+    }
   };
 
-  try {
-    let result = await attempt();
-    if (!result.ok) result = await attempt();
-    if (result.ok) {
-      understanding = result.value;
-      derived = result.value.derivedItems;
-    } else {
-      degraded = true;
-      issues = result.issues;
-    }
-  } catch (error) {
+  let result = await attempt();
+  if (!result.ok) result = await attempt();
+  if (result.ok) {
+    understanding = result.value;
+    derived = result.value.derivedItems;
+  } else {
     degraded = true;
-    issues = { structure: [error instanceof Error ? error.message : String(error)], unknownFields: [] };
+    issues = result.issues;
   }
 
   if (degraded) {

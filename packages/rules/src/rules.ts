@@ -7,7 +7,16 @@
  */
 
 import { anyOf, filled, has, num } from './context';
-import type { Rule, RuleHit, RuleMeta } from './types';
+import type { Rule, RuleContext, RuleHit, RuleMeta } from './types';
+
+// 计划时间的依据文案：条件允许只填一个时间，说法要跟实际填的对上。
+// 元信息不能替条件说话——「为什么问」里写「填了两个时间」而实际只填一个，就是编依据。
+function scheduleWhy(c: RuleContext): string {
+  const finish = filled(c.values.date_finish);
+  const movein = filled(c.values.date_movein);
+  if (finish && movein) return '因为你填了计划完工与计划入住两个时间';
+  return finish ? '因为你填了计划完工时间' : '因为你填了计划入住时间';
+}
 
 const hit = (h: RuleHit | false | null | undefined): RuleHit[] => (h ? [h] : []);
 
@@ -113,13 +122,13 @@ export const RULES: Rule[] = [
     kind: 'risk',
     section: '认识你家',
     target: 'date_start',
-    trigger: '同时填了计划完工与计划入住时间',
+    trigger: '填了计划完工或计划入住时间',
     run: (c) =>
       hit(
         (filled(c.values.date_finish) || filled(c.values.date_movein)) && {
           title: '入住时间与定制家具周期冲突',
           text: '定制柜与木作的制作安装通常需要 45-60 天，建议把下单时间提前，并在工期表里预留至少两周缓冲。',
-          why: '因为你填了计划完工与计划入住两个时间',
+          why: scheduleWhy(c),
         },
       ),
   },
@@ -1212,4 +1221,3 @@ export function ruleMeta(rule: Rule): RuleMeta {
     trigger: rule.trigger,
   };
 }
-

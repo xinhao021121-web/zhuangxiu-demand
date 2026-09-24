@@ -50,14 +50,14 @@ try {
   ok((await count('.dc')) === 3, '列出 3 份需求单');
   ok((await page.locator('.dc', { hasText: '张先生' }).innerText()).includes('清单已生成'), '已生成清单的那份标出来');
   ok((await page.locator('.dc', { hasText: '陈先生' }).innerText()).includes('待解读'), '没生成清单的那份拦住');
-  ok((await page.locator('.dc', { hasText: '张先生' }).innerText()).includes('已问 0 / 共 19 条'), '主场景显示现场进度 0 / 19');
+  ok((await page.locator('.dc', { hasText: '张先生' }).innerText()).includes('已问 0 / 共 21 条'), '主场景显示现场进度 0 / 21');
   await page.screenshot({ path: path.join(SHOT, 'm01-现场选单.png') });
 
   // 二、出门前
   await page.locator('.dc', { hasText: '张先生' }).click();
   await page.waitForSelector('#go');
   ok((await count('.stats .stat')) === 3, '出门前给出必问 / 建议问 / 共三个数');
-  ok((await text('.stats .stat')).includes('10'), '必问 10 条');
+  ok((await text('.stats .stat')).includes('11'), '必问 11 条');
   ok((await text('.card h3')).includes('现场进度'), '给出当前现场进度');
   ok((await count('.card:last-child .srow')) >= 2, '列出还没问到的必问项');
   await page.screenshot({ path: path.join(SHOT, 'm02-出门前.png') });
@@ -66,9 +66,9 @@ try {
   await page.locator('#go').click();
   await page.waitForSelector('.task');
   ok((await text('.pname')).includes('基本信息'), '默认从「基本信息」开始');
-  ok((await text('.pidx')).includes('1 / 8'), '共 8 个空间（卫生间公共条件组单列）');
-  ok((await text('.pmust')).includes('必问 已问 0 / 10'), '顶部显示必问进度');
-  ok((await count('.task')) === 6, '基本信息 6 条');
+  ok((await text('.pidx')).includes('1 / 9'), '共 9 个空间（次卧与卫生间公共条件组各单列）');
+  ok((await text('.pmust')).includes('必问 已问 0 / 11'), '顶部显示必问进度');
+  ok((await count('.task')) === 7, '基本信息 7 条');
   ok((await text('.task')).includes('必问'), '条目带必问档位徽标');
   ok((await text('.task')).includes('需求推导 + 通用核实'), '条目带来源徽标（推导与通用已合并）');
   await page.screenshot({ path: path.join(SHOT, 'm03-逐条走.png') });
@@ -92,7 +92,7 @@ try {
   await task('墙体材质与可开槽条件').locator('[data-a="asked"]').click();
   await page.waitForTimeout(400);
   ok((await task('墙体材质与可开槽条件').innerText()).includes('已问'), '点「已问」后条目标记为已问');
-  ok((await text('.pmust')).includes('必问 已问 1 / 10'), '必问进度随之更新到 1 / 10');
+  ok((await text('.pmust')).includes('必问 已问 1 / 11'), '必问进度随之更新到 1 / 11');
 
   // 记一笔
   await task('入户门与窗户是否更换及尺寸').locator('[data-a="note"]').click();
@@ -111,7 +111,7 @@ try {
   // 四、换空间
   await page.locator('#spaces').click();
   await page.waitForSelector('.rowbtn');
-  ok((await count('.rowbtn')) === 8, '换空间抽屉列出 8 个空间');
+  ok((await count('.rowbtn')) === 9, '换空间抽屉列出 9 个空间');
   const rows = await page.locator('.rowbtn').allInnerTexts();
   ok(
     rows.findIndex((t) => t.startsWith('卫生间')) < rows.findIndex((t) => t.startsWith('主卫')),
