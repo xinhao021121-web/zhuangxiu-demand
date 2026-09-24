@@ -1,6 +1,7 @@
 /** 需求单：采集端结构化导出的契约（产品文档第三章、技术方案 4.6）。 */
 
 import { z } from 'zod';
+import { EventBatchSchema } from './telemetry';
 
 /** 采集端导出的字段清单版本；读入时按版本做一次规范化。 */
 export const DEMAND_SCHEMA_VERSION = '1.0';
@@ -34,6 +35,8 @@ export const DemandSheetImportSchema = z.object({
   form: FormModelSchema,
   /** 助手建议写入的字段，界面上标「助手建议」 */
   aiMarks: z.array(z.string()).default([]),
+  /** 采集端随提交带出的埋点（技术方案 6.11）；文件导入不带 */
+  telemetry: EventBatchSchema.optional(),
 });
 
 export type FieldValueInput = z.infer<typeof FieldValueSchema>;

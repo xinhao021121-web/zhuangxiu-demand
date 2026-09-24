@@ -67,6 +67,20 @@ export interface SiteRecordRow {
   operator: string;
 }
 
+export interface EventRow {
+  id: string;
+  demandSheetId: string;
+  name: string;
+  /** 事件发生时间：客户端事件由客户端时钟换算，服务端事件就是落库时间 */
+  at: string;
+  source: 'client' | 'server';
+  operator: string | null;
+  /** 整批上报的批次 id；服务端自己产生的事件为 null */
+  batchId: string | null;
+  seq: number;
+  props: Record<string, unknown>;
+}
+
 const json = (v: unknown) => JSON.stringify(v ?? null);
 const parse = <T>(v: unknown): T => JSON.parse(String(v)) as T;
 const toBool = (v: unknown) => Number(v) === 1;
@@ -350,6 +364,65 @@ export function createRepo(db: Db) {
         note: String(r.note),
         at: String(r.at),
         operator: String(r.operator),
+      }));
+    },
+
+    /* ---------------- 埋点（技术方案 6.11） ---------------- */
+    /** 整批写入；带了 batchId 的按 (batchId, 批内序号) 幂等，返回真正写进去的条数。 */
+    createEvents(input: {
+      demandSheetId: string;
+      source: 'client' | 'server';
+      operator?: string | null;
+      batchId?: string | null;
+      at: string;
+      events: { name: string; at: string; props?: Record<string, unknown> }[];
+    }): number {
+      let inserted = 0;
+      input.events.forEach((event, seq) => {
+        if (input.batchId) {
+          const seen = one<{ id: string }>(
+            'SELECT id FROM events WHERE batch_id = ? AND seq = ?',
+            input.batchId,
+            seq,
+          );
+          if (seen) return;
+        }
+        run(
+          `INSERT INTO events
+             (id, demand_sheet_id, name, at, source, operator, batch_id, seq, props, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          randomUUID(),
+          input.demandSheetId,
+          event.name,
+          event.at,
+          input.source,
+          input.operator ?? null,
+          input.batchId ?? null,
+          seq,
+          json(event.props ?? {}),
+          input.at,
+        );
+        inserted += 1;
+      });
+      return inserted;
+    },
+    listEvents(demandSheetId?: string): EventRow[] {
+      const rows = demandSheetId
+        ? all<Record<string, unknown>>(
+            'SELECT * FROM events WHERE demand_sheet_id = ? ORDER BY at, seq',
+            demandSheetId,
+          )
+        : all<Record<string, unknown>>('SELECT * FROM events ORDER BY at, seq');
+      return rows.map((r) => ({
+        id: String(r.id),
+        demandSheetId: String(r.demand_sheet_id),
+        name: String(r.name),
+        at: String(r.at),
+        source: String(r.source) as 'client' | 'server',
+        operator: r.operator === null ? null : String(r.operator),
+        batchId: r.batch_id === null ? null : String(r.batch_id),
+        seq: Number(r.seq),
+        props: parse<Record<string, unknown>>(r.props),
       }));
     },
   };

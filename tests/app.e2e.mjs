@@ -22,6 +22,19 @@ const text = (page, sel) => page.locator(sel).first().innerText();
 const num = async (page, sel) => Number((await text(page, sel)).replace(/[^\d]/g, '')) || 0;
 const has = async (page, phrase) => (await page.locator('body').innerText()).includes(phrase);
 
+/**
+ * 读本机草稿里攒下的埋点（技术方案 6.11）。
+ * Taro 的 H5 存储外面套了一层 `{ data }`，里面才是草稿的 JSON 字符串。
+ */
+const readEvents = (page) =>
+  page.evaluate(() => {
+    const raw = localStorage.getItem('zx.demand.draft');
+    if (!raw) return [];
+    const box = JSON.parse(raw);
+    const draft = JSON.parse(typeof box === 'string' ? box : box.data);
+    return Array.isArray(draft?.events) ? draft.events : [];
+  });
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -198,6 +211,20 @@ function watch(page) {
   await page.locator('#del-ok').click();
   await page.waitForTimeout(250);
   ok((await count(page, '.inst-card')) === beforeDel - 1, '确认后删除空间实例');
+
+  // 埋点：事件真的留在本机，而且没有被随后的草稿保存盖掉（踩过的坑）
+  const events = await readEvents(page);
+  const names = events.map((e) => e.name);
+  ok(names.includes('session'), '埋点：进入填写页记了一次会话');
+  ok(names.includes('shown'), '埋点：发现展示落在本机（采纳率与不感兴趣率的分母）');
+  ok(
+    events.some((e) => e.name === 'adopt' && e.props?.rule) && names.includes('ignore'),
+    '埋点：采纳与不感兴趣都记了，采纳事件带规则',
+  );
+  ok(
+    names.includes('quiet_on') && names.includes('submit'),
+    '埋点：静默触发与提交都记了（静默率与填写时长的分子）',
+  );
 
   // 草稿：刷新后恢复
   await page.reload();

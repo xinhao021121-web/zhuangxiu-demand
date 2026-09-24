@@ -76,11 +76,17 @@ describe('本地仓储', () => {
     const repo = createLocalRepository(storage, () => 1000);
     repo.saveDraft(handleDraft());
     repo.track('adopt', { rule: 'pet-cat' });
-    const events = repo.loadDraft().events;
-    expect(events.some((e) => e.name === 'adopt')).toBe(true);
-    const result = repo.submit({ summary: '摘要' });
-    expect(result.ok).toBe(true);
-    expect(repo.loadDraft().events.some((e) => e.name === 'submit')).toBe(true);
+    repo.track('submit', { length: 12 });
+    expect(repo.loadDraft().events.map((e) => e.name)).toEqual(['adopt', 'submit']);
+    expect(repo.submit({ summary: '摘要' })).toEqual({ ok: true, at: 1000 });
+  });
+
+  it('提交只管提交，不会替调用方记事件（事件与表单各写各的）', () => {
+    const repo = createLocalRepository(createMemoryStorage(), () => 1000);
+    repo.saveDraft(createDraft());
+    repo.track('session', { env: 'h5', narrow: true });
+    repo.submit({ summary: '摘要' });
+    expect(repo.loadDraft().events.map((e) => e.name)).toEqual(['session']);
   });
 });
 

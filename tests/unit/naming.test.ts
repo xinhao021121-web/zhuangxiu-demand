@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { EVENT_NAMES } from '@zx/data';
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -163,16 +164,29 @@ describe('文档一致性', () => {
   });
 
   it('文档版本号在表头、引用与入口页之间一致', () => {
-    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.4');
-    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.4');
-    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.4');
-    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.4');
-    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.4');
+    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.5');
+    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.5');
+    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.5');
+    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.5');
+    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.5');
   });
 
   it('两份文档都带变更记录', () => {
     expect(read(PRODUCT_DOC)).toContain('附录 B：变更记录');
     expect(read(TECH_DOC)).toContain('十三、变更记录');
+  });
+
+  it('指标口径写清了来源，且事件名与代码清单同源', () => {
+    const product = read(PRODUCT_DOC);
+    const tech = read(TECH_DOC);
+    expect(product).toContain('来源（口径）');
+    // 没有补录入口时不显示 0：假数字比空着更糟
+    expect(product).toContain('未采集');
+    expect(tech).toContain('指标口径与埋点');
+    expect(tech).toContain('packages/data');
+    // 技术方案 6.11 的表里必须把代码清单里的每个事件都列上（名字一处定义）
+    const documented = [...tech.matchAll(/^\| `([a-z_]+)` \|/gm)].map((m) => m[1]);
+    EVENT_NAMES.forEach((name) => expect(documented, `技术方案里少了事件 ${name}`).toContain(name));
   });
 });
 

@@ -14,6 +14,7 @@ const ALIAS = {
   '@zx/field-spec': at('packages', 'field-spec', 'src', 'index.ts'),
   '@zx/rules': at('packages', 'rules', 'src', 'index.ts'),
   '@zx/summary': at('packages', 'summary', 'src', 'index.ts'),
+  '@zx/data': at('packages', 'data', 'src', 'index.ts'),
   '@zx/checklist': at('packages', 'checklist', 'src', 'index.ts'),
   '@zx/redact': at('packages', 'redact', 'src', 'index.ts'),
   '@zx/contracts': at('packages', 'contracts', 'src', 'index.ts'),

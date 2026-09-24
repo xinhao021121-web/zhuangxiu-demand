@@ -1,4 +1,5 @@
 export * from './demand-sheet';
+export * from './telemetry';
 export * from './understanding';
 export * from './checklist';
 export * from './outbound';

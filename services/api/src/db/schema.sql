@@ -72,6 +72,31 @@ CREATE TABLE IF NOT EXISTS outbound_records (
   operator            TEXT NOT NULL
 );
 
+-- 埋点事件（技术方案 6.11）。
+--
+-- 只收「没有别的表能承载」的事件：采集端的会话 / 展示 / 采纳 / 忽略 / 保留 / 静默 / 装机 / 提交，
+-- 以及服务端的生成与导出。清单删减与现场记录各自有表（checklist_items / site_records），
+-- 指标直接读表——同一处事实只有一个来源。
+--
+-- 幂等靠 (batch_id, seq)：客户端断网重试带同一个 batchId，服务端只落第一次。
+-- 服务端自己产生的事件不带 batch_id（NULL 在两边都不参与唯一性）。
+CREATE TABLE IF NOT EXISTS events (
+  id              TEXT PRIMARY KEY,
+  demand_sheet_id TEXT NOT NULL REFERENCES demand_sheets (id),
+  name            TEXT NOT NULL,
+  at              TEXT NOT NULL,
+  source          TEXT NOT NULL CHECK (source IN ('client', 'server')),
+  operator        TEXT,
+  batch_id        TEXT,
+  seq             INTEGER NOT NULL DEFAULT 0,
+  props           TEXT NOT NULL,
+  created_at      TEXT NOT NULL,
+  UNIQUE (batch_id, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_demand ON events (demand_sheet_id);
+CREATE INDEX IF NOT EXISTS idx_events_name ON events (name);
+
 CREATE TABLE IF NOT EXISTS site_records (
   id              TEXT PRIMARY KEY,
   demand_sheet_id TEXT NOT NULL REFERENCES demand_sheets (id),

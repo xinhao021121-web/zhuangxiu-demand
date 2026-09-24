@@ -17,6 +17,7 @@
       "@zx/field-spec": ["../packages/field-spec/src/index.ts"],
       "@zx/rules": ["../packages/rules/src/index.ts"],
       "@zx/summary": ["../packages/summary/src/index.ts"],
+      "@zx/data": ["../packages/data/src/index.ts"],
       "@zx/checklist": ["../packages/checklist/src/index.ts"],
       "@zx/redact": ["../packages/redact/src/index.ts"],
       "@zx/contracts": ["../packages/contracts/src/index.ts"],

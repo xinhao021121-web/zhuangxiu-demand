@@ -9,6 +9,7 @@ import { LoginSchema, UserSchema } from './account';
 import { ChecklistItemSchema, ChecklistSchema } from './checklist';
 import { DemandSheetImportSchema } from './demand-sheet';
 import { OutboundRecordSchema, SiteRecordBatchSchema, SiteRecordSchema } from './outbound';
+import { EventBatchSchema, StoredEventSchema } from './telemetry';
 import { UnderstandingSchema } from './understanding';
 
 const SCHEMAS = {
@@ -21,6 +22,8 @@ const SCHEMAS = {
   OutboundRecord: OutboundRecordSchema,
   SiteRecord: SiteRecordSchema,
   SiteRecordBatch: SiteRecordBatchSchema,
+  EventBatch: EventBatchSchema,
+  StoredEvent: StoredEventSchema,
 };
 
 const ref = (name: keyof typeof SCHEMAS) => ({ $ref: `#/components/schemas/${name}` });
@@ -84,6 +87,31 @@ export const API_PATHS = {
       summary: '外发记录：谁、什么时候、发了什么、用的哪版策略',
       parameters: [path('id')],
       responses: { '200': jsonArray('OutboundRecord', '外发记录') },
+    },
+  },
+  '/demand-sheets/{id}/events': {
+    get: {
+      summary: '取这份需求单的埋点事件（指标就是拿它算的）',
+      parameters: [path('id')],
+      responses: { '200': jsonArray('StoredEvent', '按时间排序的事件') },
+    },
+    post: {
+      summary: '上报埋点（整批上报，同一 batchId 只落一次）',
+      parameters: [path('id')],
+      requestBody: body('EventBatch', '一批埋点事件'),
+      responses: {
+        '201': {
+          description: '接收到的条数与因重复跳过的条数',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { accepted: { type: 'integer' }, duplicates: { type: 'integer' } },
+              },
+            },
+          },
+        },
+      },
     },
   },
   '/checklists/{id}/items/{key}': {

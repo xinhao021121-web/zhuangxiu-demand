@@ -347,6 +347,107 @@ describe('核实对象名归一（BC-05）', () => {
   });
 });
 
+describe('埋点（技术方案 6.11）', () => {
+  const batch = {
+    batchId: 'batch-1',
+    events: [
+      { name: 'session', at: Date.parse('2026-09-23T10:00:00+08:00'), props: { env: 'h5', narrow: true } },
+      { name: 'shown', at: Date.parse('2026-09-23T10:01:00+08:00'), props: { rule: 'pet-cat' } },
+      { name: 'adopt', at: Date.parse('2026-09-23T10:02:00+08:00'), props: { rule: 'pet-cat' } },
+    ],
+  };
+  const postEvents = (id: string, body: unknown, t = token) =>
+    app.request(`/demand-sheets/${id}/events`, {
+      method: 'POST',
+      headers: jsonHeaders(t),
+      body: JSON.stringify(body),
+    });
+
+  it('采集端整批上报：落库后查得到，带来源与批次', async () => {
+    await generate('d1');
+    const res = await postEvents('d1', batch);
+    expect(res.status).toBe(201);
+    expect((await res.json()) as { accepted: number }).toEqual({ accepted: 3, duplicates: 0 });
+
+    const list = (await (await app.request('/demand-sheets/d1/events', { headers: auth(token) })).json()) as {
+      name: string;
+      at: string;
+      source: string;
+      batchId: string | null;
+      props: Record<string, unknown>;
+    }[];
+    const client = list.filter((e) => e.source === 'client');
+    expect(client.map((e) => e.name)).toEqual(['session', 'shown', 'adopt']);
+    expect(client[0].batchId).toBe('batch-1');
+    expect(client[1].props).toEqual({ rule: 'pet-cat' });
+    // 客户端时钟换算成落库时间，填写时长这类差值才在同一个时钟下算
+    expect(client[0].at).toContain('2026-09-23');
+  });
+
+  it('断网重试带同一个 batchId，重复上报不会落两次', async () => {
+    await generate('d1');
+    await postEvents('d1', batch);
+    const again = await postEvents('d1', batch);
+    expect((await again.json()) as { accepted: number; duplicates: number }).toEqual({
+      accepted: 0,
+      duplicates: 3,
+    });
+    const list = (await (await app.request('/demand-sheets/d1/events', { headers: auth(token) })).json()) as unknown[];
+    expect(list.filter((e) => (e as { source: string }).source === 'client')).toHaveLength(3);
+  });
+
+  it('生成与导出各记一条服务端事件：耗时、降级与条数在里面', async () => {
+    const { body } = await generate('d1');
+    await app.request(`/checklists/${body.id}/export`, { headers: auth(token) });
+    const list = (await (await app.request('/demand-sheets/d1/events', { headers: auth(token) })).json()) as {
+      name: string;
+      source: string;
+      operator: string | null;
+      props: Record<string, unknown>;
+    }[];
+    const generated = list.find((e) => e.name === 'checklist_generate')!;
+    expect(generated.source).toBe('server');
+    expect(generated.operator).toBe('王设计');
+    expect(Number(generated.props.durationMs)).toBeGreaterThanOrEqual(0);
+    expect(generated.props.degraded).toBe(false);
+    expect(generated.props.items).toBe(body.counts.total);
+    expect(list.find((e) => e.name === 'checklist_export')!.props.items).toBe(21);
+  });
+
+  it('需求单导入时带的埋点直接落库（采集通道接上之前，走的是这条路）', async () => {
+    const imported = await app.request('/demand-sheets', {
+      method: 'POST',
+      headers: jsonHeaders(token),
+      body: JSON.stringify({
+        demandName: '张先生 · 手机版提交',
+        submittedAt: '2026-09-24 09:00',
+        source: 'miniapp',
+        form: { values: { base_area: 89 }, instances: {} },
+        aiMarks: [],
+        telemetry: batch,
+      }),
+    });
+    expect(imported.status).toBe(201);
+    const created = (await imported.json()) as { id: string };
+    const list = (await (
+      await app.request(`/demand-sheets/${created.id}/events`, { headers: auth(token) })
+    ).json()) as { name: string }[];
+    expect(list.map((e) => e.name)).toEqual(['session', 'shown', 'adopt']);
+  });
+
+  it('清单外的名字与未授权都不收', async () => {
+    await generate('d1');
+    const bad = await postEvents('d1', { batchId: 'batch-2', events: [{ name: 'click', at: 1 }] });
+    expect(bad.status).toBe(400);
+    const denied = await app.request('/demand-sheets/d1/events', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(batch),
+    });
+    expect(denied.status).toBe(401);
+  });
+});
+
 describe('清单的删减与撤销', () => {
   it('删减动作被记录，撤销后恢复', async () => {
     const { body } = await generate('d1');

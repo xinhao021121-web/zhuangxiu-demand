@@ -12,6 +12,7 @@ import { previewOutbound, DEFAULT_POLICY } from '@zx/redact';
 import { buildOverview } from '@zx/summary';
 import {
   DemandSheetImportSchema,
+  EventBatchSchema,
   LoginSchema,
   SiteRecordBatchSchema,
   UserCreateSchema,
@@ -115,6 +116,21 @@ export function createApp(deps: AppDeps) {
       payload: input.form,
       aiMarks: input.aiMarks,
     });
+    // 采集端随提交带出的埋点（技术方案 6.11）：采纳率、不感兴趣率、填写时长的分子分母都在这里
+    if (input.telemetry?.events.length) {
+      repo.createEvents({
+        demandSheetId: sheet.id,
+        source: 'client',
+        operator: user.name,
+        batchId: input.telemetry.batchId,
+        at: now(),
+        events: input.telemetry.events.map((e) => ({
+          name: e.name,
+          at: toIsoAt(e.at, now()),
+          props: e.props,
+        })),
+      });
+    }
     return c.json(toSummary(repo, sheet), 201);
   });
 
@@ -138,8 +154,30 @@ export function createApp(deps: AppDeps) {
       at: now(),
       selected: body.selected,
     };
+    // 单份解读耗时的口径就是这一次生成的墙钟时间（技术方案 6.11）：没有别的表能承载它
+    const startedAt = Date.now();
     const result = await generateChecklist(repo, provider, input);
     const stored = repo.getChecklist(result.checklistId);
+    repo.createEvents({
+      demandSheetId: sheet.id,
+      source: 'server',
+      operator: user.name,
+      at: now(),
+      events: [
+        {
+          name: 'checklist_generate',
+          at: now(),
+          props: {
+            durationMs: Date.now() - startedAt,
+            degraded: result.degraded,
+            model: provider.name,
+            items: result.checklist.counts.total,
+            must: result.checklist.counts.must,
+            suggest: result.checklist.counts.suggest,
+          },
+        },
+      ],
+    });
     return c.json(toChecklistView(stored!), 201);
   });
 
@@ -173,6 +211,7 @@ export function createApp(deps: AppDeps) {
   });
 
   app.get('/checklists/:id/export', (c) => {
+    const user = c.get('user');
     const stored = repo.getChecklist(c.req.param('id'));
     if (!stored) return c.json({ error: '清单不存在' }, 404);
     const sheet = repo.getDemandSheet(stored.demandSheetId)!;
@@ -180,6 +219,14 @@ export function createApp(deps: AppDeps) {
       name: sheet.demandName,
       overview: buildOverview(sheet.payload, []),
       submitted: sheet.submittedAt,
+    });
+    // 导出是流程的终点：生成了却没导出，断点会停在这里（技术方案 6.11）
+    repo.createEvents({
+      demandSheetId: sheet.id,
+      source: 'server',
+      operator: user.name,
+      at: now(),
+      events: [{ name: 'checklist_export', at: now(), props: { items: stored.items.length } }],
     });
     return c.body(md, 200, { 'content-type': 'text/markdown; charset=utf-8' });
   });
@@ -190,6 +237,40 @@ export function createApp(deps: AppDeps) {
     const sheet = repo.getDemandSheet(c.req.param('id'));
     if (!sheet) return c.json({ error: '需求单不存在' }, 404);
     return c.json(repo.listOutboundRecords(sheet.id));
+  });
+
+  /* ---------------- 埋点 ---------------- */
+
+  /*
+   * 采集端的埋点先攒在房主手机上，随提交或断网重连整批上报（技术方案 6.11）。
+   * 房主端那条通道（A4 采集通道）还没开，所以现在只有内部 token 能调；通道开了之后
+   * 鉴权换成匿名会话，这一段的校验与落库不动。
+   */
+  app.post('/demand-sheets/:id/events', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'demand-sheet:write')) return c.json({ error: '没有这个权限' }, 403);
+    const sheet = repo.getDemandSheet(c.req.param('id'));
+    if (!sheet) return c.json({ error: '需求单不存在' }, 404);
+    const parsed = EventBatchSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return c.json({ error: '事件格式不对', issues: parsed.error.issues }, 400);
+    const accepted = repo.createEvents({
+      demandSheetId: sheet.id,
+      source: 'client',
+      operator: user.name,
+      batchId: parsed.data.batchId,
+      at: now(),
+      events: parsed.data.events.map((e) => ({ name: e.name, at: toIsoAt(e.at, now()), props: e.props })),
+    });
+    return c.json({ accepted, duplicates: parsed.data.events.length - accepted }, 201);
+  });
+
+  /* 埋点查得到：指标是拿它算的，出问题时也要能顺着看到原始事件。 */
+  app.get('/demand-sheets/:id/events', (c) => {
+    const user = c.get('user');
+    if (!can(user, 'audit:read')) return c.json({ error: '没有这个权限' }, 403);
+    const sheet = repo.getDemandSheet(c.req.param('id'));
+    if (!sheet) return c.json({ error: '需求单不存在' }, 404);
+    return c.json(repo.listEvents(sheet.id));
   });
 
   /* ---------------- 现场记录 ---------------- */
@@ -244,4 +325,14 @@ export function createApp(deps: AppDeps) {
   app.notFound((c) => c.json({ error: '没有这个接口' }, 404));
 
   return app;
+}
+
+/**
+ * 客户端时钟（毫秒）换算成落库时间：房主手机的时钟可能不准，明显不合法时用服务端时间兜住。
+ * 填写时长这类跨事件差值要在同一个时钟下算，所以换算只做一次，落库后不再依赖客户端时钟。
+ */
+function toIsoAt(clientMs: number, fallback: string): string {
+  if (!Number.isFinite(clientMs)) return fallback;
+  const at = new Date(clientMs);
+  return Number.isNaN(at.getTime()) ? fallback : at.toISOString();
 }

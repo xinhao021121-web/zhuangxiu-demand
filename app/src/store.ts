@@ -15,13 +15,14 @@ import {
   applySuggestion,
   handleSuggestion,
   needsConfirm,
+  openSuggestions,
   suggestionsOf,
   toggleQuiet,
 } from '@zx/rules';
 import type { Suggestion } from '@zx/rules';
 import { buildSummary } from '@zx/summary';
-import { createDraft, createLocalRepository } from '@zx/data';
-import type { Draft } from '@zx/data';
+import { MAX_EVENTS, createDraft, createLocalRepository } from '@zx/data';
+import type { Draft, EventName } from '@zx/data';
 import { taroStorage } from './platform/storage';
 
 /** 表单变化后防抖多久再更新助手（见产品文档 4.8）。 */
@@ -78,14 +79,55 @@ function findSuggestion(id: string): Suggestion | undefined {
   return suggestionsOf(draft.model).find((s) => s.id === id) ?? suggestionsOf(view.model).find((s) => s.id === id);
 }
 
+/**
+ * 本次会话已经记过「展示」的发现：采纳率与不感兴趣率的分母就是它（技术方案 6.11）。
+ * 一条发现只在第一次出现在屏幕上时记一次，同一条不重复计数。
+ */
+const shownIds = new Set<string>();
+
+/**
+ * 记一次埋点。
+ *
+ * 事件存在草稿里，而草稿的保存路径只有一条（`commit` 与刷新时整份写回存储），所以事件也走
+ * 同一条路：先并进内存草稿，再随草稿保存。绕开这条路的写法（直接写存储）会被下一次保存盖掉——
+ * 这正是一个踩过的坑：采纳、忽略、提交记的事件都没能留到下一次动作之后。
+ */
+export function trackEvent(name: EventName, props?: Record<string, unknown>): void {
+  const { draft } = useAppStore.getState();
+  const events = [...draft.events, { name, at: Date.now(), props }].slice(-MAX_EVENTS);
+  const next = { ...draft, events };
+  useAppStore.setState({ draft: next });
+  // 当场落盘：会话与装机这类事件后面不一定还有别的保存动作，等下次保存就等不到了
+  repository.saveDraft(next);
+}
+
+/**
+ * 发布给助手：view 是助手读到的快照，发布时把新出现的发现各记一次展示，并把草稿写回存储。
+ * 保存取的是发布之后的那一份——展示事件是在发布时产生的，早了就会把它盖掉。
+ */
+function publish(): void {
+  const draft = useAppStore.getState().draft;
+  useAppStore.setState({ view: draft });
+  if (!draft.assistant.quiet) {
+    openSuggestions(draft.model, draft.assistant).forEach((s) => {
+      if (shownIds.has(s.id)) return;
+      shownIds.add(s.id);
+      trackEvent('shown', { rule: s.ruleId, target: s.target, kind: s.kind });
+    });
+  }
+  repository.saveDraft(useAppStore.getState().draft);
+}
+
 /** 结构性动作立即生效：采纳、忽略、增删实例、重置。 */
 function commit(draft: Draft, extra: Partial<AppStore> = {}): void {
   if (refreshTimer) {
     clearTimeout(refreshTimer);
     refreshTimer = null;
   }
-  useAppStore.setState({ draft, view: draft, ...extra });
-  repository.saveDraft(draft);
+  // 事件归事件、表单归表单：动作里构造的草稿可能早于这次埋点，直接写回会把事件冲掉
+  const { events } = useAppStore.getState().draft;
+  useAppStore.setState({ draft: { ...draft, events }, ...extra });
+  publish();
 }
 
 /** 字段输入防抖后再发布给助手，用户正在输入时不弹提示。 */
@@ -93,9 +135,7 @@ function scheduleRefresh(): void {
   if (refreshTimer) clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => {
     refreshTimer = null;
-    const draft = useAppStore.getState().draft;
-    useAppStore.setState({ view: draft });
-    repository.saveDraft(draft);
+    publish();
   }, REFRESH_DELAY);
 }
 
@@ -122,7 +162,7 @@ function applyAdopt(suggestion: Suggestion, text?: string): void {
     aiMarks: { ...draft.aiMarks, [outcome.key]: true },
     assistant: handleSuggestion(draft.assistant, suggestion.id, 'adopted', text ?? suggestion.text),
   };
-  repository.track('adopt', { rule: suggestion.ruleId, target: suggestion.target });
+  trackEvent('adopt', { rule: suggestion.ruleId, target: suggestion.target });
   commit(next);
   flash(outcome.key);
   toast(`已写入「${targetLabel(suggestion, outcome.model)}」，可在字段旁撤销`);
@@ -163,7 +203,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const { draft } = get();
     const before = draft.assistant.quiet;
     const assistant = handleSuggestion(draft.assistant, id, 'ignored');
-    repository.track('ignore', { id });
+    trackEvent('ignore', { rule: findSuggestion(id)?.ruleId ?? '', id });
+    // 连续不感兴趣自动进入静默，也算一次静默触发（人工进入的在 setQuiet 里记）
+    if (assistant.quiet && !before) trackEvent('quiet_on', { trigger: 'auto' });
     commit({ ...draft, assistant });
     toast(assistant.quiet && !before ? `连续 ${QUIET_THRESHOLD} 次不感兴趣，已进入静默模式` : '已忽略，同类建议不再出现');
   },
@@ -171,7 +213,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   keep(id) {
     const { draft } = get();
     const assistant = handleSuggestion(draft.assistant, id, 'kept');
-    repository.track('keep', { id });
+    trackEvent('keep', { rule: findSuggestion(id)?.ruleId ?? '', id });
     commit({ ...draft, assistant });
     toast('已保留你的原需求，这条提醒不再出现');
   },
@@ -214,6 +256,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setQuiet(quiet) {
     const { draft } = get();
+    if (quiet && !draft.assistant.quiet) trackEvent('quiet_on', { trigger: 'manual' });
     commit({ ...draft, assistant: toggleQuiet(draft.assistant, quiet) });
     toast(quiet ? '已进入静默模式' : '已恢复建议');
   },
@@ -234,7 +277,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     set({ pending: null });
     const { adopted } = summarise(draft);
-    repository.submit({ summary: buildSummary(draft.model, adopted) });
+    const summary = buildSummary(draft.model, adopted);
+    // 提交：先记一次提交事件（填写时长的终点），再交给仓储层留档。
+    // 采集通道（A4）开了之后，草稿里这一批事件就是随提交上报的那一批。
+    trackEvent('submit', { length: summary.length });
+    repository.submit({ summary });
+    commit(useAppStore.getState().draft);
     toast('已提交给设计师，正文与摘要在本机保存');
   },
 
@@ -310,7 +358,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
 /** 读回草稿：字段清单升级后旧草稿仍可读，静默状态不跨会话继承。 */
 export function bootstrap(): void {
   const draft = repository.loadDraft();
-  useAppStore.setState({ draft, view: draft });
+  useAppStore.setState({ draft });
+  publish();
 }
 
 /** 提交前检查与摘要共用的一份汇总。 */
@@ -324,4 +373,3 @@ export function summarise(draft: Draft) {
     suggestions: list,
   };
 }
-
