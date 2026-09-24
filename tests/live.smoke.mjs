@@ -23,9 +23,10 @@ const ONSITE_URL = new URL('onsite/', URL_TO_CHECK).href;
 
 const fails = [];
 /** 仓库里这一版文档的版本号：线上入口页必须写着同一个，否则发出去的不是本地这一版 */
-const LOCAL_VERSION = fs
-  .readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8')
-  .match(/产品设计文档 (V[\d.]+)/)?.[1];
+const LOCAL_LANDING = fs.readFileSync(path.join(ROOT, 'landing', 'index.html'), 'utf8');
+const LOCAL_VERSION = LOCAL_LANDING.match(/产品设计文档 (V[\d.]+)/)?.[1];
+/** 顺带比一下测试数量：版本号没变、但内容发旧了的情况，靠这一条能看出来 */
+const LOCAL_TEST_COUNT = LOCAL_LANDING.match(/(\d+) 个单元\/接口测试/)?.[1];
 const ok = (cond, msg) => {
   console.log((cond ? 'PASS  ' : 'FAIL  ') + msg);
   if (!cond) fails.push(msg);
@@ -52,6 +53,10 @@ if (landing.error) {
   ok(
     !!LOCAL_VERSION && html.includes(`产品设计文档 ${LOCAL_VERSION}`),
     `线上产物与仓库同一版（${LOCAL_VERSION ?? '读不到本地版本号'}）`,
+  );
+  ok(
+    !!LOCAL_TEST_COUNT && html.includes(`${LOCAL_TEST_COUNT} 个单元/接口测试`),
+    `线上入口页的测试数量与仓库一致（${LOCAL_TEST_COUNT ?? '读不到'}）`,
   );
 }
 
