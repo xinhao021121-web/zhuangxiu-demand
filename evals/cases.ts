@@ -52,7 +52,8 @@ export const EVAL_CASES: EvalCase[] = [
     intent: '旧房翻新 + 养猫 + 三口之家：清单要接住房主填过的内容，不能只出 16 项通用提醒',
     model: baseOf('d1'),
     expectation: {
-      coverFields: ['base_house_state', 'live_pet', 'bl_window'],
+      // dev_freshair 是 BC-01 的现场证据：房主选了「不确定」，清单必须问到（由待定项资产接住）
+      coverFields: ['base_house_state', 'live_pet', 'bl_window', 'dev_freshair'],
       coverObjects: ['猫砂盆位置'],
       mergeObjects: ['旧房隐蔽', '家政封窗'],
     },

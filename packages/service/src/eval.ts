@@ -399,8 +399,9 @@ export function renderReport(report: EvalReport): string {
     );
   });
   lines.push('');
-  lines.push('> 「房主暴露的不确定项」= 空缺的推荐填写项 + 房主答「不清楚」的项。它们目前进的是');
-  lines.push('> 表格理解的待确认项，没有进清单，所以接住率低是口径问题不是模型问题——见 `evals/rubric.md`。');
+  lines.push('> 「房主暴露的不确定项」= 空缺的推荐填写项 + 房主答「不清楚」的项。答「不清楚」的项会进清单');
+  lines.push('> （能落到通用清单的并成一条，落不到的用 field-spec 的待定项资产）；空缺的推荐填写项仍只在');
+  lines.push('> 表格理解的待确认项里，属于口径差异——见 `evals/rubric.md` 第六节。');
   lines.push('');
 
   const uncovered = report.results.flatMap((result) =>

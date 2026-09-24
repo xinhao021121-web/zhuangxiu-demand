@@ -5,6 +5,7 @@ import {
   SECTION_NAMES,
   SECTIONS,
   SURVEY_CHECKLIST,
+  UNCLEAR_CHECKLIST,
   addInstance,
   createModel,
   instanceName,
@@ -49,6 +50,30 @@ describe('字段规格', () => {
   it('量房确认清单 16 项', () => {
     expect(SURVEY_CHECKLIST).toHaveLength(16);
     expect(SURVEY_CHECKLIST[0].item.length).toBeGreaterThan(0);
+  });
+
+  it('给了「不清楚 / 听设计师建议」选项的字段，都有直接对应的量房核实项', () => {
+    const UNCLEAR = /不清楚|不确定|听设计师建议|还没想好|说不好/;
+    const withOption = FIELD_SPEC.filter((f) => f.options.some((o) => UNCLEAR.test(o)));
+    const mapped = new Set(SURVEY_CHECKLIST.flatMap((s) => s.relatedFields));
+
+    // 采集端目前在这 9 个专业判断字段上给了该选项；字段清单变了要回来重新决定
+    expect(withOption).toHaveLength(9);
+    expect(UNCLEAR_CHECKLIST).toHaveLength(6);
+
+    const missing = withOption.filter((f) => !mapped.has(f.id) && !UNCLEAR_CHECKLIST.some((u) => u.fieldId === f.id));
+    expect(missing.map((f) => f.id), '这些字段答「不清楚」时没有可问的条目').toEqual([]);
+
+    // 反向：资产里不留多余的行——字段不再有该选项，或它已经有通用项可落，就该删掉
+    const stale = UNCLEAR_CHECKLIST.filter((u) => !withOption.some((f) => f.id === u.fieldId));
+    expect(stale.map((u) => u.fieldId), '这些待定项已经用不上了').toEqual([]);
+    const duplicated = UNCLEAR_CHECKLIST.filter((u) => mapped.has(u.fieldId));
+    expect(duplicated.map((u) => u.fieldId), '这些字段已经能落到通用清单上，不该再单独配一条').toEqual([]);
+  });
+
+  it('待定项资产与通用清单不撞核实对象，否则会互相并掉', () => {
+    const surveyObjects = new Set(SURVEY_CHECKLIST.map((s) => s.object));
+    expect(UNCLEAR_CHECKLIST.filter((u) => surveyObjects.has(u.object)).map((u) => u.object)).toEqual([]);
   });
 
   it('空间实例：卫生间默认两个，次卧上限 4 个', () => {

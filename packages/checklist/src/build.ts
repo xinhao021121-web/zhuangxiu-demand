@@ -8,7 +8,7 @@
 
 import { SURVEY_CHECKLIST } from '@zx/field-spec';
 import type { SurveyItem } from '@zx/field-spec';
-import { derivedCandidates, surveyCandidates } from './sources';
+import { derivedCandidates, surveyCandidates, unclearCandidates } from './sources';
 import { spaceOrder } from './space';
 import type { Candidate, Checklist, ChecklistInput, ChecklistItem, ItemSource, Tier } from './types';
 
@@ -36,6 +36,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
   const canonical = new Map(survey.map((s) => [s.object, s.relatedFields[0] ?? 'survey']));
 
   const { candidates: derivedList, dropped } = derivedCandidates(derived, model, survey);
+  const unclearList = unclearCandidates(model, survey);
   const surveyList = surveyCandidates(model, survey);
 
   const bySpaceObject = new Map<string, ChecklistItem>();
@@ -71,7 +72,14 @@ export function buildChecklist(input: ChecklistInput): Checklist {
     found.source = 'both';
   };
 
+  /*
+   * 吸收顺序有讲究：推导项 → 答「不清楚」的项 → 通用项。
+   * 合并时「先到的那条留住自己的问题与档位」，所以模型已经说过的对象，房主那句「你来定」
+   * 只补进「为什么问」与关联字段，不会把模型的针对性问题冲掉；而通用项总是最后到场，
+   * 已经被房主或模型说过的对象就以它俩为准。
+   */
   derivedList.forEach(absorb);
+  unclearList.forEach(absorb);
   surveyList.forEach(absorb);
 
   const order = spaceOrder(model);

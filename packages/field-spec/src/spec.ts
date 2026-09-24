@@ -2,12 +2,16 @@
 
 import fieldSpecJson from './field-spec.json';
 import surveyJson from './survey-checklist.json';
-import type { FieldSpec, InstanceDef, SectionSpec, SurveyItem } from './types';
+import unclearJson from './unclear-checklist.json';
+import type { FieldSpec, InstanceDef, SectionSpec, SurveyItem, UnclearItem } from './types';
 
 export const FIELD_SPEC = fieldSpecJson as unknown as FieldSpec[];
 
 /** 量房确认清单：不进表单，量房时交给设计师逐条确认。 */
 export const SURVEY_CHECKLIST = surveyJson as unknown as SurveyItem[];
+
+/** 房主答「不清楚 / 听设计师建议」时量房要问的那条；落得到通用清单上的字段不在这里。 */
+export const UNCLEAR_CHECKLIST = unclearJson as unknown as UnclearItem[];
 
 export const FIELD_BY_ID: Map<string, FieldSpec> = new Map(FIELD_SPEC.map((f) => [f.id, f]));
 

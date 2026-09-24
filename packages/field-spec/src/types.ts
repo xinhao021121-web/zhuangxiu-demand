@@ -49,6 +49,26 @@ export interface SurveyItem {
   tier: SurveyTier;
 }
 
+/**
+ * 房主答「不清楚 / 听设计师建议」时，量房要问的那一条。
+ *
+ * 采集端只在涉及专业判断的字段上给这个选项，所以这份资产是有界的：某个字段给了该选项，
+ * 又落不到 16 项通用清单上时，就在这里配一条。比通用清单多一个 `onsiteChecks`——
+ * 这些项没有现成的通用核实点可复用，得到现场查什么必须写清楚。
+ */
+export interface UnclearItem {
+  /** 触发字段：给了「不清楚 / 听设计师建议」选项的那个字段 ID */
+  fieldId: string;
+  item: string;
+  goal: string;
+  onsiteChecks: string[];
+  /** 核实对象：与通用清单合并去重的键之一 */
+  object: string;
+  space: string;
+  section: string;
+  tier: SurveyTier;
+}
+
 export interface FieldGroup {
   name: string;
   fields: FieldSpec[];

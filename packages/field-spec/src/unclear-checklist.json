@@ -1,0 +1,62 @@
+[
+  {
+    "fieldId": "base_floor_pos",
+    "object": "楼层位置",
+    "space": "基本信息",
+    "section": "认识你家",
+    "tier": "must",
+    "item": "顶楼还是底层：防水、隔热与防潮返水怎么处理",
+    "goal": "顶楼防水隔热、底层防潮与返水，影响做法与费用",
+    "onsiteChecks": ["屋面防水与隔热现状（或首层地面防潮条件）", "排水是否容易返水"]
+  },
+  {
+    "fieldId": "budget_total",
+    "object": "预算口径",
+    "space": "基本信息",
+    "section": "认识你家",
+    "tier": "suggest",
+    "item": "预算上限与主材档位定在哪一档",
+    "goal": "影响主材档位与配置取舍",
+    "onsiteChecks": ["预算上限与预留备用金", "主材品牌档位"]
+  },
+  {
+    "fieldId": "style_pref",
+    "object": "风格方向",
+    "space": "基本信息",
+    "section": "认识你家",
+    "tier": "must",
+    "item": "风格方向定下来：更接近哪一类，有没有明确不想要的",
+    "goal": "答案不同，方案方向就不同",
+    "onsiteChecks": ["参考案例里真正喜欢的是哪几处", "明确不接受的风格或配色"]
+  },
+  {
+    "fieldId": "dev_freshair",
+    "object": "新风系统",
+    "space": "设备与系统",
+    "section": "设备与系统",
+    "tier": "must",
+    "item": "新风要不要做、走顶还是走地，层高够不够",
+    "goal": "影响吊顶高度、管道走向与外墙开孔",
+    "onsiteChecks": ["梁下净高与可用的吊顶空间", "外墙开孔与设备位"]
+  },
+  {
+    "fieldId": "dev_water",
+    "object": "净水与软水",
+    "space": "设备与系统",
+    "section": "设备与系统",
+    "tier": "suggest",
+    "item": "净水与软水要不要做，设备放在哪",
+    "goal": "影响设备位、电源与排水预留",
+    "onsiteChecks": ["入户水压与水质情况", "设备安装位与邻接的电源、排水"]
+  },
+  {
+    "fieldId": "dev_hotwater",
+    "object": "生活热水",
+    "space": "设备与系统",
+    "section": "设备与系统",
+    "tier": "must",
+    "item": "要不要做回水管实现即开即热，热水器放哪",
+    "goal": "影响热水器位置与回水管预留，做错要返工",
+    "onsiteChecks": ["热水器位置与排烟条件", "回水管能否预留"]
+  }
+]

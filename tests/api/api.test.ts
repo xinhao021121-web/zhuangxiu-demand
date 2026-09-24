@@ -153,7 +153,7 @@ describe('生成清单是一条完整流水线', () => {
   it('种子场景生成出的清单与产品文档的数字一致', async () => {
     const { res, body } = await generate('d1');
     expect(res.status).toBe(201);
-    expect(body.counts).toMatchObject({ total: 18, must: 9, suggest: 9 });
+    expect(body.counts).toMatchObject({ total: 19, must: 10, suggest: 9 });
     expect(body.groups[0].space).toBe('基本信息');
     expect(body.degraded).toBe(false);
   });
@@ -225,7 +225,7 @@ describe('生成清单是一条完整流水线', () => {
       'free-text',
       'raw',
     ]);
-    expect(detail.checklist.counts.total).toBe(18);
+    expect(detail.checklist.counts.total).toBe(19);
   });
 });
 
@@ -260,7 +260,7 @@ describe('模型返回的两道红线', () => {
     });
     const body = (await res.json()) as { degraded: boolean; counts: { total: number }; items: { object: string }[] };
     expect(body.degraded).toBe(true);
-    expect(body.counts.total).toBe(16);
+    expect(body.counts.total).toBe(17);
     expect(body.items.map((i) => i.object)).not.toContain('凭空来的');
   });
 
@@ -276,7 +276,7 @@ describe('模型返回的两道红线', () => {
     const body = (await res.json()) as { degraded: boolean; model: string; counts: { total: number } };
     expect(body.degraded).toBe(true);
     expect(body.model).toContain('降级');
-    expect(body.counts.total).toBe(16);
+    expect(body.counts.total).toBe(17);
   });
 
   it('模型调用抛错：清单照样出得来，只少掉推导项', async () => {
@@ -290,7 +290,7 @@ describe('模型返回的两道红线', () => {
     });
     const body = (await res.json()) as { degraded: boolean; counts: { must: number } };
     expect(body.degraded).toBe(true);
-    expect(body.counts.must).toBe(8);
+    expect(body.counts.must).toBe(9);
   });
 });
 
@@ -346,7 +346,7 @@ describe('现场记录', () => {
     });
     expect(res.status).toBe(201);
     const saved = (await res.json()) as { stats: { asked: number; skip: number; left: number; mustAskOpen?: number; must: number; mustAsked: number } };
-    expect(saved.stats).toMatchObject({ asked: 1, skip: 1, left: 16, must: 9, mustAsked: 1 });
+    expect(saved.stats).toMatchObject({ asked: 1, skip: 1, left: 17, must: 10, mustAsked: 1 });
     const summary = (await (
       await app.request(`/checklists/${checklistId}/summary`, { headers: auth(token) })
     ).json()) as { demandName: string; stats: { asked: number }; recordMarkdown: string };

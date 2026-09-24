@@ -132,8 +132,8 @@ try {
   ok((await text(studio, '.dcard.on')).includes('已解读'), '主场景是已解读状态');
   await studio.locator('.tab[data-tab="list"]').click();
   await studio.waitForSelector('.item');
-  ok((await count(studio, '.item')) === 18, '线上演示的清单 18 条');
-  ok((await text(studio, '.card h3')).includes('必问 9 条'), '线上演示的必问 9 条（与种子场景一致）');
+  ok((await count(studio, '.item')) === 19, '线上演示的清单 19 条');
+  ok((await text(studio, '.card h3')).includes('必问 10 条'), '线上演示的必问 10 条（与种子场景一致）');
   ok((await count(studio, '.badge.b-src-both')) >= 3, '推导项与通用项已合并');
   await studio.screenshot({ path: path.join(SHOT, 'pages-02-桌面工作台.png') });
   ok(studioErrors.length === 0, '桌面工作台控制台无错误' + (studioErrors.length ? '：' + studioErrors.join(' | ') : ''));
@@ -155,7 +155,7 @@ try {
   ok((await text(onsite, '.tt span')).includes('演示数据'), '标明这是演示数据');
   await onsite.locator('.dc', { hasText: '张先生' }).click();
   await onsite.waitForSelector('#go');
-  ok((await text(onsite, '.stats .stat')).includes('9'), '现场端拿到必问 9 条');
+  ok((await text(onsite, '.stats .stat')).includes('10'), '现场端拿到必问 10 条');
   await onsite.locator('#go').click();
   await onsite.waitForSelector('.task');
   ok((await count(onsite, '.task')) === 6, '基本信息 6 条（与种子场景一致）');

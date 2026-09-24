@@ -17,10 +17,10 @@ import { SEED_DERIVED, SEED_MODEL, SEED_NAME, SEED_OVERVIEW, SEED_SUBMITTED } fr
 const seed = () => buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
 
 describe('量房沟通清单', () => {
-  it('种子场景的数字与产品文档一致：必问 9 条 · 共 18 条', () => {
+  it('种子场景的数字与产品文档一致：必问 10 条 · 共 19 条', () => {
     const list = seed();
-    expect(list.counts.total).toBe(18);
-    expect(list.counts.must).toBe(9);
+    expect(list.counts.total).toBe(19);
+    expect(list.counts.must).toBe(10);
     expect(list.counts.suggest).toBe(9);
   });
 
@@ -28,7 +28,7 @@ describe('量房沟通清单', () => {
     const list = seed();
     expect(list.counts.bySpace).toEqual({
       基本信息: 6,
-      设备与系统: 5,
+      设备与系统: 6,
       客厅: 1,
       厨房: 2,
       阳台: 1,
@@ -94,7 +94,7 @@ describe('量房沟通清单', () => {
     const unjudged: DerivedItem = { ...fabricated, object: '没判据的', relatedFieldIds: ['kt_form'], impact: [] };
     const list = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED, fabricated, unjudged] });
     expect(list.dropped.map((d) => d.object)).toEqual(['凭空来的', '没判据的']);
-    expect(list.counts.total).toBe(18);
+    expect(list.counts.total).toBe(19);
     // 结构类的通用项确实指不到字段，但它标着「来自通用量房清单」，仍然合规
     expect(list.items.every((i) => i.relatedFields.length > 0 || i.source === 'survey')).toBe(true);
     list.items.forEach((i) => expect(['凭空来的', '没判据的']).not.toContain(i.object));
@@ -181,6 +181,42 @@ describe('表格理解的待确认项', () => {
   });
 });
 
+describe('房主答「不清楚」的项进清单', () => {
+  it('落不到通用清单的字段，用待定项资产生成一条', () => {
+    const item = seed().items.find((i) => i.object === '新风系统');
+    expect(item).toBeDefined();
+    expect(item!.space).toBe('设备与系统');
+    expect(item!.tier).toBe('must');
+    expect(item!.relatedFields).toEqual(['dev_freshair']);
+    expect(item!.why).toContain('不确定');
+    expect(item!.onsiteChecks).toContain('梁下净高与可用的吊顶空间');
+    expect(item!.key).toBe('新风系统#dev_freshair');
+  });
+
+  it('能落到通用清单的字段并成一条，问题仍用通用项那份，只补上房主的原话', () => {
+    const unclear: FormModel = {
+      ...SEED_MODEL,
+      values: { ...SEED_MODEL.values, base_house_state: '不清楚' },
+    };
+    const list = buildChecklist({ model: unclear, derived: [] });
+    const items = list.items.filter((i) => i.object === '旧房隐蔽');
+    expect(items).toHaveLength(1);
+    expect(items[0].source).toBe('both');
+    expect(items[0].question).toBe('旧房管线年限、防水与墙体状况');
+    expect(items[0].why).toContain('不清楚');
+    expect(items[0].relatedFields).toContain('base_house_state');
+  });
+
+  it('落不到通用清单、待定项资产里也没有的字段不生成条目，避免编一句问不出口的话', () => {
+    const free: FormModel = {
+      ...SEED_MODEL,
+      values: { ...SEED_MODEL.values, note_free: '还没想好' },
+    };
+    const extra = buildChecklist({ model: free, derived: [] }).items.filter((i) => i.relatedFields.includes('note_free'));
+    expect(extra).toEqual([]);
+  });
+});
+
 describe('清单导出与现场记录', () => {
   it('导出的 Markdown 带标题、分组与逐条依据', () => {
     const md = buildChecklistMarkdown(seed(), {
@@ -189,7 +225,7 @@ describe('清单导出与现场记录', () => {
       submitted: SEED_SUBMITTED,
     });
     expect(md).toContain('# 量房沟通清单 · 张先生');
-    expect(md).toContain('必问 9 条 · 共 18 条');
+    expect(md).toContain('必问 10 条 · 共 19 条');
     expect(md).toContain('## 基本信息　6 条');
     expect(md).toContain('为什么问：');
     expect(md).toContain('现场要核实：');
@@ -202,16 +238,16 @@ describe('清单导出与现场记录', () => {
       { itemKey: '结构#survey', status: 'skip' as const, note: '物业说 2005 年换过管线', at: '14:22', synced: true },
     ];
     const stats = siteStats(list, records);
-    expect(stats.total).toBe(18);
+    expect(stats.total).toBe(19);
     expect(stats.asked).toBe(1);
     expect(stats.skip).toBe(1);
-    expect(stats.left).toBe(16);
-    expect(stats.must).toBe(9);
+    expect(stats.left).toBe(17);
+    expect(stats.must).toBe(10);
     expect(stats.mustAsked).toBe(1);
-    expect(stats.mustOpen).toHaveLength(8);
+    expect(stats.mustOpen).toHaveLength(9);
     const md = buildSiteRecordMarkdown(list, records, { name: SEED_NAME, overview: SEED_OVERVIEW, submitted: SEED_SUBMITTED });
     expect(md).toContain('# 量房记录 · 张先生');
-    expect(md).toContain('已问 1 条 · 没问上 1 条 · 还没问到 16 条');
+    expect(md).toContain('已问 1 条 · 没问上 1 条 · 还没问到 17 条');
     expect(md).toContain('结论：烟道在窗侧，可做开放式');
     expect(md).toContain('原因：物业说 2005 年换过管线');
   });

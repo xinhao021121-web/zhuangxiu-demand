@@ -80,7 +80,7 @@ try {
   await page.locator('#send-ok').click();
   await page.waitForSelector('.item');
   await page.waitForTimeout(400);
-  ok((await count('.item')) === 18, '清单 18 条（种子场景）');
+  ok((await count('.item')) === 19, '清单 19 条（种子场景）');
   ok((await text('.grp')).startsWith('基本信息'), '「基本信息」排在第一个分组');
   const groups = await page.locator('.grp').allInnerTexts();
   ok(groups.some((t) => t.startsWith('主卫')), '卫生间按实例拆出「主卫」分组');
@@ -118,7 +118,7 @@ try {
   const md = await text('#modal pre.md');
   ok(md.includes('# 量房沟通清单'), '导出的 Markdown 带标题');
   ok(md.includes('为什么问：'), '导出的 Markdown 含逐条依据');
-  ok(md.includes('必问 9 条 · 共 18 条'), '导出的 Markdown 带计数');
+  ok(md.includes('必问 10 条 · 共 19 条'), '导出的 Markdown 带计数');
   await page.screenshot({ path: path.join(SHOT, '07-导出清单.png') });
   await page.locator('#exp-ok').click();
   await page.waitForTimeout(200);

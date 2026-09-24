@@ -8,6 +8,7 @@
 import {
   RECOMMENDED_FIELDS,
   SURVEY_CHECKLIST,
+  UNCLEAR_CHECKLIST,
   fieldKey,
   fieldOf,
   instanceName,
@@ -137,4 +138,61 @@ export function surveyCandidates(model: FormModel, survey: SurveyItem[] = SURVEY
     relatedFields: [...s.relatedFields],
     source: 'survey' as const,
   }));
+}
+
+/**
+ * 房主答「不清楚 / 听设计师建议」的项 → 清单候选（产品文档 5.3 的第二类来源）。
+ *
+ * 这些字段是采集端刻意给「不清楚」选项的专业判断字段，房主选了它，等于当面说「你来定」，
+ * 量房时必须问到。两条路：
+ *
+ * 1. **能落到通用清单上**（这项的 relatedFields 里有这个字段，如「房屋现状」「空调」「采暖」）
+ *    → 用通用项的对象、分区与档位进清单，与它并成一条，只把「为什么问」换成房主的原话；
+ * 2. **落不到**（如新风、净水、热水、预算、风格、楼层位置）→ 用 field-spec 的
+ *    `unclear-checklist` 资产，一个字段一条。
+ *
+ * 两条路都走不通的字段不生成条目：宁可少一条，也不凭空编一句问不出口的话。
+ * 它仍然留在表格理解的待确认项里，等资产补上再进清单。
+ */
+export function unclearCandidates(model: FormModel, survey: SurveyItem[] = SURVEY_CHECKLIST): Candidate[] {
+  const fromSurvey = new Map<string, SurveyItem>();
+  survey.forEach((s) => {
+    s.relatedFields.forEach((id) => {
+      if (!fromSurvey.has(id)) fromSurvey.set(id, s);
+    });
+  });
+  const byFieldId = new Map(UNCLEAR_CHECKLIST.map((u) => [u.fieldId, u]));
+
+  return unclearAnswers(model).flatMap((q) => {
+    const [, fieldId] = splitKey(q.fieldKey);
+    const mapped = fromSurvey.get(fieldId);
+    if (mapped) {
+      return [
+        {
+          object: mapped.object,
+          space: resolveSpace(model, mapped.space, mapped.section),
+          tier: mapped.tier,
+          question: mapped.item,
+          why: q.why,
+          onsiteChecks: [mapped.item],
+          relatedFields: [q.fieldKey],
+          source: 'derived' as const,
+        },
+      ];
+    }
+    const asset = byFieldId.get(fieldId);
+    if (!asset) return [];
+    return [
+      {
+        object: asset.object,
+        space: resolveSpace(model, asset.space, asset.section),
+        tier: asset.tier,
+        question: asset.item,
+        why: q.why,
+        onsiteChecks: [...asset.onsiteChecks],
+        relatedFields: [q.fieldKey],
+        source: 'derived' as const,
+      },
+    ];
+  });
 }
