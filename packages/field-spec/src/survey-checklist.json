@@ -96,7 +96,7 @@
   "object": "家政封窗",
   "space": "阳台",
   "section": "阳台",
-  "tier": "must"
+  "tier": "suggest"
  },
  {
   "no": 10,
@@ -107,7 +107,7 @@
   "object": "墙体",
   "space": "基本信息",
   "section": "认识你家",
-  "tier": "must"
+  "tier": "suggest"
  },
  {
   "no": 11,

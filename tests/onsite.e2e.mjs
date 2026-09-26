@@ -89,9 +89,9 @@ try {
   ok((await count('.det')) === 0, '再点一下收起');
 
   // 已问
-  await task('墙体材质与可开槽条件').locator('[data-a="asked"]').click();
+  await task('承重墙、梁位与门窗洞口位置').locator('[data-a="asked"]').click();
   await page.waitForTimeout(400);
-  ok((await task('墙体材质与可开槽条件').innerText()).includes('已问'), '点「已问」后条目标记为已问');
+  ok((await task('承重墙、梁位与门窗洞口位置').innerText()).includes('已问'), '点「已问」后条目标记为已问');
   ok((await text('.pmust')).includes('必问 已问 1 / 8'), '必问进度随之更新到 1 / 8');
 
   // 记一笔
