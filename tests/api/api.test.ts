@@ -369,6 +369,11 @@ describe('模型返回的两道红线', () => {
     const body = (await res.json()) as { degraded: boolean; counts: { must: number } };
     expect(body.degraded).toBe(true);
     expect(body.counts.must).toBe(11);
+    // 降级的这一刻要留痕（技术方案 6.11）：抛错算传输类失败，不是「模型给了不合法内容」
+    const failed = (await repo.listEvents('d1')).find((e) => e.name === 'checklist_error')!;
+    expect(failed.source).toBe('server');
+    expect(failed.props.reason).toBe('transport');
+    expect(failed.props.detail).toBe('限流');
   });
 });
 
@@ -489,6 +494,28 @@ describe('埋点（技术方案 6.11）', () => {
     expect(generated.props.degraded).toBe(false);
     expect(generated.props.items).toBe(body.counts.total);
     expect(list.find((e) => e.name === 'checklist_export')!.props.items).toBe(21);
+  });
+
+  it('降级时补一条 checklist_error：原因、模型与详情都在里面', async () => {
+    const broken: ModelProvider = { name: 'broken', async understand() { return { nope: true }; } };
+    const instance = await boot(broken);
+    const t = await login(DESIGNER, instance);
+    await instance.request('/demand-sheets/d1/checklist', {
+      method: 'POST',
+      headers: jsonHeaders(t),
+      body: JSON.stringify({}),
+    });
+    const list = (await (
+      await instance.request('/demand-sheets/d1/events', { headers: auth(t) })
+    ).json()) as { name: string; source: string; operator: string | null; props: Record<string, unknown> }[];
+    const failed = list.find((e) => e.name === 'checklist_error')!;
+    expect(failed.source).toBe('server');
+    expect(failed.operator).toBe('王设计');
+    expect(failed.props.model).toBe('broken');
+    expect(failed.props.reason).toBe('structure');
+    expect(String(failed.props.detail)).toContain('profile');
+    // 生成那一条照旧落库，降级与否还是从它读
+    expect(list.find((e) => e.name === 'checklist_generate')!.props.degraded).toBe(true);
   });
 
   it('需求单导入时带的埋点直接落库（采集通道接上之前，走的是这条路）', async () => {

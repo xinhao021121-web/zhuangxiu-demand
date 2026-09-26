@@ -44,6 +44,11 @@ export interface UnderstandingIssues {
   structure: string[];
   /** 出现字段清单之外的字段 ID */
   unknownFields: string[];
+  /**
+   * 调用本身没成功（超时 / 非 JSON / HTTP 失败）——不是模型给了不合法内容，而是这一趟没拿到东西。
+   * 与上面两类分开记，是因为它在埋点里要算另一件事：问题在网络或服务，不是模型不听话。
+   */
+  transport?: string[];
 }
 
 export type UnderstandingResult =

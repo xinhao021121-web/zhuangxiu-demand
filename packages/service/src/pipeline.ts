@@ -41,6 +41,43 @@ export interface GenerateResult {
   outboundRecordId: string;
 }
 
+/** 降级的原因就这三类，它们在真机上都出现过（badcases.md BC-04 / BC-07）。 */
+export type FailureReason = 'transport' | 'unknown_fields' | 'structure';
+
+export interface GenerationFailure {
+  reason: FailureReason;
+  /** 越界字段的条数，`reason` 是 unknown_fields 时有意义 */
+  unknownFields: number;
+  /** 第一条原因，截断后落库；报表只看 reason，这一条留给人查问题 */
+  detail: string;
+}
+
+const FAILURE_DETAIL_LIMIT = 200;
+
+/**
+ * 把降级原因收敛成一个稳定的名字（技术方案 6.11 的 `checklist_error`）。
+ *
+ * 顺序就是优先级：调用没拿到东西排最前——它说明问题在网络、限流或服务上，与「模型给了内容
+ * 但不合规」不是一回事，重试能不能救也不一样。
+ */
+export function describeFailure(issues: UnderstandingIssues): GenerationFailure {
+  const transport = issues.transport ?? [];
+  let reason: FailureReason = 'structure';
+  let messages = issues.structure;
+  if (transport.length) {
+    reason = 'transport';
+    messages = transport;
+  } else if (issues.unknownFields.length) {
+    reason = 'unknown_fields';
+    messages = issues.unknownFields;
+  }
+  return {
+    reason,
+    unknownFields: issues.unknownFields.length,
+    detail: (messages[0] ?? '').slice(0, FAILURE_DETAIL_LIMIT),
+  };
+}
+
 export async function generateChecklist(
   store: ServiceStore,
   provider: ModelProvider,
@@ -102,7 +139,11 @@ export async function generateChecklist(
     } catch (error) {
       return {
         ok: false,
-        issues: { structure: [error instanceof Error ? error.message : String(error)], unknownFields: [] },
+        issues: {
+          structure: [],
+          unknownFields: [],
+          transport: [error instanceof Error ? error.message : String(error)],
+        },
       };
     }
   };

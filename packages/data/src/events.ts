@@ -23,6 +23,7 @@
  * | 事件 | 什么时候记 | props |
  * | --- | --- | --- |
  * | `checklist_generate` | 生成一份清单 | `durationMs`、`degraded`、`model`、`items`、`must`、`suggest` |
+ * | `checklist_error` | 模型两道红线没过、清单降级为纯规则那一刻 | `model`、`reason`（transport / unknown_fields / structure）、`unknownFields`、`detail` |
  * | `checklist_export` | 导出清单 | `items` |
  * | `omission_log` | 遗漏补录（待 R2 的补录入口）| `space`、`criterion` |
  */
@@ -39,6 +40,7 @@ export const EVENT_NAMES = [
   'submit',
   // 服务端
   'checklist_generate',
+  'checklist_error',
   'checklist_export',
   'omission_log',
 ] as const;

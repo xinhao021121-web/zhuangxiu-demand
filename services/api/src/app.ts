@@ -27,6 +27,7 @@ import { createCors, createRateLimit } from './guard';
 import { toIsoAt } from './events';
 import {
   buildReports,
+  describeFailure,
   generateChecklist,
   omissionLedger,
   toChecklistSummary,
@@ -221,25 +222,40 @@ export function createApp(deps: AppDeps) {
     const startedAt = Date.now();
     const result = await generateChecklist(repo, provider, input);
     const stored = await repo.getChecklist(result.checklistId);
+    const events: { name: string; at: string; props: Record<string, unknown> }[] = [
+      {
+        name: 'checklist_generate',
+        at: now(),
+        props: {
+          durationMs: Date.now() - startedAt,
+          degraded: result.degraded,
+          model: provider.name,
+          items: result.checklist.counts.total,
+          must: result.checklist.counts.must,
+          suggest: result.checklist.counts.suggest,
+        },
+      },
+    ];
+    // 降级的那一刻单独记一条：`checklist_generate` 只说「降级了」，这一条说清是哪种失败
+    if (result.degraded && result.issues) {
+      const failure = describeFailure(result.issues);
+      events.push({
+        name: 'checklist_error',
+        at: now(),
+        props: {
+          model: provider.name,
+          reason: failure.reason,
+          unknownFields: failure.unknownFields,
+          detail: failure.detail,
+        },
+      });
+    }
     await repo.createEvents({
       demandSheetId: sheet.id,
       source: 'server',
       operator: user.name,
       at: now(),
-      events: [
-        {
-          name: 'checklist_generate',
-          at: now(),
-          props: {
-            durationMs: Date.now() - startedAt,
-            degraded: result.degraded,
-            model: provider.name,
-            items: result.checklist.counts.total,
-            must: result.checklist.counts.must,
-            suggest: result.checklist.counts.suggest,
-          },
-        },
-      ],
+      events,
     });
     return c.json(toChecklistView(stored!), 201);
   });
