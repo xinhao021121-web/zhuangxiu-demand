@@ -115,6 +115,7 @@ export function derivedCandidates(
     const [, primaryId] = splitKey(item.relatedFieldIds[0]!);
     return {
       object,
+      origin: item.origin ?? 'model',
       space: asset
         ? resolveSpace(model, asset.space, asset.section)
         : item.space
@@ -143,7 +144,7 @@ export function surveyCandidates(
   model: FormModel,
   survey: SurveyItem[] = SURVEY_CHECKLIST,
   /** 适用条件不成立的通用项是「降为建议问」还是「连清单都不进」——默认前者（见 `ChecklistInput`） */
-  dropInapplicable = false,
+  dropInapplicable = true,
 ): Candidate[] {
   return survey
     .filter((s) => !dropInapplicable || whenHolds(model, s.when))
@@ -151,6 +152,7 @@ export function surveyCandidates(
       object: s.object,
       space: resolveSpace(model, s.space, s.section),
       rank: s.tier === 'must' && whenHolds(model, s.when) ? RANK.siteHard : null,
+      origin: null,
       question: s.item,
       why: `通用量房核实项：${s.goal}`,
       onsiteChecks: [s.item],
@@ -192,6 +194,7 @@ export function unclearCandidates(model: FormModel, survey: SurveyItem[] = SURVE
           object: mapped.object,
           space: resolveSpace(model, mapped.space, mapped.section),
           rank: mapped.tier === 'must' ? RANK.ownerDelegated : null,
+          origin: 'unclear' as const,
           question: mapped.item,
           why: q.why,
           onsiteChecks: [mapped.item],
@@ -207,6 +210,7 @@ export function unclearCandidates(model: FormModel, survey: SurveyItem[] = SURVE
         object: asset.object,
         space: resolveSpace(model, asset.space, asset.section),
         rank: asset.tier === 'must' ? RANK.ownerDelegated : null,
+        origin: 'unclear' as const,
         question: asset.item,
         why: q.why,
         onsiteChecks: [...asset.onsiteChecks],

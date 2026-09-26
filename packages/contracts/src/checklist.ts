@@ -10,6 +10,8 @@ export const ChecklistItemSchema = z.object({
   space: z.string().min(1),
   tier: z.enum(['must', 'suggest']),
   source: z.enum(['derived', 'survey', 'both']),
+  /** 有推导成分时的来源；纯通用核实项没有这个字段（产品文档 5.6） */
+  origin: z.enum(['rule', 'unclear', 'model']).optional(),
   question: z.string().min(1),
   why: z.string().min(1),
   onsiteChecks: z.array(z.string()),

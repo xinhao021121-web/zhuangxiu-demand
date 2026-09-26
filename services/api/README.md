@@ -105,6 +105,15 @@ npx wrangler secret put AUTH_CODE                 # 内部账号登录用的验�
 npx wrangler deploy
 ```
 
+**升级已有库**：`schema.sql` 里用的是 `CREATE TABLE IF NOT EXISTS`，所以新加的列不会自己补上。
+给已经建过表的库加列要先 ALTER，再发新代码（顺序反了会因为缺列报 500）：
+
+```bash
+cd services/api
+npx wrangler d1 execute zx-api --remote --command "ALTER TABLE checklist_items ADD COLUMN origin TEXT"
+npx wrangler deploy
+```
+
 `wrangler.toml` 里的三个变量值得解释：
 
 - `CORS_ALLOWED_ORIGINS`：只有这两个静态托管来源能跨域调它；

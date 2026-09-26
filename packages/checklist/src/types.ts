@@ -12,6 +12,14 @@ export type ItemSource = 'derived' | 'survey' | 'both';
 export type Impact = 'feasibility' | 'direction' | 'cost' | 'schedule';
 
 /**
+ * 有推导成分的条目从哪来（产品文档 5.6）：规则托底 / 房主当面说「你来定」/ 模型推导。
+ *
+ * 记这一维是为了把「确定信号」与「模型判断」分开：必问的留位优先给前两类，
+ * 界面上也把来源说到底（前两类是字段级的确定判断，`model` 是读懂之后推的）。
+ */
+export type ItemOrigin = 'rule' | 'unclear' | 'model';
+
+/**
  * 返工代价档位（技术方案 B4）：候选超过上限时按它排序砍。
  * `0` 房主当面说「你来定」的项 / `1` 场地硬项 / `2` 这一家推出来的可行性风险 / `3` 口径项；
  * `null` = 不进必问候选（固定建议问）。
@@ -36,6 +44,8 @@ export interface DerivedItem {
   impact: Impact[];
   /** 归属分区；跨空间的问题（如猫砂盆放哪个卫生间）由模型指定，缺省按主字段所在分区推断 */
   space?: string;
+  /** 来源；模型的输出不带这个字段（缺省按 `model` 处理），规则托底与答「不清楚」的项各自标好 */
+  origin?: ItemOrigin;
 }
 
 /** 进清单之前的候选：来源还没有合并。 */
@@ -44,6 +54,8 @@ export interface Candidate {
   space: string;
   /** 返工代价档位，`null` = 不进必问候选。档位在这里只算一半，另一半在合并之后统一定（judge 的 rankOf） */
   rank: ReworkRank | null;
+  /** 有推导成分的来源；纯通用项是 `null` */
+  origin: ItemOrigin | null;
   question: string;
   why: string;
   onsiteChecks: string[];
@@ -63,6 +75,8 @@ export interface ChecklistItem {
   onsiteChecks: string[];
   /** 关联字段键，可点回原始表格 */
   relatedFields: string[];
+  /** 有推导成分时的来源；纯通用核实项没有这个字段 */
+  origin?: ItemOrigin;
 }
 
 export interface ChecklistGroup {
@@ -106,8 +120,9 @@ export interface ChecklistInput {
    */
   objects?: readonly ObjectAsset[];
   /**
-   * 适用条件不成立的通用项怎么处理：`false`（默认）降为建议问、仍留在清单里当兜底；
-   * `true` 连清单都不进。两条路的条目数差多少见产品文档 5.6，默认值由产品侧定。
+   * 适用条件不成立的通用项怎么处理：`true`（默认）连清单都不进——「旧房管线与防水」在毛坯
+   * 新房上不是这一家的核实项，留着只是噪音，而且会让「删减」这份数据变脏；
+   * `false` 退回到「降为建议问、仍留在清单里当兜底」（产品文档 5.6 记了两条路的差值）。
    */
   dropInapplicable?: boolean;
 }

@@ -389,6 +389,19 @@ describe('必问档位的口径（技术方案 B4）', () => {
     expect(list.items.find((i) => i.object === '上下水')!.tier).toBe('must');
   });
 
+  it('必问里至少留 1 条给确定性来源：模型项挤不掉规则托底与「你来定」', () => {
+    const rule = buildChecklist({
+      model: SEED_MODEL,
+      derived: [...SEED_DERIVED, { ...fabricated(1)[0]!, object: '猫砂盆位置', origin: 'rule' } as DerivedItem],
+    });
+    const must = rule.items.filter((i) => i.tier === 'must');
+    expect(must.some((i) => i.origin === 'rule' || i.origin === 'unclear')).toBe(true);
+    // 来源也记在条目上：规则托底那条认得出自己
+    expect(must.find((i) => i.object === '猫砂盆位置')!.origin).toBe('rule');
+    // 答「不清楚」进来的新风系统是另一类确定来源
+    expect(rule.items.find((i) => i.object === '新风系统')!.origin).toBe('unclear');
+  });
+
   it('同一条推导项换个先后顺序，必问集合不变（档位不再随模型输出漂）', () => {
     const straight = buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
     const shuffled = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED].reverse() });
@@ -426,38 +439,21 @@ describe('必问档位的口径（技术方案 B4）', () => {
     expect(list.counts.must).toBe(8);
   });
 
-  it('通用项的适用条件按这一家的房屋现状筛：老房进必问，毛坯降为建议问', () => {
-    const tierOf = (model: FormModel) =>
-      buildChecklist({ model, derived: [] }).items.find((i) => i.object === '旧房隐蔽')!.tier;
+  it('通用项的适用条件按这一家的房屋现状筛：老房进必问，毛坯上这条不进清单', () => {
+    const itemOf = (model: FormModel, dropInapplicable?: boolean) =>
+      buildChecklist({ model, ...(dropInapplicable === undefined ? {} : { dropInapplicable }), derived: [] }).items.find(
+        (i) => i.object === '旧房隐蔽',
+      );
     const values = SEED_MODEL.values;
+    const shell: FormModel = { ...SEED_MODEL, values: { ...values, base_house_state: '毛坯' } };
 
-    expect(tierOf(SEED_MODEL)).toBe('must'); // d1 是旧房翻新
-    expect(tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: '毛坯' } })).toBe('suggest');
+    expect(itemOf(SEED_MODEL)!.tier).toBe('must'); // d1 是旧房翻新
+    expect(itemOf(shell)).toBeUndefined(); // 毛坯新房：不是这一家的核实项，默认连清单都不进
+    // 退一步的开关还在：降为建议问、仍留在清单里当兜底
+    expect(itemOf(shell, false)!.tier).toBe('suggest');
+
     // 没答清楚就判不了：按成立处理，宁可多问一条（5.5 的同一条线）
-    expect(tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: '不清楚' } })).toBe('must');
-    expect(
-      tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: undefined } }),
-    ).toBe('must');
-
-    // 降级不是删除：通用清单是「量房那天兜底的那张表」，条目还在，只是不进必问
-    const shell = buildChecklist({
-      model: { ...SEED_MODEL, values: { ...values, base_house_state: '毛坯' } },
-      derived: [],
-    });
-    expect(shell.items.map((i) => i.object)).toContain('旧房隐蔽');
-  });
-
-  it('不适用项要不要连清单都不进：开关切一下，默认只降为建议问', () => {
-    const shell: FormModel = { ...SEED_MODEL, values: { ...SEED_MODEL.values, base_house_state: '毛坯' } };
-    const kept = buildChecklist({ model: shell, derived: [] });
-    expect(kept.items.map((i) => i.object)).toContain('旧房隐蔽');
-
-    const dropped = buildChecklist({ model: shell, derived: [], dropInapplicable: true });
-    expect(dropped.items.map((i) => i.object)).not.toContain('旧房隐蔽');
-    expect(dropped.counts.total).toBe(kept.counts.total - 1);
-
-    // 条件成立的老房不受影响：两种策略下它都在
-    const old = buildChecklist({ model: SEED_MODEL, derived: [], dropInapplicable: true });
-    expect(old.items.map((i) => i.object)).toContain('旧房隐蔽');
+    expect(itemOf({ ...SEED_MODEL, values: { ...values, base_house_state: '不清楚' } })!.tier).toBe('must');
+    expect(itemOf({ ...SEED_MODEL, values: { ...values, base_house_state: undefined } })!.tier).toBe('must');
   });
 });

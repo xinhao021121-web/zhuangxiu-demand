@@ -92,7 +92,7 @@ interface GeneratedChecklist {
   id: string;
   counts: { total: number; must: number; suggest: number };
   groups: { space: string; items: unknown[] }[];
-  items: { object: string; tier: string; source: string }[];
+  items: { object: string; tier: string; source: string; origin?: string }[];
   degraded: boolean;
   model: string;
   removedKeys: string[];
@@ -233,6 +233,10 @@ describe('生成清单是一条完整流水线', () => {
     expect(body.counts).toMatchObject({ total: 21, must: 8, suggest: 13 });
     expect(body.groups[0].space).toBe('基本信息');
     expect(body.degraded).toBe(false);
+    // 来源跟着条目走到接口：规则托底与「房主说你来定」分得出来（产品文档 5.6）
+    expect(body.items.find((i) => i.object === '猫砂盆位置')?.origin).toBe('rule');
+    expect(body.items.find((i) => i.object === '新风系统')?.origin).toBe('unclear');
+    expect(body.items.find((i) => i.object === '结构')?.origin).toBeUndefined();
   });
 
   it('生成前先写下外发记录：字段清单、策略版本、时间、操作人都留档', async () => {

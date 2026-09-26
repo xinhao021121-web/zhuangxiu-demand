@@ -7,7 +7,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildSiteRecordMarkdown, siteStats } from '@zx/checklist';
 import type { SiteRecord } from '@zx/checklist';
-import type { User } from '@zx/contracts';
+import type { ChecklistView, User } from '@zx/contracts';
 import { api, ApiError, DEMO_MODE, getToken, setToken } from './lib/api';
 import * as store from './lib/store';
 import type { CachedChecklist, LocalRecord } from './lib/store';
@@ -20,8 +20,14 @@ type Overlay =
   | null;
 
 const TIER_NAME = { must: '必问', suggest: '建议问' } as const;
-const SOURCE_NAME = { derived: '需求推导', survey: '通用核实', both: '需求推导 + 通用核实' } as const;
 const SOURCE_CLASS = { derived: 'b-src-rule', survey: 'b-src-survey', both: 'b-src-both' } as const;
+/** 有推导成分的条目把来源说到底（5.6）：规则托底与「你来定」是确定判断，模型推导是读懂之后推的。 */
+const ORIGIN_NAME = { rule: '规则托底', unclear: '你来定', model: '模型推导' } as const;
+const sourceName = (item: ChecklistView['items'][number]) => {
+  if (item.source === 'survey') return '通用核实';
+  const origin = ORIGIN_NAME[item.origin ?? 'model'];
+  return item.source === 'both' ? `${origin} + 通用核实` : origin;
+};
 const QUICK_SKIP = ['房主不在现场', '现场条件不允许', '时间不够，回头再问', '要等物业或图纸'];
 const QUICK_ASKED = ['房主确认可以', '现场条件不允许', '要回去核尺寸', '房主改了想法', '要加预算'];
 
@@ -589,7 +595,7 @@ export function App() {
                     >
                     <div className="tr">
                       <span className={`badge ${item.tier === 'must' ? 'b-must' : 'b-sug'}`}>{TIER_NAME[item.tier]}</span>
-                      <span className={`badge ${SOURCE_CLASS[item.source]}`}>{SOURCE_NAME[item.source]}</span>
+                      <span className={`badge ${SOURCE_CLASS[item.source]}`}>{sourceName(item)}</span>
                       {record && !record.synced ? <span className="badge b-wait">待同步</span> : null}
                       {record ? (
                         <span className={`mark ${record.status === 'asked' ? 'asked' : 'skip'}`}>

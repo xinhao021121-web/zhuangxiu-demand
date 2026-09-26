@@ -79,6 +79,8 @@ export function ruleDerivedItems(model: FormModel): DerivedItem[] {
         relatedFieldIds: hit.instKey ? row.fieldIds.map((id) => `${hit.instKey}.${id}`) : [...row.fieldIds],
         impact: [...TIER_IMPACT[tier]],
         space: canonical?.space ?? (inst ? instanceName(model, inst) : row.space),
+        // 记来源：这一条是规则算出来的，必问留位与界面徽标都要认它（产品文档 5.6）
+        origin: 'rule',
       });
     });
   });

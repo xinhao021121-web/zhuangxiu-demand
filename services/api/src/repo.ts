@@ -204,6 +204,8 @@ export function createRepo(db: Db) {
     space: String(r.space),
     tier: String(r.tier) as ChecklistItem['tier'],
     source: String(r.source) as ChecklistItem['source'],
+    // 有推导成分的条目记着它从哪来（规则托底 / 房主答「不清楚」/ 模型推导）；老的库里这列是空的
+    ...(r.origin ? { origin: String(r.origin) as NonNullable<ChecklistItem['origin']> } : {}),
     question: String(r.question),
     why: String(r.why),
     onsiteChecks: parse<string[]>(r.onsite_checks),
@@ -242,8 +244,8 @@ export function createRepo(db: Db) {
     for (const item of input.checklist.items) {
       await run(
         `INSERT INTO checklist_items
-           (id, checklist_id, item_key, item_object, space, tier, source, question, why, onsite_checks, related_fields, removed)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+           (id, checklist_id, item_key, item_object, space, tier, source, origin, question, why, onsite_checks, related_fields, removed)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         randomUUID(),
         id,
         item.key,
@@ -251,6 +253,7 @@ export function createRepo(db: Db) {
         item.space,
         item.tier,
         item.source,
+        item.origin ?? null,
         item.question,
         item.why,
         json(item.onsiteChecks),

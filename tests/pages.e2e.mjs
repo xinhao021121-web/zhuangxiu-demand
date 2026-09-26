@@ -190,7 +190,11 @@ try {
   await onsite.locator('#go').click();
   await onsite.waitForSelector('.task');
   ok((await count(onsite, '.task')) === 7, '基本信息 7 条（与种子场景一致）');
-  ok((await text(onsite, '.task')).includes('需求推导 + 通用核实'), '条目带来源徽标');
+  ok((await text(onsite, '.badge.b-src-both')).includes('通用核实'), '条目带来源徽标');
+  ok(
+    (await onsite.locator('.task .badge').allInnerTexts()).some((t) => t.includes('规则托底') || t.includes('你来定')),
+    '确定性来源（规则托底 / 你来定）在现场端也标得出来',
+  );
   const manifest = await onsite.evaluate(async () => {
     const link = document.querySelector('link[rel="manifest"]');
     if (!link) return null;

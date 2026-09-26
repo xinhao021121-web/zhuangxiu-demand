@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   space           TEXT NOT NULL,
   tier            TEXT NOT NULL,
   source          TEXT NOT NULL,
+  -- 有推导成分的条目从哪来：rule / unclear / model（产品文档 5.6）。老库升级见 README 的「升级已有库」
+  origin          TEXT,
   question        TEXT NOT NULL,
   why             TEXT NOT NULL,
   onsite_checks   TEXT NOT NULL,

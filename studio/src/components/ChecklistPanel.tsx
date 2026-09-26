@@ -5,8 +5,14 @@ import type { ChecklistView } from '@zx/contracts';
 import { fieldLabel } from './FormView';
 
 const TIER_NAME = { must: '必问', suggest: '建议问' } as const;
-const SOURCE_NAME = { derived: '需求推导', survey: '通用核实', both: '需求推导 + 通用核实' } as const;
 const SOURCE_CLASS = { derived: 'b-src-rule', survey: 'b-src-survey', both: 'b-src-both' } as const;
+/** 有推导成分的条目把来源说到底（5.6）：规则托底与「你来定」是确定判断，模型推导是读懂之后推的。 */
+const ORIGIN_NAME = { rule: '规则托底', unclear: '房主说你来定', model: '模型推导' } as const;
+const sourceName = (item: ChecklistView['items'][number]) => {
+  if (item.source === 'survey') return '通用核实';
+  const origin = ORIGIN_NAME[item.origin ?? 'model'];
+  return item.source === 'both' ? `${origin} + 通用核实` : origin;
+};
 /** 建议问里的两级（5.6）：来源不是纯通用核实的都算「这一家的」。 */
 const isOwn = (source: ChecklistView['items'][number]['source']) => source !== 'survey';
 
@@ -77,7 +83,7 @@ export function ChecklistPanel({ checklist, onToggle, onJump, pendingKey }: Prop
                     <span className={`badge ${item.tier === 'must' ? 'b-must' : 'b-sug'}`}>
                       {TIER_NAME[item.tier]}
                     </span>
-                    <span className={`badge ${SOURCE_CLASS[item.source]}`}>{SOURCE_NAME[item.source]}</span>
+                    <span className={`badge ${SOURCE_CLASS[item.source]}`}>{sourceName(item)}</span>
                     <span>{item.question}</span>
                   </div>
                   <div className="line">

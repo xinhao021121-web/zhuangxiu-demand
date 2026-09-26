@@ -10,7 +10,7 @@
 
 import type { SurveyWhen } from '@zx/field-spec';
 import type { FormModel } from '@zx/field-spec';
-import type { DerivedItem, Impact, ReworkRank } from './types';
+import type { DerivedItem, Impact, ItemOrigin, ReworkRank } from './types';
 
 /**
  * 必问的上限（研究结论第二节）：三场访谈里设计师自己筛出来的是 5 / 8 / 5 条，取上限兜住。
@@ -27,6 +27,18 @@ export const MUST_LIMIT = 8;
  * 候选不够时，把排在最前面的这一家的项换进来，替掉排在最末的通用项。
  */
 export const MUST_OWN_MIN = 2;
+
+/**
+ * 必问里至少留 1 条给**确定性来源**（规则托底 / 房主答「不清楚」）。
+ *
+ * 这两个来源是字段级的确定判断（BC-03：养猫 → 猫砂盆位置，规则早就算出来了，模型三次全漏；
+ * BC-06：入住时间与预算，采集端本来就命中过）。留位只按「这一家的」判还不够——模型自己也能
+ * 产出一堆「这一家的」候选，最后把确定信号挤出必问，等于又回到赌模型。
+ */
+export const MUST_DETERMINISTIC_MIN = 1;
+
+/** 同一件事被多个来源说中时的优先级：确定来源在前（BC-03 / BC-06 的同一条线）。 */
+export const ORIGIN_RANK: Record<ItemOrigin, number> = { rule: 0, unclear: 1, model: 2 };
 
 /**
  * 返工代价的四档，数字越小越靠前。前三档就是研究结论第二节的判定顺序（前者优先），

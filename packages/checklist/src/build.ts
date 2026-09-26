@@ -11,10 +11,19 @@
 
 import { SURVEY_CHECKLIST } from '@zx/field-spec';
 import type { SurveyItem } from '@zx/field-spec';
-import { MUST_LIMIT, MUST_OWN_MIN } from './judge';
+import { MUST_DETERMINISTIC_MIN, MUST_LIMIT, MUST_OWN_MIN, ORIGIN_RANK } from './judge';
 import { derivedCandidates, surveyCandidates, unclearCandidates } from './sources';
 import { spaceOrder } from './space';
-import type { Candidate, Checklist, ChecklistInput, ChecklistItem, ItemSource, ReworkRank, Tier } from './types';
+import type {
+  Candidate,
+  Checklist,
+  ChecklistInput,
+  ChecklistItem,
+  ItemOrigin,
+  ItemSource,
+  ReworkRank,
+  Tier,
+} from './types';
 
 const TIER_RANK: Record<Tier, number> = { must: 0, suggest: 1 };
 /** 同一组内「需求推导」排在「通用核实」前面：先看到针对这家的、非模板的问题。 */
@@ -41,17 +50,22 @@ export function buildChecklist(input: ChecklistInput): Checklist {
 
   const { candidates: derivedList, dropped } = derivedCandidates(derived, model, survey, input.objects);
   const unclearList = unclearCandidates(model, survey);
-  const surveyList = surveyCandidates(model, survey, input.dropInapplicable);
+  const surveyList = surveyCandidates(model, survey, input.dropInapplicable ?? true);
 
   /** 合并期间的条目：`tier` 还没定（合并完按返工代价统一判），档位另存一张表。 */
   type DraftItem = Omit<ChecklistItem, 'tier'>;
   const bySpaceObject = new Map<string, DraftItem>();
   const drafts: DraftItem[] = [];
   const rankByKey = new Map<string, ReworkRank | null>();
+  const originByKey = new Map<string, ItemOrigin | null>();
 
   /** 同一个键被多个来源说中：取更靠前的那一档（`null` 最靠后）。 */
   const betterRank = (a: ReworkRank | null, b: ReworkRank | null): ReworkRank | null =>
     a === null ? b : b === null ? a : (Math.min(a, b) as ReworkRank);
+
+  /** 同一个键被多个来源说中：确定来源优先（规则托底 > 答「不清楚」> 模型推导）。 */
+  const betterOrigin = (a: ItemOrigin | null, b: ItemOrigin | null): ItemOrigin | null =>
+    a === null ? b : b === null ? a : ORIGIN_RANK[a] <= ORIGIN_RANK[b] ? a : b;
 
   const absorb = (c: Candidate) => {
     const found = bySpaceObject.get(`${c.space}|${c.object}`);
@@ -69,11 +83,13 @@ export function buildChecklist(input: ChecklistInput): Checklist {
       bySpaceObject.set(`${c.space}|${c.object}`, item);
       drafts.push(item);
       rankByKey.set(item.key, c.rank);
+      originByKey.set(item.key, c.origin);
       return;
     }
     found.onsiteChecks = union(found.onsiteChecks, c.onsiteChecks);
     found.relatedFields = union(found.relatedFields, c.relatedFields);
     rankByKey.set(found.key, betterRank(rankByKey.get(found.key) ?? null, c.rank));
+    originByKey.set(found.key, betterOrigin(originByKey.get(found.key) ?? null, c.origin));
     if (found.source === c.source) return;
     if (c.source === 'derived') {
       // 推导项带着这份需求单的具体依据，问题用它的
@@ -110,26 +126,47 @@ export function buildChecklist(input: ChecklistInput): Checklist {
         a.question.localeCompare(b.question, 'zh'),
     );
 
-  /*
-   * 这一家的项要占的位置（MUST_OWN_MIN）：没有通用清单兜底的那些只靠抢名额会被挤掉，
-   * 所以候选不够时，把排在后面的这一家的项换进来，替掉排在最末的通用项。
-   */
-  const own = (d: DraftItem) => d.source === 'derived';
   const picked = ranked.slice(0, MUST_LIMIT);
-  for (const candidate of ranked.slice(MUST_LIMIT)) {
-    if (picked.filter(own).length >= MUST_OWN_MIN) break;
-    if (!own(candidate)) continue;
-    const victim = [...picked].reverse().find((d) => !own(d));
-    if (!victim) break;
-    picked.splice(picked.indexOf(victim), 1);
-    picked.push(candidate);
-  }
+
+  /**
+   * 留位：候选不够时把排在最前面、满足条件的项换进来，替掉排在最末的那条。
+   *
+   * 两条下限（这一家的项、确定性来源）会互相换人，所以换谁有讲究：先换「两边都不占」的
+   * （既不是这一家的、也不是确定来源），换不到才动另一侧。两条都是「换位置、不扩容」。
+   * 顺序也定死：先把确定性来源保下来，再补这一家的项——确定信号更稀缺，也不该被模型项挤掉。
+   */
+  const reserve = (wanted: (d: DraftItem) => boolean, other: (d: DraftItem) => boolean, min: number) => {
+    const count = () => picked.filter(wanted).length;
+    for (const candidate of ranked) {
+      if (count() >= min) break;
+      if (picked.includes(candidate) || !wanted(candidate)) continue;
+      const loser = [...picked].reverse();
+      const victim = loser.find((d) => !wanted(d) && !other(d)) ?? loser.find((d) => !wanted(d));
+      if (!victim) break;
+      picked.splice(picked.indexOf(victim), 1);
+      picked.push(candidate);
+    }
+  };
+
+  /** 这一家的项：没有通用清单兜底的那些（`source === 'derived'`）。 */
+  const own = (d: DraftItem) => d.source === 'derived';
+  /** 确定性来源：规则托底与房主答「不清楚」。 */
+  const deterministic = (d: DraftItem) => {
+    const origin = originByKey.get(d.key);
+    return origin === 'rule' || origin === 'unclear';
+  };
+  reserve(deterministic, own, MUST_DETERMINISTIC_MIN);
+  reserve(own, deterministic, MUST_OWN_MIN);
 
   const mustKeys = new Set(picked.map((d) => d.key));
-  const items: ChecklistItem[] = drafts.map((d) => ({
-    ...d,
-    tier: mustKeys.has(d.key) ? 'must' : 'suggest',
-  }));
+  const items: ChecklistItem[] = drafts.map((d) => {
+    const origin = originByKey.get(d.key) ?? null;
+    return {
+      ...d,
+      tier: mustKeys.has(d.key) ? 'must' : 'suggest',
+      ...(origin ? { origin } : {}),
+    };
+  });
 
   const groups = order
     .map((space) => {
