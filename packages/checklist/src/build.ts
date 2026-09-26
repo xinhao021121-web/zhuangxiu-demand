@@ -11,7 +11,7 @@
 
 import { SURVEY_CHECKLIST } from '@zx/field-spec';
 import type { SurveyItem } from '@zx/field-spec';
-import { MUST_LIMIT } from './judge';
+import { MUST_LIMIT, MUST_OWN_MIN } from './judge';
 import { derivedCandidates, surveyCandidates, unclearCandidates } from './sources';
 import { spaceOrder } from './space';
 import type { Candidate, Checklist, ChecklistInput, ChecklistItem, ItemSource, ReworkRank, Tier } from './types';
@@ -41,7 +41,7 @@ export function buildChecklist(input: ChecklistInput): Checklist {
 
   const { candidates: derivedList, dropped } = derivedCandidates(derived, model, survey, input.objects);
   const unclearList = unclearCandidates(model, survey);
-  const surveyList = surveyCandidates(model, survey);
+  const surveyList = surveyCandidates(model, survey, input.dropInapplicable);
 
   /** 合并期间的条目：`tier` 还没定（合并完按返工代价统一判），档位另存一张表。 */
   type DraftItem = Omit<ChecklistItem, 'tier'>;
@@ -100,19 +100,32 @@ export function buildChecklist(input: ChecklistInput): Checklist {
    * 档位：候选按返工代价排，前 8 条是必问（B4）。同档内按分区顺序 → 来源 → 问题文本排，
    * 全是不看模型输出顺序的确定键，所以同一份需求单每次生成的必问集合一致。
    */
-  const mustKeys = new Set(
-    drafts
-      .filter((d) => rankByKey.get(d.key) !== null)
-      .sort(
-        (a, b) =>
-          rankByKey.get(a.key)! - rankByKey.get(b.key)! ||
-          (spaceIndex.get(a.space) ?? order.length) - (spaceIndex.get(b.space) ?? order.length) ||
-          SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
-          a.question.localeCompare(b.question, 'zh'),
-      )
-      .slice(0, MUST_LIMIT)
-      .map((d) => d.key),
-  );
+  const ranked = drafts
+    .filter((d) => rankByKey.get(d.key) !== null)
+    .sort(
+      (a, b) =>
+        rankByKey.get(a.key)! - rankByKey.get(b.key)! ||
+        (spaceIndex.get(a.space) ?? order.length) - (spaceIndex.get(b.space) ?? order.length) ||
+        SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
+        a.question.localeCompare(b.question, 'zh'),
+    );
+
+  /*
+   * 这一家的项要占的位置（MUST_OWN_MIN）：没有通用清单兜底的那些只靠抢名额会被挤掉，
+   * 所以候选不够时，把排在后面的这一家的项换进来，替掉排在最末的通用项。
+   */
+  const own = (d: DraftItem) => d.source === 'derived';
+  const picked = ranked.slice(0, MUST_LIMIT);
+  for (const candidate of ranked.slice(MUST_LIMIT)) {
+    if (picked.filter(own).length >= MUST_OWN_MIN) break;
+    if (!own(candidate)) continue;
+    const victim = [...picked].reverse().find((d) => !own(d));
+    if (!victim) break;
+    picked.splice(picked.indexOf(victim), 1);
+    picked.push(candidate);
+  }
+
+  const mustKeys = new Set(picked.map((d) => d.key));
   const items: ChecklistItem[] = drafts.map((d) => ({
     ...d,
     tier: mustKeys.has(d.key) ? 'must' : 'suggest',

@@ -105,4 +105,9 @@ export interface ChecklistInput {
    * 模型换一个名字说同一件事时要并成一条，靠的就是这份清单（badcases.md BC-05）。
    */
   objects?: readonly ObjectAsset[];
+  /**
+   * 适用条件不成立的通用项怎么处理：`false`（默认）降为建议问、仍留在清单里当兜底；
+   * `true` 连清单都不进。两条路的条目数差多少见产品文档 5.6，默认值由产品侧定。
+   */
+  dropInapplicable?: boolean;
 }

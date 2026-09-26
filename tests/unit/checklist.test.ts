@@ -372,12 +372,21 @@ describe('必问档位的口径（技术方案 B4）', () => {
       impact: ['feasibility'],
     }));
 
-  it('模型判得再多也顶不破上限：必问恒为 8 条，集合与没有它们时一致', () => {
+  it('模型判得再多也顶不破上限：必问恒为 8 条', () => {
     const base = buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
     const crowded = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED, ...fabricated(10)] });
     expect(crowded.items).toHaveLength(base.items.length + 10);
     expect(crowded.counts.must).toBe(8);
-    expect(mustObjects(crowded)).toEqual(mustObjects(base));
+    expect(mustObjects(crowded)).toHaveLength(8);
+  });
+
+  it('必问里给这一家的项留位置：没有通用清单兜底的至少 2 条，且不扩容', () => {
+    const list = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED, ...fabricated(3)] });
+    expect(list.counts.must).toBe(8);
+    expect(list.items.filter((i) => i.tier === 'must' && i.source === 'derived').length).toBeGreaterThanOrEqual(2);
+    // 换的是位置，不是把通用项整批挤出去：场地硬项仍在必问里
+    expect(list.items.find((i) => i.object === '结构')!.tier).toBe('must');
+    expect(list.items.find((i) => i.object === '上下水')!.tier).toBe('must');
   });
 
   it('同一条推导项换个先后顺序，必问集合不变（档位不再随模型输出漂）', () => {
@@ -436,5 +445,19 @@ describe('必问档位的口径（技术方案 B4）', () => {
       derived: [],
     });
     expect(shell.items.map((i) => i.object)).toContain('旧房隐蔽');
+  });
+
+  it('不适用项要不要连清单都不进：开关切一下，默认只降为建议问', () => {
+    const shell: FormModel = { ...SEED_MODEL, values: { ...SEED_MODEL.values, base_house_state: '毛坯' } };
+    const kept = buildChecklist({ model: shell, derived: [] });
+    expect(kept.items.map((i) => i.object)).toContain('旧房隐蔽');
+
+    const dropped = buildChecklist({ model: shell, derived: [], dropInapplicable: true });
+    expect(dropped.items.map((i) => i.object)).not.toContain('旧房隐蔽');
+    expect(dropped.counts.total).toBe(kept.counts.total - 1);
+
+    // 条件成立的老房不受影响：两种策略下它都在
+    const old = buildChecklist({ model: SEED_MODEL, derived: [], dropInapplicable: true });
+    expect(old.items.map((i) => i.object)).toContain('旧房隐蔽');
   });
 });

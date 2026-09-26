@@ -139,17 +139,24 @@ export function derivedCandidates(
  * 同样不进必问候选——但条目照旧留在清单里当兜底。最终谁是必问由 `buildChecklist`
  * 按返工代价统一定（技术方案 B4）。
  */
-export function surveyCandidates(model: FormModel, survey: SurveyItem[] = SURVEY_CHECKLIST): Candidate[] {
-  return survey.map((s) => ({
-    object: s.object,
-    space: resolveSpace(model, s.space, s.section),
-    rank: s.tier === 'must' && whenHolds(model, s.when) ? RANK.siteHard : null,
-    question: s.item,
-    why: `通用量房核实项：${s.goal}`,
-    onsiteChecks: [s.item],
-    relatedFields: [...s.relatedFields],
-    source: 'survey' as const,
-  }));
+export function surveyCandidates(
+  model: FormModel,
+  survey: SurveyItem[] = SURVEY_CHECKLIST,
+  /** 适用条件不成立的通用项是「降为建议问」还是「连清单都不进」——默认前者（见 `ChecklistInput`） */
+  dropInapplicable = false,
+): Candidate[] {
+  return survey
+    .filter((s) => !dropInapplicable || whenHolds(model, s.when))
+    .map((s) => ({
+      object: s.object,
+      space: resolveSpace(model, s.space, s.section),
+      rank: s.tier === 'must' && whenHolds(model, s.when) ? RANK.siteHard : null,
+      question: s.item,
+      why: `通用量房核实项：${s.goal}`,
+      onsiteChecks: [s.item],
+      relatedFields: [...s.relatedFields],
+      source: 'survey' as const,
+    }));
 }
 
 /**
