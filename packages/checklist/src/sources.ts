@@ -18,7 +18,7 @@ import {
   visibleFields,
 } from '@zx/field-spec';
 import type { FieldValue, FormModel, SurveyItem } from '@zx/field-spec';
-import { RANK, classifyDerived } from './judge';
+import { RANK, classifyDerived, whenHolds } from './judge';
 import { canonicalObjectName, objectAssets } from './objects';
 import type { ObjectAsset } from './objects';
 import { baseSpaceOf, resolveSpace, spaceOfFieldKey } from './space';
@@ -135,13 +135,15 @@ export function derivedCandidates(
  * 16 项通用量房确认清单：现成资产，按它声明的分区进清单。
  *
  * 档位不再直接照抄资产的 tier：资产里的 must 项是「场地硬项」，进必问候选（`RANK.siteHard`），
- * 建议问项不进候选。最终谁是必问由 `buildChecklist` 按返工代价统一定（技术方案 B4）。
+ * 建议问项不进候选；写了适用条件而这一家不成立的（如「旧房管线与防水」遇到毛坯新房），
+ * 同样不进必问候选——但条目照旧留在清单里当兜底。最终谁是必问由 `buildChecklist`
+ * 按返工代价统一定（技术方案 B4）。
  */
 export function surveyCandidates(model: FormModel, survey: SurveyItem[] = SURVEY_CHECKLIST): Candidate[] {
   return survey.map((s) => ({
     object: s.object,
     space: resolveSpace(model, s.space, s.section),
-    rank: s.tier === 'must' ? RANK.siteHard : null,
+    rank: s.tier === 'must' && whenHolds(model, s.when) ? RANK.siteHard : null,
     question: s.item,
     why: `通用量房核实项：${s.goal}`,
     onsiteChecks: [s.item],

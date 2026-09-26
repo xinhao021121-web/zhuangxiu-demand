@@ -416,4 +416,25 @@ describe('必问档位的口径（技术方案 B4）', () => {
     expect(list.counts.total).toBe(10);
     expect(list.counts.must).toBe(8);
   });
+
+  it('通用项的适用条件按这一家的房屋现状筛：老房进必问，毛坯降为建议问', () => {
+    const tierOf = (model: FormModel) =>
+      buildChecklist({ model, derived: [] }).items.find((i) => i.object === '旧房隐蔽')!.tier;
+    const values = SEED_MODEL.values;
+
+    expect(tierOf(SEED_MODEL)).toBe('must'); // d1 是旧房翻新
+    expect(tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: '毛坯' } })).toBe('suggest');
+    // 没答清楚就判不了：按成立处理，宁可多问一条（5.5 的同一条线）
+    expect(tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: '不清楚' } })).toBe('must');
+    expect(
+      tierOf({ ...SEED_MODEL, values: { ...values, base_house_state: undefined } }),
+    ).toBe('must');
+
+    // 降级不是删除：通用清单是「量房那天兜底的那张表」，条目还在，只是不进必问
+    const shell = buildChecklist({
+      model: { ...SEED_MODEL, values: { ...values, base_house_state: '毛坯' } },
+      derived: [],
+    });
+    expect(shell.items.map((i) => i.object)).toContain('旧房隐蔽');
+  });
 });

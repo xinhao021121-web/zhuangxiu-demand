@@ -118,7 +118,8 @@
   "object": "旧房隐蔽",
   "space": "基本信息",
   "section": "认识你家",
-  "tier": "must"
+  "tier": "must",
+  "when": { "field": "base_house_state", "anyOf": ["旧房翻新", "精装改造"] }
  },
  {
   "no": 12,

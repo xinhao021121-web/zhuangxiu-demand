@@ -26,6 +26,19 @@ export interface FieldSpec {
 export type SurveyTier = 'must' | 'suggest';
 
 /**
+ * 通用项的适用条件（研究结论第二节的「老房给老房的、新房给新房的」）。
+ *
+ * 只在**房主明确说了别的值**时才判不成立：没填、或答「不清楚 / 不确定」一律按成立处理——
+ * 判不了的事宁可多问一条，也不能因为一个没答的字段把要问的事丢掉。
+ */
+export interface SurveyWhen {
+  /** 判定用的字段 ID（固定字段，写在 `values` 里） */
+  field: string;
+  /** 命中了其中任意一个值才算适用 */
+  anyOf: string[];
+}
+
+/**
  * 量房确认清单的一项（field-spec 的静态资产，16 项）。
  *
  * relatedFields / object / space / section 是给解读台用的机器可读映射：
@@ -47,6 +60,8 @@ export interface SurveyItem {
   /** 分区名：space 对应的实例在当前需求单里不存在时，退回到这一组 */
   section: string;
   tier: SurveyTier;
+  /** 适用条件；不写就是每套房都适用 */
+  when?: SurveyWhen;
 }
 
 /**
