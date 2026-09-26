@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIELD_BY_ID, SURVEY_CHECKLIST } from '@zx/field-spec';
-import type { FormModel } from '@zx/field-spec';
+import type { FormModel, SurveyItem } from '@zx/field-spec';
 import {
   buildChecklist,
   buildChecklistMarkdown,
@@ -17,11 +17,11 @@ import { SEED_DERIVED, SEED_MODEL, SEED_NAME, SEED_OVERVIEW, SEED_SUBMITTED } fr
 const seed = () => buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
 
 describe('量房沟通清单', () => {
-  it('种子场景的数字与产品文档一致：必问 10 条 · 共 19 条', () => {
+  it('种子场景的数字与产品文档一致：必问 8 条 · 共 19 条', () => {
     const list = seed();
     expect(list.counts.total).toBe(19);
-    expect(list.counts.must).toBe(10);
-    expect(list.counts.suggest).toBe(9);
+    expect(list.counts.must).toBe(8);
+    expect(list.counts.suggest).toBe(11);
   });
 
   it('分区条数均衡，且「基本信息」在最前（产品文档 4.5.1）', () => {
@@ -285,7 +285,7 @@ describe('清单导出与现场记录', () => {
       submitted: SEED_SUBMITTED,
     });
     expect(md).toContain('# 量房沟通清单 · 张先生');
-    expect(md).toContain('必问 10 条 · 共 19 条');
+    expect(md).toContain('必问 8 条 · 共 19 条');
     expect(md).toContain('## 基本信息　6 条');
     expect(md).toContain('为什么问：');
     expect(md).toContain('现场要核实：');
@@ -302,9 +302,9 @@ describe('清单导出与现场记录', () => {
     expect(stats.asked).toBe(1);
     expect(stats.skip).toBe(1);
     expect(stats.left).toBe(17);
-    expect(stats.must).toBe(10);
+    expect(stats.must).toBe(8);
     expect(stats.mustAsked).toBe(1);
-    expect(stats.mustOpen).toHaveLength(9);
+    expect(stats.mustOpen).toHaveLength(7);
     const md = buildSiteRecordMarkdown(list, records, { name: SEED_NAME, overview: SEED_OVERVIEW, submitted: SEED_SUBMITTED });
     expect(md).toContain('# 量房记录 · 张先生');
     expect(md).toContain('已问 1 条 · 没问上 1 条 · 还没问到 17 条');
@@ -351,5 +351,69 @@ describe('需求单本身', () => {
     const list = buildChecklist({ model: empty, derived: [] });
     expect(list.counts.total).toBe(16);
     expect(list.items.every((i) => i.source === 'survey')).toBe(true);
+  });
+});
+
+describe('必问档位的口径（技术方案 B4）', () => {
+  const mustObjects = (list: ReturnType<typeof buildChecklist>) =>
+    list.items
+      .filter((i) => i.tier === 'must')
+      .map((i) => i.object)
+      .sort();
+
+  /** 模型自创的可行性风险项：判据成立、指得到字段，但档位由代码给。 */
+  const fabricated = (count: number): DerivedItem[] =>
+    Array.from({ length: count }, (_, index): DerivedItem => ({
+      object: `自创对象${index}`,
+      question: `要不要处理自创对象${index}`,
+      why: '模型自己推的',
+      onsiteChecks: ['看一眼'],
+      relatedFieldIds: ['kt_form'],
+      impact: ['feasibility'],
+    }));
+
+  it('模型判得再多也顶不破上限：必问恒为 8 条，集合与没有它们时一致', () => {
+    const base = buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
+    const crowded = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED, ...fabricated(10)] });
+    expect(crowded.items).toHaveLength(base.items.length + 10);
+    expect(crowded.counts.must).toBe(8);
+    expect(mustObjects(crowded)).toEqual(mustObjects(base));
+  });
+
+  it('同一条推导项换个先后顺序，必问集合不变（档位不再随模型输出漂）', () => {
+    const straight = buildChecklist({ model: SEED_MODEL, derived: SEED_DERIVED });
+    const shuffled = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED].reverse() });
+    expect(mustObjects(shuffled)).toEqual(mustObjects(straight));
+  });
+
+  it('只影响成本或工期的项照旧进清单，但永远进不了必问', () => {
+    const costOnly: DerivedItem = {
+      object: '预算口径',
+      question: '预算上限定在哪一档',
+      why: '模型判的是成本',
+      onsiteChecks: [],
+      relatedFieldIds: ['budget_total'],
+      impact: ['cost'],
+    };
+    const list = buildChecklist({ model: SEED_MODEL, derived: [...SEED_DERIVED, costOnly] });
+    expect(list.items.find((i) => i.object === '预算口径')!.tier).toBe('suggest');
+    expect(list.dropped).toHaveLength(0);
+  });
+
+  it('资产里的 must 一样要过上限：10 条硬项也只留 8 条', () => {
+    const many: SurveyItem[] = Array.from({ length: 10 }, (_, index) => ({
+      no: index + 1,
+      item: `核实项${index}`,
+      goal: '测试用',
+      source: 'cabinets_type',
+      relatedFields: ['cabinets_type'],
+      object: `硬项${index}`,
+      space: '基本信息',
+      section: '认识你家',
+      tier: 'must',
+    }));
+    const list = buildChecklist({ model: { values: {}, instances: {} }, derived: [], survey: many });
+    expect(list.counts.total).toBe(10);
+    expect(list.counts.must).toBe(8);
   });
 });

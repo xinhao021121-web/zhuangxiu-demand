@@ -4,13 +4,17 @@
  * 合并键是「归属空间 + 核实对象」，不用文字相似度：两条落在同一个键上就并成一条，
  * 问题用推导项（它带着这份需求单的具体依据），现场要核实取并集，来源标为两者；
  * 匹配不上就并列两条，宁可多一条让设计师删，也不要错合并掉一条真实问题。
+ *
+ * 档位与条数在合并之后统一定（judge 的 `MUST_LIMIT` / `RANK`）：候选先按返工代价排，
+ * 前 8 条是必问，其余是建议问。同一个核实对象被两种来源说中时取更靠前的那一档。
  */
 
 import { SURVEY_CHECKLIST } from '@zx/field-spec';
 import type { SurveyItem } from '@zx/field-spec';
+import { MUST_LIMIT } from './judge';
 import { derivedCandidates, surveyCandidates, unclearCandidates } from './sources';
 import { spaceOrder } from './space';
-import type { Candidate, Checklist, ChecklistInput, ChecklistItem, ItemSource, Tier } from './types';
+import type { Candidate, Checklist, ChecklistInput, ChecklistItem, ItemSource, ReworkRank, Tier } from './types';
 
 const TIER_RANK: Record<Tier, number> = { must: 0, suggest: 1 };
 /** 同一组内「需求推导」排在「通用核实」前面：先看到针对这家的、非模板的问题。 */
@@ -39,17 +43,23 @@ export function buildChecklist(input: ChecklistInput): Checklist {
   const unclearList = unclearCandidates(model, survey);
   const surveyList = surveyCandidates(model, survey);
 
-  const bySpaceObject = new Map<string, ChecklistItem>();
-  const items: ChecklistItem[] = [];
+  /** 合并期间的条目：`tier` 还没定（合并完按返工代价统一判），档位另存一张表。 */
+  type DraftItem = Omit<ChecklistItem, 'tier'>;
+  const bySpaceObject = new Map<string, DraftItem>();
+  const drafts: DraftItem[] = [];
+  const rankByKey = new Map<string, ReworkRank | null>();
+
+  /** 同一个键被多个来源说中：取更靠前的那一档（`null` 最靠后）。 */
+  const betterRank = (a: ReworkRank | null, b: ReworkRank | null): ReworkRank | null =>
+    a === null ? b : b === null ? a : (Math.min(a, b) as ReworkRank);
 
   const absorb = (c: Candidate) => {
     const found = bySpaceObject.get(`${c.space}|${c.object}`);
     if (!found) {
-      const item: ChecklistItem = {
+      const item: DraftItem = {
         key: `${c.object}#${primaryFieldOf(c.object, c.relatedFields, canonical)}`,
         object: c.object,
         space: c.space,
-        tier: c.tier,
         source: c.source,
         question: c.question,
         why: c.why,
@@ -57,32 +67,57 @@ export function buildChecklist(input: ChecklistInput): Checklist {
         relatedFields: [...c.relatedFields],
       };
       bySpaceObject.set(`${c.space}|${c.object}`, item);
-      items.push(item);
+      drafts.push(item);
+      rankByKey.set(item.key, c.rank);
       return;
     }
     found.onsiteChecks = union(found.onsiteChecks, c.onsiteChecks);
     found.relatedFields = union(found.relatedFields, c.relatedFields);
+    rankByKey.set(found.key, betterRank(rankByKey.get(found.key) ?? null, c.rank));
     if (found.source === c.source) return;
     if (c.source === 'derived') {
-      // 推导项带着这份需求单的具体依据，问题与档位用它的
+      // 推导项带着这份需求单的具体依据，问题用它的
       found.question = c.question;
       found.why = c.why;
-      found.tier = c.tier;
     }
     found.source = 'both';
   };
 
   /*
    * 吸收顺序有讲究：推导项 → 答「不清楚」的项 → 通用项。
-   * 合并时「先到的那条留住自己的问题与档位」，所以模型已经说过的对象，房主那句「你来定」
-   * 只补进「为什么问」与关联字段，不会把模型的针对性问题冲掉；而通用项总是最后到场，
-   * 已经被房主或模型说过的对象就以它俩为准。
+   * 合并时「先到的那条留住自己的问题」，所以模型已经说过的对象，房主那句「你来定」只补进
+   * 「为什么问」与关联字段，不会把模型的针对性问题冲掉；而通用项总是最后到场，已经被房主或
+   * 模型说过的对象就以它俩为准。档位不看先后——合并完统一按返工代价判。
    */
   derivedList.forEach(absorb);
   unclearList.forEach(absorb);
   surveyList.forEach(absorb);
 
   const order = spaceOrder(model);
+  const spaceIndex = new Map(order.map((space, index) => [space, index]));
+
+  /*
+   * 档位：候选按返工代价排，前 8 条是必问（B4）。同档内按分区顺序 → 来源 → 问题文本排，
+   * 全是不看模型输出顺序的确定键，所以同一份需求单每次生成的必问集合一致。
+   */
+  const mustKeys = new Set(
+    drafts
+      .filter((d) => rankByKey.get(d.key) !== null)
+      .sort(
+        (a, b) =>
+          rankByKey.get(a.key)! - rankByKey.get(b.key)! ||
+          (spaceIndex.get(a.space) ?? order.length) - (spaceIndex.get(b.space) ?? order.length) ||
+          SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
+          a.question.localeCompare(b.question, 'zh'),
+      )
+      .slice(0, MUST_LIMIT)
+      .map((d) => d.key),
+  );
+  const items: ChecklistItem[] = drafts.map((d) => ({
+    ...d,
+    tier: mustKeys.has(d.key) ? 'must' : 'suggest',
+  }));
+
   const groups = order
     .map((space) => {
       const list = items

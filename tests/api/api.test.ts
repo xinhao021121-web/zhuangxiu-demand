@@ -230,7 +230,7 @@ describe('生成清单是一条完整流水线', () => {
   it('种子场景生成出的清单与产品文档的数字一致', async () => {
     const { res, body } = await generate('d1');
     expect(res.status).toBe(201);
-    expect(body.counts).toMatchObject({ total: 21, must: 11, suggest: 10 });
+    expect(body.counts).toMatchObject({ total: 21, must: 8, suggest: 13 });
     expect(body.groups[0].space).toBe('基本信息');
     expect(body.degraded).toBe(false);
   });
@@ -368,7 +368,7 @@ describe('模型返回的两道红线', () => {
     });
     const body = (await res.json()) as { degraded: boolean; counts: { must: number } };
     expect(body.degraded).toBe(true);
-    expect(body.counts.must).toBe(11);
+    expect(body.counts.must).toBe(8);
     // 降级的这一刻要留痕（技术方案 6.11）：抛错算传输类失败，不是「模型给了不合法内容」
     const failed = (await repo.listEvents('d1')).find((e) => e.name === 'checklist_error')!;
     expect(failed.source).toBe('server');
@@ -604,7 +604,7 @@ describe('现场记录', () => {
     });
     expect(res.status).toBe(201);
     const saved = (await res.json()) as { stats: { asked: number; skip: number; left: number; mustAskOpen?: number; must: number; mustAsked: number } };
-    expect(saved.stats).toMatchObject({ asked: 1, skip: 1, left: 19, must: 11, mustAsked: 1 });
+    expect(saved.stats).toMatchObject({ asked: 1, skip: 1, left: 19, must: 8, mustAsked: 1 });
     const summary = (await (
       await app.request(`/checklists/${checklistId}/summary`, { headers: auth(token) })
     ).json()) as { demandName: string; stats: { asked: number }; recordMarkdown: string };

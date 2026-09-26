@@ -18,7 +18,7 @@ import {
   visibleFields,
 } from '@zx/field-spec';
 import type { FieldValue, FormModel, SurveyItem } from '@zx/field-spec';
-import { classifyDerived } from './judge';
+import { RANK, classifyDerived } from './judge';
 import { canonicalObjectName, objectAssets } from './objects';
 import type { ObjectAsset } from './objects';
 import { baseSpaceOf, resolveSpace, spaceOfFieldKey } from './space';
@@ -109,7 +109,7 @@ export function derivedCandidates(
 ): { candidates: Candidate[]; dropped: DerivedItem[] } {
   const { accepted, dropped } = classifyDerived(derived);
   const assets = objectAssets(survey, objects);
-  const candidates = accepted.map(({ item, tier }) => {
+  const candidates = accepted.map(({ item, rank }) => {
     const object = canonicalObjectName(item.object, assets);
     const asset = assets.get(object);
     const [, primaryId] = splitKey(item.relatedFieldIds[0]!);
@@ -120,7 +120,7 @@ export function derivedCandidates(
         : item.space
           ? resolveSpace(model, item.space, sectionOf(primaryId))
           : spaceOfFieldKey(model, item.relatedFieldIds[0]!),
-      tier,
+      rank,
       question: item.question,
       why: item.why,
       onsiteChecks: [...item.onsiteChecks],
@@ -131,12 +131,17 @@ export function derivedCandidates(
   return { candidates, dropped };
 }
 
-/** 16 项通用量房确认清单：现成资产，按它声明的分区与档位进清单。 */
+/**
+ * 16 项通用量房确认清单：现成资产，按它声明的分区进清单。
+ *
+ * 档位不再直接照抄资产的 tier：资产里的 must 项是「场地硬项」，进必问候选（`RANK.siteHard`），
+ * 建议问项不进候选。最终谁是必问由 `buildChecklist` 按返工代价统一定（技术方案 B4）。
+ */
 export function surveyCandidates(model: FormModel, survey: SurveyItem[] = SURVEY_CHECKLIST): Candidate[] {
   return survey.map((s) => ({
     object: s.object,
     space: resolveSpace(model, s.space, s.section),
-    tier: s.tier,
+    rank: s.tier === 'must' ? RANK.siteHard : null,
     question: s.item,
     why: `通用量房核实项：${s.goal}`,
     onsiteChecks: [s.item],
@@ -149,7 +154,8 @@ export function surveyCandidates(model: FormModel, survey: SurveyItem[] = SURVEY
  * 房主答「不清楚 / 听设计师建议」的项 → 清单候选（产品文档 5.3 的第二类来源）。
  *
  * 这些字段是采集端刻意给「不清楚」选项的专业判断字段，房主选了它，等于当面说「你来定」，
- * 量房时必须问到。两条路：
+ * 量房时必须问到——所以资产里标了 must 的这类项，档位是必问候选里最靠前的一档
+ * （`RANK.ownerDelegated`，见 judge）。两条路：
  *
  * 1. **能落到通用清单上**（这项的 relatedFields 里有这个字段，如「房屋现状」「空调」「采暖」）
  *    → 用通用项的对象、分区与档位进清单，与它并成一条，只把「为什么问」换成房主的原话；
@@ -176,7 +182,7 @@ export function unclearCandidates(model: FormModel, survey: SurveyItem[] = SURVE
         {
           object: mapped.object,
           space: resolveSpace(model, mapped.space, mapped.section),
-          tier: mapped.tier,
+          rank: mapped.tier === 'must' ? RANK.ownerDelegated : null,
           question: mapped.item,
           why: q.why,
           onsiteChecks: [mapped.item],
@@ -191,7 +197,7 @@ export function unclearCandidates(model: FormModel, survey: SurveyItem[] = SURVE
       {
         object: asset.object,
         space: resolveSpace(model, asset.space, asset.section),
-        tier: asset.tier,
+        rank: asset.tier === 'must' ? RANK.ownerDelegated : null,
         question: asset.item,
         why: q.why,
         onsiteChecks: [...asset.onsiteChecks],

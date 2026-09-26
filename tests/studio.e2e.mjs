@@ -118,7 +118,7 @@ try {
   const md = await text('#modal pre.md');
   ok(md.includes('# 量房沟通清单'), '导出的 Markdown 带标题');
   ok(md.includes('为什么问：'), '导出的 Markdown 含逐条依据');
-  ok(md.includes('必问 11 条 · 共 21 条'), '导出的 Markdown 带计数');
+  ok(md.includes('必问 8 条 · 共 21 条'), '导出的 Markdown 带计数');
   await page.screenshot({ path: path.join(SHOT, '07-导出清单.png') });
   await page.locator('#exp-ok').click();
   await page.waitForTimeout(200);

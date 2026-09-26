@@ -55,7 +55,8 @@ describe('规则托底的行为', () => {
     const item = checklist.items.find((i) => i.object === '猫砂盆位置');
     expect(item, 'BC-03 的现场：d1 三次全漏，规则托底必须顶上来').toBeDefined();
     expect(item!.space).toBe('卫生间');
-    expect(item!.tier).toBe('must');
+    // 档位不归规则资产管了：它由代码按返工代价给（B4），这里只保证条目到场、依据与字段对得上
+    expect(item!.tier).toBe('suggest');
     expect(item!.relatedFields).toContain('live_pet');
     expect(item!.why).toContain('养宠物');
     expect(item!.onsiteChecks).toContain('就近插座与通风条件');

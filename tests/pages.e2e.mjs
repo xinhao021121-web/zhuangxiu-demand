@@ -133,7 +133,7 @@ try {
   await studio.locator('.tab[data-tab="list"]').click();
   await studio.waitForSelector('.item');
   ok((await count(studio, '.item')) === 21, '线上演示的清单 21 条');
-  ok((await text(studio, '.card h3')).includes('必问 11 条'), '线上演示的必问 11 条（与种子场景一致）');
+  ok((await text(studio, '.card h3')).includes('必问 8 条'), '线上演示的必问 8 条（与种子场景一致）');
   ok((await count(studio, '.badge.b-src-both')) >= 3, '推导项与通用项已合并');
   // 演示模式也要能补录与看报表：静态托管那份走的是浏览器内的 LocalService，不是另一套假数据
   await studio.locator('#om-note').fill('线上演示补的一条遗漏');
@@ -186,7 +186,7 @@ try {
   ok((await text(onsite, '.tt span')).includes('演示数据'), '标明这是演示数据');
   await onsite.locator('.dc', { hasText: '张先生' }).click();
   await onsite.waitForSelector('#go');
-  ok((await text(onsite, '.stats .stat')).includes('11'), '现场端拿到必问 11 条');
+  ok((await text(onsite, '.stats .stat')).includes('8'), '现场端拿到必问 8 条');
   await onsite.locator('#go').click();
   await onsite.waitForSelector('.task');
   ok((await count(onsite, '.task')) === 7, '基本信息 7 条（与种子场景一致）');

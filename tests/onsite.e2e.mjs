@@ -57,7 +57,7 @@ try {
   await page.locator('.dc', { hasText: '张先生' }).click();
   await page.waitForSelector('#go');
   ok((await count('.stats .stat')) === 3, '出门前给出必问 / 建议问 / 共三个数');
-  ok((await text('.stats .stat')).includes('11'), '必问 11 条');
+  ok((await text('.stats .stat')).includes('8'), '必问 8 条（口径 B4：上限 8，场地硬项先占）');
   ok((await text('.card h3')).includes('现场进度'), '给出当前现场进度');
   ok((await count('.card:last-child .srow')) >= 2, '列出还没问到的必问项');
   await page.screenshot({ path: path.join(SHOT, 'm02-出门前.png') });
@@ -67,7 +67,7 @@ try {
   await page.waitForSelector('.task');
   ok((await text('.pname')).includes('基本信息'), '默认从「基本信息」开始');
   ok((await text('.pidx')).includes('1 / 9'), '共 9 个空间（次卧与卫生间公共条件组各单列）');
-  ok((await text('.pmust')).includes('必问 已问 0 / 11'), '顶部显示必问进度');
+  ok((await text('.pmust')).includes('必问 已问 0 / 8'), '顶部显示必问进度');
   ok((await count('.task')) === 7, '基本信息 7 条');
   ok((await text('.task')).includes('必问'), '条目带必问档位徽标');
   ok((await text('.task')).includes('需求推导 + 通用核实'), '条目带来源徽标（推导与通用已合并）');
@@ -92,7 +92,7 @@ try {
   await task('墙体材质与可开槽条件').locator('[data-a="asked"]').click();
   await page.waitForTimeout(400);
   ok((await task('墙体材质与可开槽条件').innerText()).includes('已问'), '点「已问」后条目标记为已问');
-  ok((await text('.pmust')).includes('必问 已问 1 / 11'), '必问进度随之更新到 1 / 11');
+  ok((await text('.pmust')).includes('必问 已问 1 / 8'), '必问进度随之更新到 1 / 8');
 
   // 记一笔
   await task('入户门与窗户是否更换及尺寸').locator('[data-a="note"]').click();

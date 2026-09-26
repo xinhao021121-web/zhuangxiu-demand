@@ -12,6 +12,13 @@ export type ItemSource = 'derived' | 'survey' | 'both';
 export type Impact = 'feasibility' | 'direction' | 'cost' | 'schedule';
 
 /**
+ * 返工代价档位（技术方案 B4）：候选超过上限时按它排序砍。
+ * `0` 房主当面说「你来定」的项 / `1` 场地硬项 / `2` 这一家推出来的可行性风险 / `3` 口径项；
+ * `null` = 不进必问候选（固定建议问）。
+ */
+export type ReworkRank = 0 | 1 | 2 | 3;
+
+/**
  * 推导项：由模型从已填内容推出的、需要当面确认的点（产品文档 4.2 第三条来源）。
  *
  * 硬约束：relatedFieldIds 必须指到字段；指不到字段的内容进不了清单。
@@ -35,7 +42,8 @@ export interface DerivedItem {
 export interface Candidate {
   object: string;
   space: string;
-  tier: Tier;
+  /** 返工代价档位，`null` = 不进必问候选。档位在这里只算一半，另一半在合并之后统一定（judge 的 rankOf） */
+  rank: ReworkRank | null;
   question: string;
   why: string;
   onsiteChecks: string[];
