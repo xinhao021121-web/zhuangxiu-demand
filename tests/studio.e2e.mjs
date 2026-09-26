@@ -89,7 +89,27 @@ try {
     '「卫生间」公共条件组排在「主卫」之前',
   );
   ok((await text('.card h3')).includes('必问'), '顶部给出必问计数');
+  ok((await text('.card h3')).includes('建议问里这一家的'), '顶部给出「这一家的」条数');
   ok((await count('.badge.b-src-both')) >= 3, '推导项与通用项已合并');
+  // 建议问里的两级（5.6）：这一家的在前，通用核实排在后面，中间有分界
+  ok((await count('.subgrp')) >= 2, '建议问分出「这一家的」与「通用核实」两级');
+  const subs = await page.locator('.subgrp').allInnerTexts();
+  ok(
+    subs.some((t) => t.includes('这一家的')) && subs.some((t) => t.includes('通用核实')),
+    '两级都标出来了',
+  );
+  ok(
+    (await page.locator('.item').first().evaluate((el) => el.previousElementSibling?.className || '')).includes(
+      'subgrp',
+    ) === false,
+    '第一条（必问）前面不摆分界',
+  );
+  ok(
+    await page.locator('.subgrp').evaluateAll((all) =>
+      all.every((el) => (el.nextElementSibling?.className || '').includes('item')),
+    ),
+    '每条分界紧跟它管的那一级',
+  );
   ok((await text('.item')).includes('为什么问'), '每条含「为什么问」');
   ok((await text('.item')).includes('现场要核实'), '每条含「现场要核实」');
   await page.screenshot({ path: path.join(SHOT, '04-量房清单.png') });

@@ -4,7 +4,7 @@
  * 判断用领域包，数据先落本机：断网时看到的还是上一次同步下来的清单，记录攒着回有网再同步。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildSiteRecordMarkdown, siteStats } from '@zx/checklist';
 import type { SiteRecord } from '@zx/checklist';
 import type { User } from '@zx/contracts';
@@ -64,6 +64,11 @@ export function App() {
   const stats = useMemo(
     () => (checklist ? siteStats(checklist, myRecords as SiteRecord[]) : null),
     [checklist, myRecords],
+  );
+  /** 建议问里这一家的有几条（5.6 的两级）：来源不是纯通用核实的都算。 */
+  const ownSuggest = useMemo(
+    () => (checklist ? checklist.items.filter((i) => i.tier === 'suggest' && i.source !== 'survey').length : 0),
+    [checklist],
   );
   const pending = useMemo(() => records.filter((r) => !r.synced), [records]);
   const statusOf = useCallback(
@@ -519,7 +524,9 @@ export function App() {
                 <i style={{ width: `${stats.total ? Math.round((stats.asked / stats.total) * 100) : 0}%` }} />
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--dim)', marginTop: 9, lineHeight: 1.7 }}>
-                按现场动线走：先进门核结构与尺寸，再一个空间一个空间问。每条问完点「已问」，没问上的记一句，回来再补。
+                按现场动线走：先进门核结构与尺寸，再一个空间一个空间问。每个空间里必问在最前，建议问{' '}
+                {stats.total - stats.must} 条里这一家的 {ownSuggest} 条排在通用核实之前。每条问完点「已问」，
+                没问上的记一句，回来再补。
               </div>
             </div>
             {stats.mustOpen.length ? (
@@ -556,20 +563,30 @@ export function App() {
             {pending.length ? <div className="syncbar off">离线中：{pending.length} 条记录还没同步</div> : null}
             {liveItems
               .filter((item) => item.space === space)
-              .map((item) => {
+              .map((item, index, list) => {
                 const record = statusOf(item.key);
                 const isOpen = !!open[item.key];
+                const previous = list[index - 1];
+                const own = item.source !== 'survey';
+                const showDivider =
+                  item.tier === 'suggest' &&
+                  (!previous || previous.tier === 'must' || (previous.source !== 'survey') !== own);
                 const context = item.relatedFields
                   .map((fieldKey) => current.fieldValues[fieldKey])
                   .filter((v) => v && v.value)
                   .map((v) => `${v.label}：${v.value}`)
                   .join('　');
                 return (
-                  <div
-                    className={`task${record ? (record.status === 'asked' ? ' asked' : ' skip') : ''}`}
-                    key={item.key}
-                    data-key={item.key}
-                  >
+                  <Fragment key={item.key}>
+                    {showDivider ? (
+                      <div className="subgrp" data-sub={own ? 'own' : 'survey'}>
+                        {own ? '建议问 · 这一家的' : '建议问 · 通用核实'}
+                      </div>
+                    ) : null}
+                    <div
+                      className={`task${record ? (record.status === 'asked' ? ' asked' : ' skip') : ''}`}
+                      data-key={item.key}
+                    >
                     <div className="tr">
                       <span className={`badge ${item.tier === 'must' ? 'b-must' : 'b-sug'}`}>{TIER_NAME[item.tier]}</span>
                       <span className={`badge ${SOURCE_CLASS[item.source]}`}>{SOURCE_NAME[item.source]}</span>
@@ -662,7 +679,8 @@ export function App() {
                         </>
                       )}
                     </div>
-                  </div>
+                    </div>
+                  </Fragment>
                 );
               })}
           </>

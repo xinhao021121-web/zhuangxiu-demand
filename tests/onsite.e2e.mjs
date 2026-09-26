@@ -71,6 +71,9 @@ try {
   ok((await count('.task')) === 7, '基本信息 7 条');
   ok((await text('.task')).includes('必问'), '条目带必问档位徽标');
   ok((await text('.task')).includes('需求推导 + 通用核实'), '条目带来源徽标（推导与通用已合并）');
+  // 建议问里的两级（5.6）：这一家的在前，通用核实排在后面，中间有分界
+  ok((await count('.subgrp')) >= 1, '建议问分出「这一家的」与「通用核实」两级');
+  ok((await text('.subgrp')).includes('建议问'), '分界标明是建议问的下一级');
   await page.screenshot({ path: path.join(SHOT, 'm03-逐条走.png') });
 
   // 展开依据
