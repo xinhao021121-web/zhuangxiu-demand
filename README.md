@@ -5,7 +5,7 @@
 
 - 产品设计文档：`docs/问需_产品设计文档_V1.md`（定位、三个端、回流闭环）
 - 技术方案：`docs/问需_技术方案_V1.md`
-- 用户研究：`research/问需_用户研究方案_V1.md`（访谈提纲、假设与判定标准）· `research/问需_用户研究执行包_V1.md`（时间表与跨人汇总表）· `research/materials/`（分档卡片与发现卡片判定材料，由 `pnpm run build:research` 生成）
+- 用户研究：`research/问需_研究结论_V1.md`（**三场设计师访谈的汇总**：必问口径提案、遗漏台账 5 类、画像校正、假设验证表）· `research/问需_用户研究方案_V1.md`（访谈提纲、假设与判定标准）· `research/问需_用户研究执行包_V1.md`（时间表与跨人汇总表）· `research/materials/`（分档卡片与发现卡片判定材料，由 `pnpm run build:research` 生成）
 - 成本与 ROI：`research/问需_成本与ROI模型_V1.md`（成本侧已实测；收益侧参数等访谈填）
 
 
