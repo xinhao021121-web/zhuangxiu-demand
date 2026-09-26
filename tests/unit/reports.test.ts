@@ -29,6 +29,7 @@ const item = (
   source: ChecklistItem['source'],
   tier: ChecklistItem['tier'],
   removed = false,
+  origin?: ChecklistItem['origin'],
 ): StoredItem => ({
   key,
   object: key.split('#')[0],
@@ -39,6 +40,7 @@ const item = (
   why: '因为…',
   onsiteChecks: [],
   relatedFields: [key.split('#')[1]],
+  ...(origin ? { origin } : {}),
   removed,
 });
 
@@ -118,28 +120,38 @@ describe('规则健康度', () => {
 });
 
 describe('判据健康度', () => {
-  it('按「来源 · 档位」归组：条目数、被删数、删减率，推导项排最前', async () => {
+  it('按「来源 · 档位」归组：规则托底与模型推导分得开，条目数 / 被删数 / 删减率都在', async () => {
     const reports = await buildReports(
       source({
         sheets: [sheet('s1', '张先生')],
         checklists: {
           s1: checklist('s1', [
-            item('排烟#kt_form', 'derived', 'must', true),
-            item('猫砂盆位置#live_pet', 'derived', 'must'),
+            item('排烟#kt_form', 'derived', 'must', true, 'model'),
+            item('猫砂盆位置#live_pet', 'derived', 'must', false, 'rule'),
+            item('新风系统#dev_freshair', 'derived', 'suggest', true, 'unclear'),
             item('配电#base_house_state', 'survey', 'must'),
             item('封窗#base_window', 'survey', 'suggest'),
-            item('烟道#kt_hood', 'both', 'must', true),
+            item('烟道#kt_hood', 'both', 'must', true, 'rule'),
           ]),
         },
       }),
     );
     expect(reports.criteria.map((c) => c.group)).toEqual([
-      '需求推导 · 必问',
-      '推导+通用 · 必问',
+      '规则托底 · 必问',
+      '规则托底 + 通用核实 · 必问',
+      '房主说你来定 · 建议问',
+      '模型推导 · 必问',
       '通用核实 · 必问',
       '通用核实 · 建议问',
     ]);
-    expect(reports.criteria[0]).toMatchObject({ items: 2, removed: 1, removalRate: 50 });
+    expect(reports.criteria.map((c) => [c.origin, c.items, c.removed, c.removalRate])).toEqual([
+      ['rule', 1, 0, 0],
+      ['rule', 1, 1, 100],
+      ['unclear', 1, 1, 100],
+      ['model', 1, 1, 100],
+      [null, 1, 0, 0],
+      [null, 1, 0, 0],
+    ]);
   });
 
   it('只算每份需求单最新那一份清单，删减取当前状态（撤销后不计入被删）', async () => {

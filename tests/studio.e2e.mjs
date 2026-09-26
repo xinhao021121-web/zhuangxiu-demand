@@ -184,6 +184,11 @@ try {
   ok((await count('#rep-rules')) === 1 && (await count('#rep-criteria')) === 1, '规则与判据两张报表都在');
   ok((await count('#rep-fields')) === 1 && (await count('#rep-omissions')) === 1, '字段与遗漏两张报表都在');
   ok((await count('#rep-criteria .rtable tr')) > 1, '判据健康度按来源与档位分组出数');
+  const criteria = await text('#rep-criteria');
+  ok(
+    ['规则托底', '房主说你来定', '模型推导'].some((label) => criteria.includes(label)),
+    '判据健康度把来源拆到 origin（规则托底 / 你来定 / 模型推导）',
+  );
   ok((await count('#rep-fields .rtable tr')) > 1, '字段健康度出数');
   ok((await text('#rep-omissions')).includes('阳台有没有晾晒需求'), '遗漏台账里能看到刚补的那条');
   ok((await text('#rep-omissions')).includes('张先生 · 89㎡ 老房翻新'), '台账按改后的叫法认人');

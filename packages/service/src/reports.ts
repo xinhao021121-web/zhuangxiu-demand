@@ -11,7 +11,7 @@
 import { fieldOf, isEmptyValue, splitKey } from '@zx/field-spec';
 import type { FieldValue, FormModel } from '@zx/field-spec';
 import { unclearAnswers } from '@zx/checklist';
-import type { ItemSource, Tier } from '@zx/checklist';
+import type { ChecklistItem, ItemOrigin, ItemSource, Tier } from '@zx/checklist';
 import { RULE_META } from '@zx/rules';
 import type { CriterionHealth, FieldHealth, OmissionCategory, Reports, RuleHealth } from '@zx/contracts';
 import type { EventRecord, Maybe, SheetRecord, SiteRecordRecord, ChecklistRecord } from './types';
@@ -32,6 +32,18 @@ function pct(part: number, whole: number): number | null {
 
 const SOURCE_LABEL: Record<ItemSource, string> = { derived: '需求推导', both: '推导+通用', survey: '通用核实' };
 const TIER_LABEL: Record<Tier, string> = { must: '必问', suggest: '建议问' };
+/** 有推导成分的条目把来源说到底（产品文档 5.6）：规则托底 / 房主说你来定 / 模型推导。 */
+const ORIGIN_LABEL: Record<ItemOrigin, string> = { rule: '规则托底', unclear: '房主说你来定', model: '模型推导' };
+/** 纯通用项（没有推导成分）排在有来源的后面。 */
+const ORIGIN_RANK: Record<ItemOrigin | 'survey', number> = { rule: 0, unclear: 1, model: 2, survey: 3 };
+
+/** 一行的来源标签：与两个端的徽标同一套写法（`规则托底`、`房主说你来定 + 通用核实`…）。 */
+function sourceLabelOf(item: ChecklistItem): { label: string; origin: ItemOrigin | null } {
+  if (item.source === 'survey') return { label: SOURCE_LABEL.survey, origin: null };
+  const origin = item.origin ?? 'model';
+  const label = item.source === 'both' ? `${ORIGIN_LABEL[origin]} + 通用核实` : ORIGIN_LABEL[origin];
+  return { label, origin };
+}
 /** 报表里的固定顺序：推导项在最前（它最可能被删，是调判据的第一现场）。 */
 const SOURCE_RANK: Record<ItemSource, number> = { derived: 0, both: 1, survey: 2 };
 const TRIGGER_BY_RULE = new Map(RULE_META.map((m) => [m.id, m.trigger]));
@@ -82,7 +94,8 @@ function ruleReport(events: EventRecord[]): RuleHealth[] {
 }
 
 /**
- * 判据健康度：按「来源 · 档位」归组。
+ * 判据健康度：按「来源 · 档位」归组——来源带上 `origin`（规则托底 / 房主说你来定 / 模型推导），
+ * 所以这一版能回答「谁被删得多」：是规则托底推得太宽，还是模型自己编的太多。
  *
  * 只统计每份需求单**最新那一份**清单：重新生成过的旧清单不再计入，否则「生成三次、删一次」
  * 会把同一条条目数成三条。删减取条目的当前状态（撤销后不计入被删，7.5 第 2 条）。
@@ -93,10 +106,11 @@ async function criterionReport(sheets: SheetRecord[], source: ReportSource): Pro
     const checklist = await source.latestChecklist(sheet.id);
     if (!checklist) continue;
     checklist.items.forEach((item) => {
-      const group = `${SOURCE_LABEL[item.source]} · ${TIER_LABEL[item.tier]}`;
+      const { label, origin } = sourceLabelOf(item);
+      const group = `${label} · ${TIER_LABEL[item.tier]}`;
       const row =
         rows.get(group) ??
-        { group, source: item.source, tier: item.tier, items: 0, removed: 0, removalRate: null };
+        { group, source: item.source, origin, tier: item.tier, items: 0, removed: 0, removalRate: null };
       row.items += 1;
       if (item.removed) row.removed += 1;
       rows.set(group, row);
@@ -107,6 +121,7 @@ async function criterionReport(sheets: SheetRecord[], source: ReportSource): Pro
     .map((r) => ({ ...r, removalRate: pct(r.removed, r.items) }))
     .sort(
       (a, b) =>
+        ORIGIN_RANK[a.origin ?? 'survey'] - ORIGIN_RANK[b.origin ?? 'survey'] ||
         SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
         (a.tier === 'must' ? 0 : 1) - (b.tier === 'must' ? 0 : 1),
     );

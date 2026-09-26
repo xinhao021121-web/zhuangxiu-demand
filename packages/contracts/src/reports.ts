@@ -27,13 +27,16 @@ export const RuleHealthSchema = z.object({
 /**
  * 判据健康度：每组的条目数 / 被删数 / 删减率 / 档位。
  *
- * 这里的「组」是**来源 · 档位**（如「需求推导 · 必问」）：清单条目上没有存它满足了哪条判据
+ * 这里的「组」是**来源 · 档位**（如「规则托底 · 必问」）：清单条目上没有存它满足了哪条判据
  * （判据只在筛选那一刻用一次），所以这一版按来源与档位分组——它同样回答 7.6 的两个问题：
- * 哪类来源的条目最常被删（推得太宽），以及档位是不是定错了。
+ * 哪类来源的条目最常被删（推得太宽），以及档位是不是定错了。来源带 `origin` 之后，
+ * 「规则托底推得太宽」与「模型自己编得太多」才分得开（产品文档 5.6）。
  */
 export const CriterionHealthSchema = z.object({
   group: z.string(),
   source: z.enum(['derived', 'survey', 'both']),
+  /** 有推导成分的条目的来源；纯通用核实是 null */
+  origin: z.enum(['rule', 'unclear', 'model']).nullable(),
   tier: z.enum(['must', 'suggest']),
   items: z.number().int().nonnegative(),
   removed: z.number().int().nonnegative(),

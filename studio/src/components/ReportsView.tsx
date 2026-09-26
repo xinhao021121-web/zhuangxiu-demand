@@ -84,7 +84,7 @@ export function ReportsView({ reports, onClose }: { reports: Reports; onClose: (
             <tbody>
               {reports.criteria.map((c) => (
                 <tr key={c.group}>
-                  <td>{sourceLabel(c.source)}</td>
+                  <td>{sourceLabel(c)}</td>
                   <td>
                     <span className={`badge ${c.tier === 'must' ? 'b-must' : 'b-sug'}`}>
                       {c.tier === 'must' ? '必问' : '建议问'}
@@ -101,8 +101,10 @@ export function ReportsView({ reports, onClose }: { reports: Reports; onClose: (
           <div className="empty-line">还没有生成过清单，没有可汇总的条目。</div>
         )}
         <div className="note">
-          「来源」是这条条目打哪来：需求推导（模型从已填内容推的）、通用核实（16 项资产）、推导+通用（两条撞在
-          一起并成一条）。条目上没有存它满足了哪条判据，所以这一版按来源与档位分组。
+          「来源」是这条条目打哪来：规则托底（采集端的规则早就算出来的）、房主说你来定（答「不清楚」的项）、
+          模型推导（读懂这份需求单之后推的）、通用核实（16 项资产）；与通用清单撞在一起并成一条的写成
+          「X + 通用核实」。条目上没有存它满足了哪条判据，所以这一版按来源与档位分组——**同一列里比较
+          「规则托底」与「模型推导」的删减率，就是判断该多写规则还是多依赖模型的那份证据**。
         </div>
       </div>
 
@@ -207,6 +209,9 @@ export function ReportsView({ reports, onClose }: { reports: Reports; onClose: (
   );
 }
 
-function sourceLabel(source: 'derived' | 'survey' | 'both'): string {
-  return source === 'derived' ? '需求推导' : source === 'both' ? '推导+通用' : '通用核实';
+/** 来源列：有推导成分的把 `origin` 说清楚（5.6），纯通用核实就是「通用核实」。 */
+function sourceLabel(item: { source: 'derived' | 'survey' | 'both'; origin: 'rule' | 'unclear' | 'model' | null }): string {
+  if (item.source === 'survey') return '通用核实';
+  const origin = { rule: '规则托底', unclear: '房主说你来定', model: '模型推导' }[item.origin ?? 'model'];
+  return item.source === 'both' ? `${origin} + 通用核实` : origin;
 }
