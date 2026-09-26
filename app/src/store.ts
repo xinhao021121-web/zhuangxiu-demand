@@ -30,7 +30,7 @@ import {
   newSubmissionId,
 } from '@zx/data';
 import type { Draft, EventName, SubmitOutcome } from '@zx/data';
-import { collectionChannel } from './platform/collection';
+import { collectionChannel, isDemoInboxShared } from './platform/collection';
 import { saveHandoff } from './platform/handoff';
 import { taroStorage } from './platform/storage';
 
@@ -391,9 +391,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 }));
 
-/** 三种落点说三种话：送到了、展示模式只留本机、没送出去。 */
+/** 三种落点说三种话：真送出去了、进了同源收件箱（演示）、哪也去不了。 */
 function submitToast(outcome: SubmitOutcome): string {
   if (!outcome.ok) return `没送出去（${outcome.reason}）：本机已留一份，也可以存成交接文件发给设计师`;
+  if (isDemoInboxShared) return '已提交给设计师：演示模式下需求单存在这台设备上，解读端打开就能看到';
   if (outcome.delivered) return '已提交给设计师，本机仍留一份';
   return '已提交给设计师，正文与摘要在本机保存';
 }

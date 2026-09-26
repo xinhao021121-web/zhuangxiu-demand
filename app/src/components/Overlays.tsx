@@ -4,6 +4,7 @@ import { Text, View } from '@tarojs/components';
 import { recommendStats } from '@zx/field-spec';
 import { OVERVIEW_LIMIT, buildOverview, buildSummary, buildSurveyChecklist } from '@zx/summary';
 import { summarise, useAppStore } from '../store';
+import { isDemoInboxShared } from '../platform/collection';
 
 /** 同一套弹层：窄屏从底部升起占据大半屏，宽屏是居中卡片，差异交给媒体查询。 */
 export function Overlay({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -84,7 +85,9 @@ export function ConfirmView() {
             提交后会生成《需求意向书》和《量房确认清单》两份材料，量房确认清单 16 项由设计师现场逐条确认。
           </Text>
           <Text className="panel-line">
-            没网、或者这套演示没接服务端时，可以「存交接文件」：存下一份需求单 JSON，直接发给设计师导入。
+            {isDemoInboxShared
+              ? '这套演示没接服务端：提交后需求单存在这台设备上，同一台设备打开解读端就能看到；也可以存一份交接文件发给设计师。'
+              : '没网时可以让房主存一份交接文件：存下一份需求单 JSON，直接发给设计师导入。'}
           </Text>
         </View>
         <View className="panel-foot">

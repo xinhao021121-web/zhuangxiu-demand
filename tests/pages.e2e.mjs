@@ -201,6 +201,104 @@ try {
   await onsite.screenshot({ path: path.join(SHOT, 'pages-03-现场端.png') });
   ok(onsiteErrors.length === 0, '现场端控制台无错误' + (onsiteErrors.length ? '：' + onsiteErrors.join(' | ') : ''));
   await onsite.close();
+
+  // 六、三端一条链路：同一个浏览器上下文就是同一份演示数据
+  // （上面每一段都是 `browser.newPage()`，各自一个新上下文；这一段刻意共用一个）
+  const ctx = await browser.newContext();
+  const chainErrors = [];
+  const watch = (page) => {
+    page.on('pageerror', (e) => chainErrors.push('pageerror: ' + e.message));
+    page.on('console', (m) => {
+      if (m.type() === 'error') chainErrors.push('console: ' + m.text());
+    });
+  };
+
+  // 第 1 步：采集端填示例 → 忽略两条（留下埋点）→ 提交
+  const chainApp = await ctx.newPage();
+  watch(chainApp);
+  await chainApp.goto(`${BASE}app/`);
+  await chainApp.waitForSelector('#btn-demo', { timeout: 20000 });
+  await chainApp.click('#btn-demo');
+  await chainApp.waitForTimeout(500);
+  for (let i = 0; i < 2; i += 1) {
+    const ignore = chainApp.locator('.dk:not(.done) .btn:has-text("不感兴趣")').first();
+    if ((await ignore.count()) === 0) break;
+    await ignore.click();
+    await chainApp.waitForTimeout(200);
+  }
+  await chainApp.click('#btn-submit');
+  await chainApp.waitForTimeout(250);
+  await chainApp.click('#cf-ok');
+  await chainApp.waitForTimeout(500);
+  ok(
+    (await chainApp.locator('#toast').innerText()).includes('这台设备'),
+    '链路 · 采集端提交后说清落点（演示模式）',
+  );
+
+  // 第 2 步：解读端收编这份需求单并解读出清单
+  const chainStudio = await ctx.newPage();
+  watch(chainStudio);
+  await chainStudio.goto(`${BASE}studio/`);
+  await chainStudio.waitForSelector('.login');
+  await chainStudio.locator('.login button[type="submit"]').click();
+  await chainStudio.waitForSelector('.dcard');
+  ok((await count(chainStudio, '.dcard')) === 4, '链路 · 解读端收编了采集端刚提交的需求单');
+  const chainCard = chainStudio.locator('.dcard', { hasText: '未命名需求单' });
+  ok((await chainCard.count()) === 1, '链路 · 新需求单用与服务端同口径的名字');
+  await chainCard.click();
+  await chainStudio.waitForTimeout(400);
+  await chainStudio.locator('.tab[data-tab="list"]').click();
+  await chainStudio.locator('#btn-gen3').click();
+  await chainStudio.waitForSelector('#modal');
+  await chainStudio.locator('#send-ok').click();
+  await chainStudio.waitForSelector('.item');
+  const chainItems = await count(chainStudio, '.item');
+  ok(chainItems >= 16, `链路 · 解读端给这份需求单生成了清单（${chainItems} 条）`);
+  await chainStudio.locator('[data-act="del"]').first().click();
+  await chainStudio.waitForTimeout(400);
+
+  // 第 3 步：现场端选到同一份清单，记一笔「没问上」
+  const chainOnsite = await ctx.newPage();
+  watch(chainOnsite);
+  await chainOnsite.goto(`${BASE}onsite/`);
+  await chainOnsite.waitForSelector('.login');
+  await chainOnsite.locator('.login button[type="submit"]').click();
+  await chainOnsite.waitForSelector('.dc');
+  const chainOnsiteCard = chainOnsite.locator('.dc', { hasText: '未命名需求单' });
+  ok((await chainOnsiteCard.count()) === 1, '链路 · 现场端看得到解读端刚生成清单的那一份');
+  await chainOnsiteCard.click();
+  await chainOnsite.waitForSelector('#go');
+  await chainOnsite.locator('#go').click();
+  await chainOnsite.waitForSelector('.task');
+  await chainOnsite.locator('.task').first().locator('[data-a="skip"]').click();
+  await chainOnsite.waitForSelector('#sheet');
+  await chainOnsite.locator('.chip', { hasText: '房主不在现场' }).click();
+  await chainOnsite.locator('#sh-save').click();
+  await chainOnsite.waitForTimeout(600);
+
+  // 第 4 步：回解读端——刷新不丢，而且两边的东西都在报表里
+  await chainStudio.reload();
+  await chainStudio.waitForSelector('.dcard');
+  ok((await count(chainStudio, '.dcard')) === 4, '链路 · 刷新之后数据还在（演示数据落在浏览器里）');
+  await chainStudio.locator('#btn-reports').click();
+  await chainStudio.waitForSelector('#rep-criteria');
+  const chainRules = await text(chainStudio, '#rep-rules');
+  ok(!chainRules.includes('还没有埋点'), '链路 · 房主端的埋点回到了规则健康度');
+  ok(chainRules.includes('%'), '链路 · 拒绝率算得出来（展示与不感兴趣都有样本）');
+  ok(
+    !(await text(chainStudio, '#rep-criteria')).includes('还没有生成过清单'),
+    '链路 · 判据健康度统计到了这一轮生成的清单',
+  );
+  await chainStudio.locator('#rep-back').click();
+
+  // 第 5 步：一键重置，回到干净的开场（给下一位评审）
+  await chainStudio.locator('#btn-reset-demo').click();
+  await chainStudio.waitForTimeout(1500);
+  await chainStudio.waitForSelector('.dcard', { timeout: 20000 });
+  ok((await count(chainStudio, '.dcard')) === 3, '链路 · 重置演示数据后回到种子的三份');
+
+  ok(chainErrors.length === 0, '三端链路控制台无错误' + (chainErrors.length ? '：' + chainErrors.join(' | ') : ''));
+  await ctx.close();
 } finally {
   await browser.close();
   server.kill();

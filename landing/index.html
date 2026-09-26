@@ -43,6 +43,11 @@ a:hover{text-decoration:underline}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn small{font-weight:400;opacity:.75;font-size:12.5px}
 .hint{font-size:12.5px;color:var(--dim2);margin:14px 0 0}
+.steps{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin:26px 0 0}
+.step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.step .k{font-size:12px;color:var(--brand);font-weight:600;letter-spacing:.04em}
+.step p{margin:7px 0 0;font-size:14px;color:var(--dim);line-height:1.7}
+.step a{font-weight:600}
 /* 通用段落 */
 section{padding:34px 0}
 h2{font-size:24px;margin:0 0 6px;letter-spacing:-.01em}
@@ -115,9 +120,28 @@ footer .stack{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
       <a class="btn" href="./onsite/">现场端 PWA <small>手机上打开</small></a>
       <a class="btn" href="./app/">采集端 <small>房主填需求单</small></a>
     </div>
+    <div class="steps">
+      <div class="step">
+        <div class="k">第 1 步 · 约 40 秒</div>
+        <p><a href="./app/">采集端</a>点「填入示例需求」再点提交——这一段是房主填需求单。</p>
+      </div>
+      <div class="step">
+        <div class="k">第 2 步 · 约 1 分钟</div>
+        <p><a href="./studio/">桌面工作台</a>登录（账号已预填）→ 刚才那份「未命名需求单」就在列表里 → 生成清单、删两条、改个名。</p>
+      </div>
+      <div class="step">
+        <div class="k">第 3 步 · 约 1 分钟</div>
+        <p><a href="./onsite/">现场端</a>选同一份单，逐空间问、记一笔；拔网线也记得住。</p>
+      </div>
+      <div class="step">
+        <div class="k">第 4 步 · 约 20 秒</div>
+        <p>回工作台打开「回流报表」：你删掉的那几条、现场记的那几笔，都在这里汇总。</p>
+      </div>
+    </div>
     <p class="hint">
-      线上是<strong>演示模式</strong>：接口在浏览器里跑同一套领域包（判据、脱敏、合并、排序都是真代码），
-      只有存储与模型换成了种子数据，所以不用注册、不用等服务器。登录按钮已经预填演示账号。
+      线上是<strong>演示模式</strong>：判据、脱敏、合并、排序跑的都是仓库里那套真代码，只有存储与模型
+      换成了浏览器内的实现——所以不用注册、不用等服务器。三个入口<strong>共用同一份数据</strong>（存在你自己的
+      浏览器里，刷新不丢），想看干净的开场，在工作台右上角点「重置演示数据」。
     </p>
   </section>
 

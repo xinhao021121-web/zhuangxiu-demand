@@ -94,6 +94,16 @@ export function Workbench() {
     }
   }, []);
 
+  /**
+   * 重置演示数据（只在演示模式出现）：清掉本机那一份，再重新加载页面。
+   * 演示服务是这一页的会话里的实例，清完必须重来一次才读得到种子状态。
+   */
+  const resetDemo = useCallback(async () => {
+    const { resetDemoData } = await import('../lib/demo');
+    resetDemoData();
+    window.location.reload();
+  }, []);
+
   useEffect(() => {
     setUser(readUser());
   }, []);
@@ -265,11 +275,16 @@ export function Workbench() {
         <h1>问需 · 解读</h1>
         <span className="sub">桌面工作台</span>
         {DEMO_MODE ? (
-          <span className="pill" id="demo-pill">演示数据 · 在浏览器里跑，未接服务端</span>
+          <span className="pill" id="demo-pill">演示数据 · 存在这台浏览器里，三个入口共用一份</span>
         ) : (
           <span className="pill">公司内部 · 数据不出自有服务端</span>
         )}
         <div className="spacer" />
+        {DEMO_MODE ? (
+          <button type="button" className="btn ghost" id="btn-reset-demo" onClick={resetDemo}>
+            重置演示数据
+          </button>
+        ) : null}
         <button type="button" className="btn ghost" id="btn-reports" onClick={openReports}>
           回流报表
         </button>

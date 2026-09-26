@@ -12,6 +12,7 @@
   "dependencies": {
     "@zx/checklist": "workspace:*",
     "@zx/contracts": "workspace:*",
+    "@zx/data": "workspace:*",
     "@zx/field-spec": "workspace:*",
     "@zx/redact": "workspace:*",
     "@zx/rules": "workspace:*",

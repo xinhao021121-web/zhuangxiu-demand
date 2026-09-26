@@ -35,6 +35,21 @@ const readEvents = (page) =>
     return Array.isArray(draft?.events) ? draft.events : [];
   });
 
+/**
+ * 读演示模式的收件箱：没接采集通道时，提交的需求单与整批埋点落在这里，
+ * 解读端一打开就收编（作品集演示里三个入口共享这一份）。
+ */
+const readInbox = (page) =>
+  page.evaluate(() => {
+    const raw = localStorage.getItem('zx.demo.inbox.v1');
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  });
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -187,6 +202,17 @@ function watch(page) {
   await page.waitForTimeout(200);
   ok((await count(page, '#quiet-note')) === 0, '可一键恢复建议');
 
+  // 埋点：事件真的留在本机，而且没有被随后的草稿保存盖掉（踩过的坑）
+  const events = await readEvents(page);
+  const names = events.map((e) => e.name);
+  ok(names.includes('session'), '埋点：进入填写页记了一次会话');
+  ok(names.includes('shown'), '埋点：发现展示落在本机（采纳率与不感兴趣率的分母）');
+  ok(
+    events.some((e) => e.name === 'adopt' && e.props?.rule) && names.includes('ignore'),
+    '埋点：采纳与不感兴趣都记了，采纳事件带规则',
+  );
+  ok(names.includes('quiet_on'), '埋点：静默触发记了（静默率的分子）');
+
   // 需求摘要
   await page.click('#btn-summary-top');
   await page.waitForTimeout(300);
@@ -230,7 +256,21 @@ function watch(page) {
   await page.waitForTimeout(250);
   ok((await count(page, '#cf-body')) === 0, '确认提交后弹层关闭');
   ok((await count(page, '#toast')) === 1, '提交后给出反馈提示');
-  ok((await text(page, '#toast')).includes('本机'), '没接采集通道时提交提示说清只留本机（展示模式）');
+  ok(
+    (await text(page, '#toast')).includes('这台设备'),
+    '展示模式提交提示说清需求单落在哪（同设备浏览器，解读端能看到）',
+  );
+
+  // 提交的落点是同源收件箱：需求单与整批埋点一起进去，解读端一打开就收编
+  const inbox = await readInbox(page);
+  ok(inbox.length === 1, '演示模式下提交的需求单落进同源收件箱');
+  ok(inbox[0]?.demandName === '未命名需求单', '收件箱里的需求单用与服务端同口径的名字');
+  const batched = (inbox[0]?.telemetry?.events ?? []).map((e) => e.name);
+  ok(
+    batched.includes('submit') && batched.includes('shown') && batched.includes('session'),
+    '整批埋点随提交带出去了（提交事件与发现展示在同一批里）',
+  );
+  ok((await readEvents(page)).length === 0, '送出去的这一批不再留在本机草稿里（不重复上报）');
 
   // 删除已填内容的实例需要二次确认
   const beforeDel = await count(page, '.inst-card');
@@ -240,20 +280,6 @@ function watch(page) {
   await page.locator('#del-ok').click();
   await page.waitForTimeout(250);
   ok((await count(page, '.inst-card')) === beforeDel - 1, '确认后删除空间实例');
-
-  // 埋点：事件真的留在本机，而且没有被随后的草稿保存盖掉（踩过的坑）
-  const events = await readEvents(page);
-  const names = events.map((e) => e.name);
-  ok(names.includes('session'), '埋点：进入填写页记了一次会话');
-  ok(names.includes('shown'), '埋点：发现展示落在本机（采纳率与不感兴趣率的分母）');
-  ok(
-    events.some((e) => e.name === 'adopt' && e.props?.rule) && names.includes('ignore'),
-    '埋点：采纳与不感兴趣都记了，采纳事件带规则',
-  );
-  ok(
-    names.includes('quiet_on') && names.includes('submit'),
-    '埋点：静默触发与提交都记了（静默率与填写时长的分子）',
-  );
 
   // 草稿：刷新后恢复
   await page.reload();

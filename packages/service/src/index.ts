@@ -6,5 +6,6 @@ export * from './reports';
 export * from './pipeline';
 export * from './fixture';
 export * from './local';
+export * from './demo-store';
 export * from './eval';
 export * from './rule-candidates';

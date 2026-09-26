@@ -5,7 +5,8 @@
  * 存储是内存数组，模型是种子数据里的固定输出（对应服务端的 fake provider）。
  * 这样「线上演示点出来的清单」就是真代码跑出来的，不是另一套假数据。
  *
- * 状态只活在这一次页面会话里：刷新等于重置，演示用刚好。
+ * 状态默认只活在这一次页面会话里（测试要的就是这个）；展示版会注入 `persistence`，
+ * 把五张表落到浏览器的共享存储里——刷新不丢，三个入口共用一份（作品集演示，见 `demo-store.ts`）。
  */
 
 import { siteStats } from '@zx/checklist';
@@ -13,17 +14,15 @@ import type { ChecklistItem, SiteRecord } from '@zx/checklist';
 import type { User } from '@zx/contracts';
 import type { FormModel } from '@zx/field-spec';
 import { createFixtureProvider } from './fixture';
+import type { DemoPersistence, DemoTables } from './demo-store';
 import { generateChecklist } from './pipeline';
 import { toChecklistSummary, toChecklistView, toDetail, toDomainChecklist, toSummary } from './projections';
 import { buildReports, omissionLedger } from './reports';
 import type { ReportSource } from './reports';
 import type {
   ChecklistRecord,
-  EventRecord,
-  OutboundRecordRecord,
   ServiceStore,
   SheetRecord,
-  SiteRecordRecord,
 } from './types';
 import type { ModelProvider } from './model';
 import type { Omission, OmissionCategory, Reports } from '@zx/contracts';
@@ -58,6 +57,11 @@ export interface LocalServiceOptions {
   now?: () => string;
   /** 模型名只用于界面展示 */
   modelName?: string;
+  /**
+   * 演示持久化：给了就把五张表读写到外面（浏览器里是三个入口共享的 localStorage），
+   * 刷新不丢；不给就是纯内存，测试与早期用法不变。
+   */
+  persistence?: DemoPersistence;
 }
 
 export class LocalServiceError extends Error {
@@ -73,22 +77,43 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
   const now = options.now ?? (() => new Date().toISOString());
   const authCode = options.authCode ?? '000000';
   const provider: ModelProvider = createFixtureProvider(seed.sheets, options.modelName ?? '演示数据');
+  const persistence = options.persistence ?? null;
 
-  const sheets: SheetRecord[] = seed.sheets.map((s) => ({
-    id: s.id,
-    demandName: s.demandName,
-    schemaVersion: s.schemaVersion,
-    submittedAt: s.submittedAt,
-    source: s.source,
-    submittedBy: null,
-    createdAt: s.submittedAt,
-    payload: s.form,
-    aiMarks: s.aiMarks,
-  }));
-  const checklists: ChecklistRecord[] = [];
-  const outbound: OutboundRecordRecord[] = [];
-  const sites: SiteRecordRecord[] = [];
-  const events: EventRecord[] = [];
+  /** 种子里那五张表：第一次打开与「重置演示数据」都回到这里。 */
+  const seedTables = (): DemoTables => ({
+    sheets: seed.sheets.map((s) => ({
+      id: s.id,
+      demandName: s.demandName,
+      schemaVersion: s.schemaVersion,
+      submittedAt: s.submittedAt,
+      source: s.source,
+      submittedBy: null,
+      createdAt: s.submittedAt,
+      payload: s.form,
+      aiMarks: s.aiMarks,
+    })),
+    checklists: [],
+    outbound: [],
+    sites: [],
+    events: [],
+  });
+
+  const stored = persistence?.load() ?? null;
+  const tables: DemoTables = stored ?? seedTables();
+  const { sheets, checklists, outbound, sites, events } = tables;
+  const persist = () => persistence?.save(tables);
+  // 第一次打开（或本机那份坏了）：先把种子落下去，之后每次改动都累加在这一份上
+  if (!stored) persist();
+
+  /** 原地换掉一个数组的内容：下面的闭包握着的是数组本身，不能换成新数组。 */
+  const adopt = (next: DemoTables) => {
+    const swap = <T>(target: T[], source: T[]) => target.splice(0, target.length, ...source);
+    swap(sheets, next.sheets);
+    swap(checklists, next.checklists);
+    swap(outbound, next.outbound);
+    swap(sites, next.sites);
+    swap(events, next.events);
+  };
 
   /** 这一份内存 store 同时满足流水线与报表的读能力：报表要的「列全部需求单 / 列全部事件」也在这里。 */
   const store: ServiceStore & ReportSource = {
@@ -101,6 +126,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
       demandSheetId ? events.filter((e) => e.demandSheetId === demandSheetId) : events,
     createOutboundRecord: (record) => {
       outbound.push(record);
+      persist();
       return record;
     },
     createChecklist: (input) => {
@@ -118,6 +144,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
         items: input.checklist.items.map((i) => ({ ...i, removed: false })),
       };
       checklists.push(record);
+      persist();
       return record;
     },
   };
@@ -175,7 +202,8 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
         demandName: input.demandName,
         schemaVersion: input.schemaVersion,
         submittedAt: input.submittedAt,
-        source: 'file',
+        // 文件导入是 file；采集端那条通道落的是 miniapp（与真实服务同一个字段）
+        source: input.source ?? 'file',
         submittedBy: current?.id ?? null,
         createdAt: now(),
         payload: input.form,
@@ -183,7 +211,49 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
       };
       // 刚导入的排最前，方便看一眼；演示模式不按提交时间重排（真实服务按 submitted_at 倒序）
       sheets.unshift(sheet);
+      persist();
       return await toSummary(store, sheet);
+    },
+
+    /**
+     * 把采集端在演示模式下提交的需求单收进来（同源共享的收件箱，见 `@zx/data` 的 `demo-inbox`）。
+     *
+     * 幂等与采集通道同口径：同一个 `submissionId` 已经落库就不落第二份。
+     * 随提交带出的埋点一并落成客户端事件，所以「规则健康度」看得到房主那一边拒绝了什么。
+     */
+    async receiveSubmissions(): Promise<number> {
+      const inbox = persistence?.submissions() ?? [];
+      let added = 0;
+      for (const entry of inbox) {
+        if (await store.getDemandSheet(entry.submissionId)) continue;
+        sheets.unshift({
+          id: entry.submissionId,
+          demandName: entry.demandName,
+          schemaVersion: entry.schemaVersion,
+          submittedAt: entry.submittedAt,
+          source: entry.source,
+          submittedBy: null,
+          createdAt: entry.submittedAt,
+          payload: entry.form,
+          aiMarks: entry.aiMarks,
+        });
+        const batch = entry.telemetry;
+        batch?.events.forEach((event, seq) => {
+          const at = new Date(event.at);
+          events.push({
+            id: `${batch.batchId}-${seq}`,
+            demandSheetId: entry.submissionId,
+            name: event.name,
+            at: Number.isNaN(at.getTime()) ? now() : at.toISOString(),
+            source: 'client',
+            operator: null,
+            props: event.props ?? {},
+          });
+        });
+        added += 1;
+      }
+      if (added) persist();
+      return added;
     },
 
     async detail(id: string) {
@@ -210,6 +280,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
       const item = record.items.find((i) => i.key === key);
       if (!item) throw new LocalServiceError(404, '清单项不存在');
       item.removed = removed;
+      persist();
       return { key, removed } satisfies Pick<ChecklistItem, 'key'> & { removed: boolean };
     },
 
@@ -223,6 +294,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
       const name = demandName.trim();
       if (!name) throw new LocalServiceError(400, '名字不能为空');
       (await requireSheet(id)).demandName = name;
+      persist();
     },
 
     /** 遗漏补录：与 API 一样落成一条 `omission_log` 事件，台账就是这些事件本身。 */
@@ -238,7 +310,18 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
         operator: current?.name ?? '演示账号',
         props: { space: input.space, category: input.category, note: input.note ?? '' },
       });
+      persist();
       return await listOmissions(sheet);
+    },
+
+    /**
+     * 重置这份演示数据：清掉本机存的（含采集端收件箱），回到种子状态。
+     * 作品集里给评审用——前一个人点乱了，下一个人一键回到干净的开场。
+     */
+    async resetDemo(): Promise<void> {
+      persistence?.reset();
+      adopt(seedTables());
+      persist();
     },
 
     async omissions(id: string): Promise<Omission[]> {
@@ -284,6 +367,7 @@ export function createLocalService(seed: LocalSeed, options: LocalServiceOptions
           operator: current?.name ?? r.operator,
         });
       });
+      persist();
       const records = await store.listSiteRecords(record.id);
       return { records, stats: siteStats(toDomainChecklist(record), records as SiteRecord[]) };
     },
