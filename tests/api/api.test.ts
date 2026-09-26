@@ -970,6 +970,20 @@ describe('上线前置的两道门：CORS 与限流（技术方案 5.3）', () =
     expect(res.headers.get('access-control-allow-origin')).toBeNull();
   });
 
+  it('不配白名单时，本机默认值要盖住仓库自己用的那几个端口', async () => {
+    // 漏一个端口，对应的端到端测试就会卡在登录那一步（现场端 preview 的 4200 就这样漏过一次）
+    const localApp = await boot();
+    for (const origin of [
+      'http://127.0.0.1:4173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:4200',
+    ]) {
+      // 过了 CORS 这道门才会因为没有令牌回 401；403 说明它根本不在名单里
+      expect([origin, (await localApp.request('/demand-sheets', { headers: { origin } })).status]).toEqual([origin, 401]);
+    }
+  });
+
   it('采集通道超过限额回 429，并告诉客户端多久之后再来', async () => {
     const limited = await bootWithCors({
       COLLECTION_RATE_LIMIT: '3',

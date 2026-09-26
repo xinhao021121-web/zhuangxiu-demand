@@ -13,7 +13,13 @@ const list = (v: string | undefined) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-/** 本机开发默认放开的来源：H5 预览、桌面工作台、现场端（常用命令里的三个端口）。 */
+/**
+ * 本机开发默认放开的来源：H5 预览、桌面工作台、现场端 dev 与 preview。
+ *
+ * 这几个端口是仓库自己的命令与测试在用的（`tools/serve-h5.mjs` 4173、studio 3000、
+ * onsite dev 5174、`vite preview` 4200）。少一个，对应的端到端测试就会在登录那一步
+ * 被自己的白名单挡成 403——所以这张表要跟着脚本一起改。
+ */
 const LOCAL_ORIGINS = [
   'http://127.0.0.1:4173',
   'http://localhost:4173',
@@ -21,6 +27,8 @@ const LOCAL_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:5174',
   'http://localhost:5174',
+  'http://127.0.0.1:4200',
+  'http://localhost:4200',
 ];
 
 export interface ApiEnv {
