@@ -1,0 +1,17 @@
+{
+  "name": "问需 · 现场（量房清单）",
+  "short_name": "问需现场",
+  "description": "按空间逐条走量房沟通清单，记一句话结论，没网也能记",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9ecf1",
+  "theme_color": "#2f6fed",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
