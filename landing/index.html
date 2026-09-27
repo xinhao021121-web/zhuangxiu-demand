@@ -315,7 +315,7 @@ footer .stack{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
           「这一家的」与「通用核实」两级。种子场景的必问里因此有了「这一家」的问题。
           清单条目还记着来源（规则托底 / 房主说你来定 / 模型推导），必问里给这一家的项留了 2 个位置，
           其中至少 1 个给确定性来源——子场景的 8 条必问里有 4 条是规则托底或「你来定」；
-          回流报表的判据健康度也按来源拆开，一列就能看出**规则托底与模型推导谁被删得多**。
+          回流报表的判据健康度也按来源拆开，一列就能看出<strong>规则托底与模型推导谁被删得多</strong>。
           <strong>还剩一件</strong>：这一列还缺真实的设计师删减数据，等真机实测回来才能校准。
         </li>
         <li>
@@ -323,8 +323,10 @@ footer .stack{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
           这部分还没测，指标只能先取基线。
         </li>
         <li>
-          <strong>线上是演示模式</strong>：API 服务（Node + Hono）还没部署，两个端当前跑的是浏览器内实现。
-          接回真服务只需要把两个构建变量指向自己的域名，服务端逻辑与演示版调的是同一份代码。
+          <strong>线上是演示模式，不是没接服务端</strong>：API 服务（Node + Hono 的同一份逻辑，已部署到
+          Cloudflare Workers + D1 并绑了自有域名）是在跑的；两个设计师端目前仍走浏览器内实现——
+          判据、脱敏、合并、排序跑的都是仓库里那套真代码，只有存储与模型换成了浏览器内的实现。
+          接回真服务只需要把两个构建变量指向自己的域名，服务端与演示版调的是同一份代码。
         </li>
       </ul>
     </div>
@@ -332,16 +334,32 @@ footer .stack{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 
   <section>
     <h2><span class="n">06</span>文档与源码</h2>
+    <p class="sub">产品判断、技术取舍、用户研究与质量评估都留了痕：三场设计师访谈是清单口径的来源，13 个用例的真机实测与 badcase 台账是清单质量的证据。</p>
     <div class="grid c3">
       <div class="card">
-        <h3>问需 · 产品设计文档 V1.17</h3>
+        <h3>问需 · 产品设计文档 V1.18</h3>
         <p>产品定位、判据、脱敏策略、功能与指标、待确认项。</p>
         <p><a href="https://github.com/xinhao021121-web/zhuangxiu-demand/blob/main/docs/%E9%97%AE%E9%9C%80_%E4%BA%A7%E5%93%81%E8%AE%BE%E8%AE%A1%E6%96%87%E6%A1%A3_V1.md">读文档 →</a></p>
       </div>
       <div class="card">
-        <h3>问需 · 技术方案 V1.21</h3>
+        <h3>问需 · 技术方案 V1.22</h3>
         <p>分层与选型、模型接入、脱敏与外发顺序、部署与合规、实测结论。</p>
         <p><a href="https://github.com/xinhao021121-web/zhuangxiu-demand/blob/main/docs/%E9%97%AE%E9%9C%80_%E6%8A%80%E6%9C%AF%E6%96%B9%E6%A1%88_V1.md">读文档 →</a></p>
+      </div>
+      <div class="card">
+        <h3>问需 · 用户研究结论 V1</h3>
+        <p>三场设计师访谈的汇总：必问档位的口径提案、遗漏台账 5 类、目标画像校正、假设验证表。</p>
+        <p><a href="https://github.com/xinhao021121-web/zhuangxiu-demand/blob/main/research/%E9%97%AE%E9%9C%80_%E7%A0%94%E7%A9%B6%E7%BB%93%E8%AE%BA_V1.md">读结论 →</a></p>
+      </div>
+      <div class="card">
+        <h3>问需 · 成本与 ROI 模型 V1</h3>
+        <p>成本侧已实测（单份约两分钱），收益侧参数等访谈填；与「模型选型」那节的实测同源。</p>
+        <p><a href="https://github.com/xinhao021121-web/zhuangxiu-demand/blob/main/research/%E9%97%AE%E9%9C%80_%E6%88%90%E6%9C%AC%E4%B8%8EROI%E6%A8%A1%E5%9E%8B_V1.md">读模型 →</a></p>
+      </div>
+      <div class="card">
+        <h3>清单质量评估</h3>
+        <p>13 个用例的真机实测报告、评分口径与 badcase 台账——每次换型号、改提示词都回到这张表。</p>
+        <p><a href="https://github.com/xinhao021121-web/zhuangxiu-demand/blob/main/evals/rubric.md">看口径 →</a></p>
       </div>
       <div class="card">
         <h3>源码仓库</h3>
@@ -363,7 +381,7 @@ footer .stack{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
       <span class="tag">PostgreSQL（设计）/ SQLite（本地）</span>
       <span class="tag">Vitest + Playwright</span>
     </div>
-      <div>领域逻辑与界面分离：字段规格、规则、清单判据、脱敏、合并排序都是零框架依赖的纯 TS 包，服务端与三个端共用，242 个单元/接口测试 + 8 套端到端。</div>
+      <div>领域逻辑与界面分离：字段规格、规则、清单判据、脱敏、合并排序都是零框架依赖的纯 TS 包，服务端与三个端共用，247 个单元/接口测试 + 10 套端到端与冒烟测试。</div>
   </div>
 </footer>
 </body>

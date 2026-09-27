@@ -164,11 +164,55 @@ describe('文档一致性', () => {
   });
 
   it('文档版本号在表头、引用与入口页之间一致', () => {
-    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.17');
-    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.21');
-    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.17');
-    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.17');
-    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.21');
+    expect(read(PRODUCT_DOC)).toContain('问需 · 产品设计文档 V1.18');
+    expect(read(TECH_DOC)).toContain('问需 · 技术方案 V1.22');
+    expect(read(TECH_DOC)).toContain('《问需 · 产品设计文档》V1.18');
+    expect(read('landing/index.html')).toContain('问需 · 产品设计文档 V1.18');
+    expect(read('landing/index.html')).toContain('问需 · 技术方案 V1.22');
+  });
+
+  it('交付线状态跟实现同步：B4 已完成、A5 只剩小程序提审', () => {
+    const product = read(PRODUCT_DOC);
+    const tech = read(TECH_DOC);
+    // B4（必问档位口径收回代码）早已落进代码，表格不能还挂着「待办」
+    expect(product).toContain('| | B4 必问档位口径收回代码 | 已完成');
+    expect(product).not.toContain('| | B4 必问档位口径收回代码 | 待办');
+    // A5 的 H5 与手机版已发布，只剩小程序提审
+    expect(tech).toContain('| | A5 | 小程序提审、H5 部署、演示材料 | **部分完成**');
+    expect(tech).not.toContain('| | A5 | 小程序提审、H5 部署、演示材料 | 待办 |');
+  });
+
+  it('入口页不谎报线上状态：API 已部署，只有设计师端走演示模式', () => {
+    const landing = read('landing/index.html');
+    expect(landing).not.toContain('还没部署');
+    expect(landing).toContain('Cloudflare Workers');
+    expect(landing).toContain('演示模式');
+    // 入口页是 HTML，Markdown 的粗体星号会原样显示出来
+    expect(landing).not.toContain('**');
+  });
+
+  it('第三章写回了访谈的画像校正：设计师分三种', () => {
+    const product = read(PRODUCT_DOC);
+    expect(product).toContain('设计师不是一类人');
+    expect(product).toContain('独立工作室主理人');
+    expect(product).toContain('门店跑量设计师');
+  });
+
+  it('README 的仓库结构列全了领域包，测试层数不再是旧的「三层」', () => {
+    const readme = read('README.md');
+    ['field-spec/', 'rules/', 'summary/', 'data/', 'checklist/', 'redact/', 'contracts/', 'service/', 'devtools/'].forEach(
+      (pkg) => expect(readme, `README 的仓库结构少了 ${pkg}`).toContain(pkg),
+    );
+    expect(readme).toContain('deploy/');
+    expect(readme).toContain('outputs/');
+    expect(readme).not.toContain('三层测试');
+  });
+
+  it('采集端的功能编号与产品文档一致（F1–F9，不另起 F10）', () => {
+    const appReadme = read('app/README.md');
+    expect(appReadme).toContain('| F9 | 需求单结构化导出');
+    expect(appReadme).not.toContain('| F10 |');
+    expect(read(PRODUCT_DOC)).toContain('| F9 | 需求单结构化导出 |');
   });
 
   it('两份文档都带变更记录', () => {

@@ -47,8 +47,7 @@ pnpm run dev:h5                             # 本地开发
 | F6 | 静默模式（连续 3 次不感兴趣，不跨会话继承） | `packages/rules` 的 `state.ts` |
 | F7 | 空间实例管理（次卧 ≤4、卫生间 ≤3、书房 ≤2，房型决定字段） | `packages/field-spec` 的 `model.ts` |
 | F8 | 量房确认清单（16 项，随摘要一起给设计师） | `packages/summary` |
-| F9 | 结构化提交：草稿拼成需求单（含助手写入过的字段与一整批埋点）交给采集通道；没配通道就只留本机 | `packages/data` 的 `buildSubmission` / `createCollectionClient` + `store.ts` + `services/api` 的 `/a` |
-| F10 | 交接文件：没网或没接服务端时，把需求单存成一份 JSON 交给设计师 | `packages/data` 的 `buildHandoff` + `platform/handoff.ts` + 提交前检查里的「存交接文件」 |
+| F9 | 需求单结构化导出：草稿拼成需求单（含助手写入过的字段与一整批埋点），有网时提交到采集通道、没配通道就只留本机；没网或没接服务端时另存一份交接文件（H5 下载 JSON，小程序端退成复制）交给设计师 | `packages/data` 的 `buildSubmission` / `buildHandoff` / `createCollectionClient` + `store.ts` + `platform/handoff.ts` + `services/api` 的 `/a` |
 
 ## 采集通道
 

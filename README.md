@@ -12,7 +12,7 @@
 - 解读端 Demo：`designer/设计需求解读台_Demo_V0.1.html`（双击打开，数据模拟）
 - 现场端 Demo：`designer/现场量房_Demo_V0.1.html`（双击打开；也可用手机访问）
 - 采集端实现：`app/`（Taro + React + TypeScript，一套代码产出微信小程序与 H5）
-- 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储、清单判据、脱敏与外发，零框架依赖）
+- 领域层：`packages/`（字段规格、规则引擎、摘要、数据仓储、清单判据、脱敏与外发、服务端流水线与回流报表，零框架依赖）
 
 ## 仓库结构
 
@@ -30,14 +30,17 @@ packages/
   checklist/          量房沟通清单：来源候选、判据筛选、合并去重、排序计数、导出
   redact/             外发脱敏：字段级三级策略、自由文本替换、外发 payload 与审计记录
   contracts/          API 契约与共享类型（zod → 类型 + OpenAPI）
+  service/            服务端纯逻辑：清单生成流水线、投影、模型接口、回流报表、浏览器内演示实现
   devtools/           单测与类型检查用的开发依赖
-tools/                字段清单 Excel → JSON、Demo 构建脚本
+tools/                字段清单 Excel → JSON、Demo 构建脚本、部署脚本
+outputs/              字段清单 Excel（唯一的人类编辑入口）与它的构建脚本
+deploy/               上线配置与说明（GitHub Pages / Vercel / Netlify / Nginx / 容器 compose）
 docs/                 问需的产品设计文档与技术方案
 research/             用户研究：访谈方案、执行包与材料（materials/ 是脚本生成的）、记录模板、自测记录、成本与 ROI 模型
 evals/                清单质量评估：用例、评分标准、badcase 台账、质量/成本报告
 demo/  mobile/        早期 H5 Demo，作为交互设计稿保留，不再演进
 designer/            设计需求解读台 Demo + 现场量房手机端 Demo（数据模拟）
-tests/                三层测试（领域单测 + H5 端到端 + Demo 冒烟）
+tests/                测试：领域单测 + API + 各端端到端（采集端 / 工作台 / 现场端 / 上线产物）+ Demo 冒烟
 ```
 
 ## 安装依赖
